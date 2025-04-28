@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <commons/log.h>
 
 /**
 * @brief Imprime un saludo por consola

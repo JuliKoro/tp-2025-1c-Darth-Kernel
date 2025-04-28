@@ -22,13 +22,14 @@
 #define PUERTO_MEMORIA_KERNEL "6666" 
 #define PUERTO_MEMORIA_CPU "7777" 
 
+extern t_log* logger_sockets;
 
 /**
 * @brief Crea un socket para el servidor. Lo pone en modo escucha
 * @param puerto el puerto donde va a escuchar el socket del servidor
 * @return Devuelve el descriptor del socket
 */
-int iniciar_servidor(char* puerto, t_log* logger);
+int iniciar_servidor(char* puerto);
 
 
 /**
@@ -39,7 +40,7 @@ int iniciar_servidor(char* puerto, t_log* logger);
 * @return Devuelve el descriptor del socket conectado, o valor negativo
 * si hay error.
 */
-int crear_conexion(char* ip, char* puerto, t_log* logger);
+int crear_conexion(char* ip, char* puerto);
 
 
 /**
@@ -48,7 +49,7 @@ int crear_conexion(char* ip, char* puerto, t_log* logger);
 * @param logger el logger del modulo
 * @return devuelve un socket conectado al socket del servidor
 */
-int esperar_cliente(int socket_servidor, t_log* logger);
+int esperar_cliente(int socket_servidor);
 
 
 /**
@@ -58,7 +59,7 @@ int esperar_cliente(int socket_servidor, t_log* logger);
 * @param logger el logger del modulo que envia el mensaje
 * @return Nada 
 */
-void enviar_mensaje (char* mensaje, int socket, t_log* logger);
+void enviar_mensaje (char* mensaje, int socket);
 
 
 /**
@@ -67,7 +68,7 @@ void enviar_mensaje (char* mensaje, int socket, t_log* logger);
 * @param logger el logger del modulo
 * @return devuelve el mensaje recibido char*
 */
-char* recibir_mensaje(int socket, t_log* logger);
+char* recibir_mensaje(int socket);
 
 
 

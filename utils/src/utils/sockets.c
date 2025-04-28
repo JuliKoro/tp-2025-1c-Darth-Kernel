@@ -1,9 +1,9 @@
 #include "sockets.h"
 #include <commons/log.h>
 
+ t_log* logger_sockets;
 
-
-int iniciar_servidor(char* puerto, t_log* logger){
+int iniciar_servidor(char* puerto){
     int socket_servidor;
      
     struct addrinfo hints, *server_info;
@@ -17,7 +17,7 @@ int iniciar_servidor(char* puerto, t_log* logger){
     //Obtengo info del puerto e ip local, manejo errores
     int err = getaddrinfo(NULL, puerto, &hints, &server_info);
     if(err !=0){
-        log_error(logger, "Fallo getaddrinfo - %s", gai_strerror(err));
+        log_error(logger_sockets, "Fallo getaddrinfo - %s", gai_strerror(err));
     }
 
     //Creo el socket, chequeo errores
@@ -26,7 +26,7 @@ int iniciar_servidor(char* puerto, t_log* logger){
                               server_info->ai_protocol);
 
     if (socket_servidor == -1){
-        log_error(logger, "Error al crear el socket: %s", strerror(errno));
+        log_error(logger_sockets, "Error al crear el socket: %s", strerror(errno));
         freeaddrinfo(server_info);
         return -1;
     }
@@ -36,7 +36,7 @@ int iniciar_servidor(char* puerto, t_log* logger){
 
     //Bindeo el socket al puerto
 	if(bind(socket_servidor,server_info->ai_addr,server_info->ai_addrlen) == -1) {
-        log_error(logger, "Error en el bind: %s", strerror(errno));
+        log_error(logger_sockets, "Error en el bind: %s", strerror(errno));
         close(socket_servidor);
         freeaddrinfo(server_info);
         return -1;
@@ -44,7 +44,7 @@ int iniciar_servidor(char* puerto, t_log* logger){
 
     //Escucho conexiones entrantes
 	if(listen(socket_servidor, SOMAXCONN) == -1) {
-        log_error(logger, "Error en listen: %s", strerror(errno));
+        log_error(logger_sockets, "Error en listen: %s", strerror(errno));
         close(socket_servidor);
         freeaddrinfo(server_info);
         return -1;
@@ -54,11 +54,11 @@ int iniciar_servidor(char* puerto, t_log* logger){
     freeaddrinfo(server_info);
     
     //Loggeo y devuelvo socket
-    log_info(logger, "Servidor escuchando en el puerto %s !", puerto);
+    log_info(logger_sockets, "Servidor escuchando en el puerto %s !", puerto);
     return socket_servidor;
 }
 
-int crear_conexion (char* ip, char* puerto, t_log* logger){
+int crear_conexion (char* ip, char* puerto){
     
     struct addrinfo hints, *server_info;
 
@@ -71,7 +71,7 @@ int crear_conexion (char* ip, char* puerto, t_log* logger){
     //Obtengo informacion de la IP, puerto y chequeo errores
     int err = getaddrinfo(ip, puerto, &hints, &server_info);
     if(err !=0){
-        log_error(logger, "Fallo getaddrinfo al conectar con %s:%s - %s", ip, puerto, gai_strerror(err));
+        log_error(logger_sockets, "Fallo getaddrinfo al conectar con %s:%s - %s", ip, puerto, gai_strerror(err));
     }
         
 
@@ -82,7 +82,7 @@ int crear_conexion (char* ip, char* puerto, t_log* logger){
 
     //Chequeo por errores en la creacion
     if(socket_cliente == -1) {
-        log_error(logger,"Error al crear socket %s ", strerror(errno));
+        log_error(logger_sockets,"Error al crear socket %s ", strerror(errno));
         freeaddrinfo(server_info);
         return -1;
     }
@@ -90,13 +90,13 @@ int crear_conexion (char* ip, char* puerto, t_log* logger){
     //Se conecta al socket con el server, el cual debe estar escuchando. 
     //Chequeo errores              
     if(connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen) == -1){
-        log_error(logger,"Fallo getaddrinfo al conectar con %s:%s - %s", ip, puerto, strerror(errno));
+        log_error(logger_sockets,"Fallo getaddrinfo al conectar con %s:%s - %s", ip, puerto, strerror(errno));
         freeaddrinfo(server_info);
         close(socket_cliente);
         return -1;
     }
     
-    log_info(logger, "Conectado con exito a %s puerto %s", ip, puerto);
+    log_info(logger_sockets, "Conectado con exito a %s puerto %s", ip, puerto);
 
     //Libero memoria 
     freeaddrinfo(server_info);
@@ -105,53 +105,53 @@ int crear_conexion (char* ip, char* puerto, t_log* logger){
     return socket_cliente;
 }
 
-int esperar_cliente (int socket_servidor, t_log* logger){
+int esperar_cliente (int socket_servidor){
 
 
     //Acepta conexion, chequeo errores
     int socket_cliente = accept(socket_servidor, NULL, NULL);
 	if(socket_cliente == -1){
-        log_error(logger, "Error en el accept(): %s", strerror(errno));
+        log_error(logger_sockets, "Error en el accept(): %s", strerror(errno));
         return -1;
     }
 
-    log_info(logger, "Se conecto un cliente!");
+    log_info(logger_sockets, "Se conecto un cliente!");
 
     //Devuelvo socket ya conectado con el servidor
 	return socket_cliente;
 }
 
-void enviar_mensaje(char* mensaje, int socket, t_log* logger){
-    if(mensaje == NULL || logger ==  NULL){
+void enviar_mensaje(char* mensaje, int socket){
+    if(mensaje == NULL || logger_sockets ==  NULL){
         return;
     }
     //Tamanio del string +1 para el /0
     int size = strlen(mensaje) + 1;
     //Envio tamanio del string y chequeo errores
     if(send(socket, &size, sizeof(int), 0) == -1){
-        log_error(logger, "Error al enviar tamanio del mensaje: %s", strerror(errno));
+        log_error(logger_sockets, "Error al enviar tamanio del mensaje: %s", strerror(errno));
         return;
     } 
     //Envio mensaje y chequeo errores
     if (send (socket, mensaje, size, 0) == -1){
-        log_error(logger, "Error al enviar mensaje: %s", strerror(errno));
+        log_error(logger_sockets, "Error al enviar mensaje: %s", strerror(errno));
         return;
     }
     
 }
 
-char* recibir_mensaje(int socket, t_log* logger){
+char* recibir_mensaje(int socket){
     int size;
     //Recibo tamanio del mensaje a recibir, chequeo errores
     if(recv(socket, &size, sizeof(int), MSG_WAITALL) == -1){
-        log_error(logger, "Error al recibir tamanio del mensaje: %s", strerror(errno));
+        log_error(logger_sockets, "Error al recibir tamanio del mensaje: %s", strerror(errno));
         return NULL;
     }
     //Reservo espacio para recibir el mensaje
     char* buffer = malloc (size);
     //Recibo mensaje, chequeo errores
     if(recv(socket, buffer, size, MSG_WAITALL) == -1){
-        log_error(logger, "Error al recibir el mensaje: %s", strerror(errno));
+        log_error(logger_sockets, "Error al recibir el mensaje: %s", strerror(errno));
         //Libero memoria reservada para buffer antes de volver
         free(buffer);
         return NULL;

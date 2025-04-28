@@ -6,7 +6,7 @@
 
 int cpu_conectar_a_kernel(void);
 
-int cpu_conectar_a_memoria(void);
+// int cpu_conectar_a_memoria(void);
 
 
 #endif

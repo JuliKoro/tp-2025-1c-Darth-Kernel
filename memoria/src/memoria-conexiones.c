@@ -88,3 +88,4 @@ int memoria_conectar_a_cpu(){
     return 0;
 
 }
+

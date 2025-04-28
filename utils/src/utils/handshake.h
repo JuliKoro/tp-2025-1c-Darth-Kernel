@@ -1,12 +1,12 @@
 #ifndef UTILS_HANDSHAKE_H_
 #define UTILS_HANDSHAKE_H_
 
-#include "handshake.h"
 #include <sys/socket.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <commons/log.h>
+#include "sockets.h"
 
 
 /**
@@ -34,7 +34,7 @@ const char* nombre_modulo(id_modulo_t modulo);
 * @param logger el logger del modulo
 * @return 
 */
-int enviar_handshake (int socket, id_modulo_t modulo, t_log* logger);
+int enviar_handshake (int socket, id_modulo_t modulo);
 
 
 /**
@@ -44,6 +44,6 @@ int enviar_handshake (int socket, id_modulo_t modulo, t_log* logger);
 * @param logger el logger del modulo
 * @return 
 */
-int recibir_handshake (int socket, id_modulo_t* modulo_recibido, t_log* logger);
+int recibir_handshake (int socket, id_modulo_t* modulo_recibido);
 
 #endif
