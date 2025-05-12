@@ -1,11 +1,14 @@
 #ifndef MEMORIA_CONEXIONES_H_
 #define MEMORIA_CONEXIONES_H_
 
-#include <utils/handshake.h>
 #include <utils/sockets.h>
 
-int memoria_conectar_a_kernel();
+#include "memoria-configs.h"
 
-int memoria_conectar_a_cpu();
+/**
+* @brief Inicia el servidor de memoria
+* @return Devuelve socket del cliente para comunicarse con memoria
+*/
+int iniciar_servidor_memoria();
 
 #endif

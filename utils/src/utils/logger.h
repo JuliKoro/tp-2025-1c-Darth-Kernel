@@ -1,5 +1,5 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef UTILS_LOGGER_H_
+#define UTILS_LOGGER_H_
 
 #include <commons/log.h>
 #include <stdlib.h>
@@ -22,6 +22,6 @@ t_log* iniciar_logger(char* archivo_log, char* nombre_modulo);
 * @param nombre_moduloe El nombre que va a mostrar en log en cada entrada
 * @return Devuelve una t_log* logger
 */
-void iniciar_logger_global(t_log** destino, const char* path, const char* nombre_modulo);
+void iniciar_logger_global(t_log** destino, char* path, char* nombre_modulo);
 
 #endif

@@ -1,11 +1,20 @@
 #include "sockets.h"
-#include <commons/log.h>
 
- t_log* logger_sockets;
+// Variables globales
+t_log* logger_sockets;
 
-int iniciar_servidor(char* puerto){
+// Funciones auxiliares
+
+
+const char* int_a_string(int numero) {
+    static char buffer[6];
+    sprintf(buffer, "%d", numero);
+    return buffer;
+}
+
+// Funciones de conexión
+int iniciar_servidor(const char* puerto) {
     int socket_servidor;
-     
     struct addrinfo hints, *server_info;
 
     //Seteo hints en 0
@@ -21,9 +30,9 @@ int iniciar_servidor(char* puerto){
     }
 
     //Creo el socket, chequeo errores
-    socket_servidor = socket (server_info->ai_family,
-                              server_info->ai_socktype,
-                              server_info->ai_protocol);
+    socket_servidor = socket(server_info->ai_family,
+                           server_info->ai_socktype,
+                           server_info->ai_protocol);
 
     if (socket_servidor == -1){
         log_error(logger_sockets, "Error al crear el socket: %s", strerror(errno));
@@ -35,7 +44,7 @@ int iniciar_servidor(char* puerto){
     setsockopt(socket_servidor, SOL_SOCKET,SO_REUSEPORT,&(int){1}, sizeof(int));
 
     //Bindeo el socket al puerto
-	if(bind(socket_servidor,server_info->ai_addr,server_info->ai_addrlen) == -1) {
+    if(bind(socket_servidor,server_info->ai_addr,server_info->ai_addrlen) == -1) {
         log_error(logger_sockets, "Error en el bind: %s", strerror(errno));
         close(socket_servidor);
         freeaddrinfo(server_info);
@@ -43,7 +52,7 @@ int iniciar_servidor(char* puerto){
     }
 
     //Escucho conexiones entrantes
-	if(listen(socket_servidor, SOMAXCONN) == -1) {
+    if(listen(socket_servidor, SOMAXCONN) == -1) {
         log_error(logger_sockets, "Error en listen: %s", strerror(errno));
         close(socket_servidor);
         freeaddrinfo(server_info);
@@ -58,14 +67,13 @@ int iniciar_servidor(char* puerto){
     return socket_servidor;
 }
 
-int crear_conexion (char* ip, char* puerto){
-    
+int crear_conexion(const char* ip, const char* puerto) {
     struct addrinfo hints, *server_info;
 
     //Seteo hints en 0
     memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET; //IPV4
-	hints.ai_socktype = SOCK_STREAM; //TCP
+    hints.ai_family = AF_INET; //IPV4
+    hints.ai_socktype = SOCK_STREAM; //TCP
     hints.ai_flags = AI_PASSIVE;
 
     //Obtengo informacion de la IP, puerto y chequeo errores
@@ -73,12 +81,11 @@ int crear_conexion (char* ip, char* puerto){
     if(err !=0){
         log_error(logger_sockets, "Fallo getaddrinfo al conectar con %s:%s - %s", ip, puerto, gai_strerror(err));
     }
-        
 
     //Creo el socket
-    int socket_cliente = socket (server_info->ai_family, 
-                                 server_info->ai_socktype, 
-                                 server_info->ai_protocol);
+    int socket_cliente = socket(server_info->ai_family, 
+                              server_info->ai_socktype, 
+                              server_info->ai_protocol);
 
     //Chequeo por errores en la creacion
     if(socket_cliente == -1) {
@@ -105,12 +112,10 @@ int crear_conexion (char* ip, char* puerto){
     return socket_cliente;
 }
 
-int esperar_cliente (int socket_servidor){
-
-
+int esperar_cliente(int socket_servidor) {
     //Acepta conexion, chequeo errores
     int socket_cliente = accept(socket_servidor, NULL, NULL);
-	if(socket_cliente == -1){
+    if(socket_cliente == -1){
         log_error(logger_sockets, "Error en el accept(): %s", strerror(errno));
         return -1;
     }
@@ -118,11 +123,12 @@ int esperar_cliente (int socket_servidor){
     log_info(logger_sockets, "Se conecto un cliente!");
 
     //Devuelvo socket ya conectado con el servidor
-	return socket_cliente;
+    return socket_cliente;
 }
 
-void enviar_mensaje(char* mensaje, int socket){
-    if(mensaje == NULL || logger_sockets ==  NULL){
+// Funciones de mensajes
+void enviar_mensaje(char* mensaje, int socket) {
+    if(mensaje == NULL || logger_sockets == NULL){
         return;
     }
     //Tamanio del string +1 para el /0
@@ -133,14 +139,13 @@ void enviar_mensaje(char* mensaje, int socket){
         return;
     } 
     //Envio mensaje y chequeo errores
-    if (send (socket, mensaje, size, 0) == -1){
+    if (send(socket, mensaje, size, 0) == -1){
         log_error(logger_sockets, "Error al enviar mensaje: %s", strerror(errno));
         return;
     }
-    
 }
 
-char* recibir_mensaje(int socket){
+char* recibir_mensaje(int socket) {
     int size;
     //Recibo tamanio del mensaje a recibir, chequeo errores
     if(recv(socket, &size, sizeof(int), MSG_WAITALL) == -1){
@@ -148,7 +153,7 @@ char* recibir_mensaje(int socket){
         return NULL;
     }
     //Reservo espacio para recibir el mensaje
-    char* buffer = malloc (size);
+    char* buffer = malloc(size);
     //Recibo mensaje, chequeo errores
     if(recv(socket, buffer, size, MSG_WAITALL) == -1){
         log_error(logger_sockets, "Error al recibir el mensaje: %s", strerror(errno));
@@ -157,4 +162,35 @@ char* recibir_mensaje(int socket){
         return NULL;
     }
     return buffer;
+}
+
+// Funciones de handshake
+int enviar_handshake(int socket, id_modulo_t modulo) {
+    //Casteo enum a uint8_t
+    u_int8_t id = (u_int8_t)modulo;
+    //Envio al socket el valor de id, chequeo errores
+    if(send(socket, &id, sizeof(u_int8_t), 0) == -1){
+        log_error(logger_sockets,"Error al enviar handshake %s (ID %d) : %s", nombre_modulo(modulo), modulo , strerror(errno));
+        return -1;
+    } 
+
+    log_info(logger_sockets, "Handshake de %s (ID %d) enviado!", nombre_modulo(modulo), modulo);
+    return 0;
+}
+
+int recibir_handshake(int socket, id_modulo_t* modulo_recibido) {
+    u_int8_t id;
+
+    //Recibo valor de id y chequeo errores
+    if(recv(socket, &id, sizeof(u_int8_t), MSG_WAITALL) == -1){
+        log_error(logger_sockets,"Error al recibir handshake: %s", strerror(errno));
+        return -1;
+    }
+
+    //Casteo el u_int8_t a id_modulo_t y la almaceno en la variable que se recibio para eso
+    *modulo_recibido = (id_modulo_t)id;
+    
+    log_info(logger_sockets, "Handshake de %s (ID %d) recibido!", nombre_modulo((id_modulo_t)id), id);
+    
+    return 0;
 }

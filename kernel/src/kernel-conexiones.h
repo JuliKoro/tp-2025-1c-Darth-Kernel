@@ -2,34 +2,45 @@
 #define KERNEL_CONEXIONES_H_
 
 
-#include <utils/handshake.h>
 #include <utils/sockets.h>
 #include <utils/configs.h>
 #include <utils/logger.h>
 
+#include "kernel-configs.h"
+
 //Conexion con CPU
 
 /**
-* @brief Crea la conexion con CPU (kernel es server aca) y manda handshake.
-* @return Devuelve 0
+* @brief Función genérica para iniciar un servidor
+* @param puerto Puerto en el que escuchará el servidor
+* @param nombre_modulo Nombre del módulo que se conectará
+* @param tipo_modulo Tipo de módulo para el handshake
+* @return Devuelve socket del cliente para comunicarse
 */
-int kernel_conectar_a_cpu(void);
-
-
+int iniciar_servidor_generico(int puerto, char* nombre_modulo, int tipo_modulo);
 
 /**
-* @brief Crea la conexion con Memoria (kernel es cliente en este caso) y manda handshake.
-* @return Devuelve 0
+* @brief Levanta servidor en el puerto de escucha de dispatch
+* @return Devuelve socket del cliente para comunicarse con CPU
+*/
+int iniciar_servidor_dispatch(void);
+
+/**
+* @brief Levanta servidor en el puerto de escucha de interrupciones
+* @return Devuelve socket del cliente para comunicarse con CPU-Interrupt
+*/
+int iniciar_servidor_interrupt(void);
+ 
+/**
+* @brief Levanta servidor en el puerto de escucha de IO
+* @return Devuelve socket del cliente para comunicarse con IO
+*/
+int iniciar_servidor_io(void);
+
+/**
+* @brief Conecta con la memoria
+* @return Devuelve socket del cliente para comunicarse con memoria
 */
 int kernel_conectar_a_memoria(void);
-
-
-/**
-* @brief Crea la conexion con IO (kernel es server) y manda handshake.
-* @return Devuelve 0
-*/
-int kernel_conectar_a_io(void);
-
-
 
 #endif
