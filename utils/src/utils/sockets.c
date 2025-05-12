@@ -12,6 +12,19 @@ const char* int_a_string(int numero) {
     return buffer;
 }
 
+char* nombre_modulo(id_modulo_t modulo) {
+    switch(modulo) {
+        case HANDSHAKE_CPU:
+            return "CPU";
+        case HANDSHAKE_KERNEL:
+            return "KERNEL";
+        case HANDSHAKE_MEMORIA:
+            return "MEMORIA";
+        case HANDSHAKE_IO:
+            return "IO";
+    }
+    return NULL;
+}   
 // Funciones de conexión
 int iniciar_servidor(const char* puerto) {
     int socket_servidor;

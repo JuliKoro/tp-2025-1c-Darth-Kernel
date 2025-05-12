@@ -33,7 +33,7 @@ typedef enum {
     HANDSHAKE_IO
 } id_modulo_t;
 
-
+char* nombre_modulo(id_modulo_t modulo);
 
 /**
 * @brief Crea un socket para el servidor. Lo pone en modo escucha
