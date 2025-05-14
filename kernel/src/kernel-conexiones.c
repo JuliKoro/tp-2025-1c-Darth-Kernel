@@ -9,22 +9,12 @@ int iniciar_servidor_generico(int puerto, char* nombre_modulo, int tipo_modulo) 
     //Creo el socket del servidor
     int kernel_server_fd = iniciar_servidor(int_a_string(puerto));
     //Espero la conexion
-    int kernel_cliente_fd = esperar_cliente(kernel_server_fd);
+    //int kernel_cliente_fd = esperar_cliente(kernel_server_fd);
 
     //Realizo el handshake
-    if(recibir_handshake(kernel_cliente_fd, &modulo_recibido) == -1) {
-        log_error(logger_sockets, "[HANDSHAKE] Error en recepcion de handshake. Cierro conexion.");
-        return -1;
-    }
+    
 
-    if(modulo_recibido != tipo_modulo) {
-        log_error(logger_sockets, "[HANDSHAKE] Se esperaba conexion de %s. Cierro conexion", nombre_modulo);
-        return -1;
-    }
-
-    log_info(logger_sockets, "[HANDSHAKE] Handshake recibido correctamente. Conexion establecida con %s", nombre_modulo);
-
-    return kernel_cliente_fd;
+    return kernel_server_fd;
 }
 
 int iniciar_servidor_dispatch() {

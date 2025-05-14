@@ -167,6 +167,10 @@ char* recibir_mensaje(int socket) {
     }
     //Reservo espacio para recibir el mensaje
     char* buffer = malloc(size);
+    if(buffer == NULL){
+        log_error(logger_sockets, "Error al reservar memoria para el mensaje: %s", strerror(errno));
+        return NULL;
+    }
     //Recibo mensaje, chequeo errores
     if(recv(socket, buffer, size, MSG_WAITALL) == -1){
         log_error(logger_sockets, "Error al recibir el mensaje: %s", strerror(errno));
@@ -174,6 +178,7 @@ char* recibir_mensaje(int socket) {
         free(buffer);
         return NULL;
     }
+    buffer[size - 1] = '\0';
     return buffer;
 }
 

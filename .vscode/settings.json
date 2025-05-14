@@ -9,6 +9,9 @@
         "sockets.h": "c",
         "kernel-configs.h": "c",
         "kernel.h": "c",
-        "configs.h": "c"
+        "configs.h": "c",
+        "io.h": "c",
+        "kernel-conexiones.h": "c",
+        "io-conexiones.h": "c"
     }
 }
