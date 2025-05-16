@@ -15,6 +15,11 @@ int main(int argc, char* argv[]) {
    char* mensaje = recibir_mensaje(socket_memoria);
 
    log_info(logger_sockets, "Me llego esto: %s", mensaje);
+   
+   // Aca reciben las instrucciones de Memoria :)
+   char* paquete = recibir_mensaje(socket_memoria);
+   printf("Instrucciones recibidas:\n%s\n", paquete);
+   free(paquete);
 
    free(mensaje);
    close(socket_memoria);
