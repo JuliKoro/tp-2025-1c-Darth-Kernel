@@ -7,6 +7,11 @@ Check 2:
     - Tenerlas cargadas en mmemoria (puede ser una estructura tipo map<PID, lista de instrucciones>)
 */
 
+/*
+    El dia de mañana que se implemente el PCB se hace uso del Program Counter (PC) para saber que instrucción ejecutar
+    y asi mismo no repetir archivos de instrucciones.
+*/
+
 // Retorna una const somulando que hay x cantidad de bytes disponibles en memoria
 int obtener_espacio_libre_mock() {
     return 1024; // Retorna 1KB como espacio libre (solo de prueba, lo está simulando)
@@ -113,12 +118,12 @@ int main(int argc, char* argv[]) {
     }
     // Acá usar cargar_instrucciones para leer el archivo y justamente, obtener esas instrucciones
 
-    /*
+    
     for (int pc = 0; pc < proceso->cantidad_instrucciones; pc++) {
         const char* instruccion = obtener_instruccion(proceso, pc);
         printf("## PID: %d - Obtener instrucción: %d - Instrucción: %s\n", pid, pc, instruccion);
     }
-*/
+
     log_info(logger_sockets, "Voy a obtener espacio libre mock");
     obtener_espacio_libre_mock();
     int resultado = obtener_espacio_libre_mock();
