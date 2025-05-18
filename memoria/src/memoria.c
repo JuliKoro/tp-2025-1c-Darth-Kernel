@@ -81,26 +81,23 @@ void destruir_proceso(void* proceso_void) {
 }
 
 void cargar_proceso(int pid, const char* nombre_archivo) {
-
     char fullpath[512];
     snprintf(fullpath, sizeof(fullpath), "%s/%s", memoria_configs.pathinstrucciones, nombre_archivo);
 
     T_Proceso* proceso = leer_archivo_de_proceso(fullpath, pid);
     if (proceso != NULL) {
-        dictionary_put(procesos_en_memoria, strdup(nombre_archivo), proceso);
+        char* pid_key = malloc(10);
+        sprintf(pid_key, "%d", pid);
+        dictionary_put(procesos_en_memoria, pid_key, proceso);
+        log_info(logger_memoria, "## PID %d - Proceso Creado - Tamaño: <TAMAÑO>", pid);
     }
-
-    // Creación de Proceso: “## PID: <PID> - Proceso Creado - Tamaño: <TAMAÑO>”
-    log_info(logger_memoria, "## PID %d - Proceso Creado - Tamaño: <TAMAÑO>", pid);
-
 }
 
 void cargar_procesos_en_memoria() {
-    //procesos_en_memoria = dictionary_create();
-    if (procesos_en_memoria != NULL) {
-        dictionary_destroy_and_destroy_elements(procesos_en_memoria, (void*) destruir_proceso);
+    if (procesos_en_memoria == NULL) {
+        procesos_en_memoria = dictionary_create();
     }
-    procesos_en_memoria = dictionary_create();
+
 
     DIR* dir = opendir(memoria_configs.pathinstrucciones);
     if (!dir) {
@@ -134,9 +131,26 @@ void cargar_procesos_en_memoria() {
     }
 
 
-/*
-Obtener instrucción: “## PID: <PID> - Obtener instrucción: <PC> - Instrucción: <INSTRUCCIÓN> <...ARGS>”
-*/
+
+// Esto se lo retorna a CPU cuando pida una instrucción
+char* obtener_instruccion(int pid, int pc) {
+    char pid_key[10];
+    sprintf(pid_key, "%d", pid);
+
+    T_Proceso* proceso = dictionary_get(procesos_en_memoria, pid_key);
+    if (proceso != NULL && pc <= proceso->cantidad_instrucciones) {
+        const char* instruccion = proceso->instrucciones[pc-1];
+        log_info(logger_memoria, "## PID %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion);
+        return instruccion;
+    }
+
+    //log_info(logger_memoria, "No se encontró el proceso con PID %d o PC fuera de rango", pid);
+    log_info(logger_memoria, ":)) Disculpe, me puede mandar una patrulla acá a la colonia Morelos, 5º sector, pero desde ya porque va a dar chingazos.");
+
+    return NULL;
+}
+
+
 
 int main(int argc, char* argv[]) {
 
@@ -153,9 +167,10 @@ int main(int argc, char* argv[]) {
 
     log_info(logger_memoria, "Iniciando módulo Memoria...");
     cargar_procesos_en_memoria();
-
-
     dictionary_iterator(procesos_en_memoria, mostrar_proceso);
+    obtener_instruccion(1234, 1); // Estas dos lineas están simulando el pedido de una instrucción por parte de CPU
+    obtener_instruccion(1234, 4);
+
 
 
 /*
