@@ -1,4 +1,12 @@
 #include "memoria.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <commons/collections/dictionary.h>
+#include <commons/log.h>
+
+// No olividar de incluir el log obligatorio: Conexión de Kernel: “## Kernel Conectado - FD del socket: <FD_DEL_SOCKET>” 
 
 /*
 Check 2:
@@ -12,131 +20,155 @@ Check 2:
     y asi mismo no repetir archivos de instrucciones.
 */
 
-// Retorna una const somulando que hay x cantidad de bytes disponibles en memoria
-int obtener_espacio_libre_mock() {
-    return 1024; // Retorna 1KB como espacio libre (solo de prueba, lo está simulando)
-}
-
-#define MAX_LINEA 256
-#define MAX_INSTRUCCIONES 1024
-
 // Define una estructura para almacenar las instrucciones de un proceso:
 typedef struct {
     int pid;
     char** instrucciones;
     int cantidad_instrucciones;
-} ProcesoInstrucciones;
+} T_Proceso;
 
-ProcesoInstrucciones* cargar_instrucciones(const char* path_archivo, int pid) {
-    FILE* archivo = fopen(path_archivo, "r");   // va a abrir un archivo pseudocódigo (uno por proceso en este caso)
+// Globales
+t_dictionary* procesos_en_memoria;
+t_log* logger_memoria;
+
+// Retorna una const somulando que hay x cantidad de bytes disponibles en memoria
+int obtener_espacio_libre_mock() {
+    return 1024; // Retorna 1KB como espacio libre (solo de prueba, lo está simulando)
+}
+
+T_Proceso* leer_archivo_de_proceso(const char* filepath, int pid) {
+    FILE* archivo = fopen(filepath, "r");
     if (!archivo) {
-        perror("Error al abrir archivo de pseudocódigo");
+        log_error(logger_memoria, "No se pudo abrir el archivo del PID %d", pid);
         return NULL;
     }
 
-    ProcesoInstrucciones* proceso = malloc(sizeof(ProcesoInstrucciones));
-    proceso->pid = pid;
-    proceso->instrucciones = malloc(sizeof(char*) * MAX_INSTRUCCIONES);
-    proceso->cantidad_instrucciones = 0;
+    char** instrucciones = malloc(sizeof(char*) * 100); // Se puede ajustar dinámicamente luego
+    int cantidad = 0;
 
-    char buffer[MAX_LINEA];
-    while (fgets(buffer, MAX_LINEA, archivo) != NULL) {
-        // Elimina el salto de línea si lo hay
-        buffer[strcspn(buffer, "\r\n")] = 0;
-
-        proceso->instrucciones[proceso->cantidad_instrucciones] = strdup(buffer);
-        proceso->cantidad_instrucciones++;
+    char linea[256];
+    while (fgets(linea, sizeof(linea), archivo)) {
+        linea[strcspn(linea, "\n")] = 0; // Remueve el salto de línea
+        instrucciones[cantidad] = strdup(linea); // Copia segura
+        cantidad++;
     }
-    // Adentro de este while lo que está haciendo es leer linea por linea cada instrucción y 
-    // se las afana (se las guarda, para quien no es de Lanús) en un array de stirngs
 
     fclose(archivo);
-    return proceso; // devuelve un puntero a la estructura ProcesoInstrucciones
+
+    T_Proceso* proceso = malloc(sizeof(T_Proceso));
+    proceso->pid = pid;
+    proceso->instrucciones = instrucciones;
+    proceso->cantidad_instrucciones = cantidad;
+
+    return proceso;
 }
 
-const char* obtener_instruccion(ProcesoInstrucciones* proceso, int pc) {
-    if (pc < 0 || pc >= proceso->cantidad_instrucciones) {
-        return NULL; // si está fuera de rango
-    }
-    return proceso->instrucciones[pc];
-}
-// Esta funcion te va a devolver la instruccion que corresponde al pc (program counter) que le pases
-
-
-void liberar_proceso(ProcesoInstrucciones* proceso) {
+void destruir_proceso(void* proceso_void) {
+    T_Proceso* proceso = (T_Proceso*) proceso_void;
     for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
-        free(proceso->instrucciones[i]); // chau memoria de cada instrucción (la liberamos)
+        free(proceso->instrucciones[i]);
     }
+    
     free(proceso->instrucciones);
-    free(proceso);  // lo mismo con el proceso completo
+    free(proceso);
+
+    log_info(logger_memoria, "## PID: %d - Proceso Destruido - ...", proceso->pid);
+    /*
+    ESTE ES EL LOGGER OBLIGATORIO, POR AHORA (check 2) HAY INFO QUE TODAVÍA NO TENGO, POR LO QUE SOLO VOY A AVISAR DE LA DESTRUCCION DEL PROCESO CON SU RESPECTIVO PID
+    Destrucción de Proceso: “## PID: <PID> - Proceso Destruido - Métricas - Acc.T.Pag: <ATP>; Inst.Sol.: <Inst.Sol.>; 
+    SWAP: <SWAP>; Mem.Prin.: <Mem.Prin.>; Lec.Mem.: <Lec.Mem.>; Esc.Mem.: <Esc.Mem.>”
+     */
 }
 
-char* serializar_instrucciones(ProcesoInstrucciones* proceso) {
-    size_t buffer_size = MAX_LINEA * proceso->cantidad_instrucciones;
-    char* buffer = malloc(buffer_size);
-    buffer[0] = '\0'; // Inicializa el buffer como string vacío
+void cargar_proceso(int pid, const char* nombre_archivo) {
 
-    for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
-        strcat(buffer, proceso->instrucciones[i]);
-        if (i < proceso->cantidad_instrucciones - 1) {
-            strcat(buffer, "\n"); // Agrega un salto de línea entre instrucciones
+    char fullpath[512];
+    snprintf(fullpath, sizeof(fullpath), "%s/%s", memoria_configs.pathinstrucciones, nombre_archivo);
+
+    T_Proceso* proceso = leer_archivo_de_proceso(fullpath, pid);
+    if (proceso != NULL) {
+        dictionary_put(procesos_en_memoria, strdup(nombre_archivo), proceso);
+    }
+
+    // Creación de Proceso: “## PID: <PID> - Proceso Creado - Tamaño: <TAMAÑO>”
+    log_info(logger_memoria, "## PID %d - Proceso Creado - Tamaño: <TAMAÑO>", pid);
+
+}
+
+void cargar_procesos_en_memoria() {
+    //procesos_en_memoria = dictionary_create();
+    if (procesos_en_memoria != NULL) {
+        dictionary_destroy_and_destroy_elements(procesos_en_memoria, (void*) destruir_proceso);
+    }
+    procesos_en_memoria = dictionary_create();
+
+    DIR* dir = opendir(memoria_configs.pathinstrucciones);
+    if (!dir) {
+        log_error(logger_memoria, "No se pudo abrir el directorio de instrucciones");
+        return;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {  // Solo archivos regulares
+            log_info(logger_memoria, "Leyendo archivo: %s", entry->d_name);
+            int pid = atoi(entry->d_name); // Convierte nombre de archivo a PID
+            if (pid == 0 && strcmp(entry->d_name, "0") != 0)
+                continue; // No es un número válido
+
+            cargar_proceso(pid, entry->d_name);
+ 
         }
     }
-    // en este for lo que hace es concatenar cada instrucción al buffer (que es un string)
-    // es string se puede enviar por socket ewe
 
-    return buffer;
+    closedir(dir);
 }
 
-void enviar_instrucciones(int socket, ProcesoInstrucciones* proceso) {
-    char* paquete = serializar_instrucciones(proceso); 
-    enviar_mensaje(paquete, socket);
-    free(paquete);
-}
-// Llama a la funcion de serialización y lo envía por socket con la funcion enviar_mensaje
+    // Ejemplo: imprimir todos los procesos cargados
+    void mostrar_proceso(char* key, void* value) {
+        T_Proceso* proceso = (T_Proceso*)value;
+        printf("PID: %d\n", proceso->pid);
+        for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
+            printf("  - %s\n", proceso->instrucciones[i]);
+        }
+    }
+
+
+/*
+Obtener instrucción: “## PID: <PID> - Obtener instrucción: <PC> - Instrucción: <INSTRUCCIÓN> <...ARGS>”
+*/
 
 int main(int argc, char* argv[]) {
 
-    const char* path = "/home/utnso/scripts/1234"; // esto despues hay que cambiarlo. 
+    logger_memoria = log_create("memoria.log", "MEMORIA", true, LOG_LEVEL_INFO);
+
+
+    //const char* path = "/home/utnso/scripts/1234"; // esto despues hay que cambiarlo. 
     // Tiene que ser un pseudocódigo por cada proceso dentro de la ruta que pide el enunciado (en /untso/scripts)
-    int pid = 1; // Es un ejemplo
-
-    saludar("memoria");
-    inicializar_configs();
-
-    int socket_memoria = iniciar_servidor_memoria();
-
-    enviar_mensaje("Hola como andas :3 soy la memoria", socket_memoria);
-
-    char* mensaje = recibir_mensaje(socket_memoria);
-    log_info(logger_sockets, "Me llego esto: %s", mensaje);
-
-    log_info(logger_sockets, "Voy a cargar las instrucciones");
-    ProcesoInstrucciones* proceso = cargar_instrucciones(path, pid);
-    if (!proceso) {
-        return 1;   // aca pincha si no podemos cargar el archivo
-    }
-    // Acá usar cargar_instrucciones para leer el archivo y justamente, obtener esas instrucciones
-
     
-    for (int pc = 0; pc < proceso->cantidad_instrucciones; pc++) {
-        const char* instruccion = obtener_instruccion(proceso, pc);
-        printf("## PID: %d - Obtener instrucción: %d - Instrucción: %s\n", pid, pc, instruccion);
-    }
 
+    inicializar_configs();
+    int socket_memoria = iniciar_servidor_memoria();
+    
+
+    log_info(logger_memoria, "Iniciando módulo Memoria...");
+    cargar_procesos_en_memoria();
+
+
+    dictionary_iterator(procesos_en_memoria, mostrar_proceso);
+
+
+/*
     log_info(logger_sockets, "Voy a obtener espacio libre mock");
     obtener_espacio_libre_mock();
     int resultado = obtener_espacio_libre_mock();
     log_info(logger_sockets, "Espacio libre mock obtenido correctamente: %i", resultado);
     // muestra el dato de color de lo que vale el mock nada mas
+*/
 
-    log_info(logger_sockets, "Enviando instrucciones al otro módulo...");
-    enviar_instrucciones(socket_memoria, proceso);    
-
-    liberar_proceso(proceso);
-    free(mensaje);
-
+    dictionary_destroy_and_destroy_elements(procesos_en_memoria, free); // Si querés liberar también instrucciones hay que hacer free de cada string
     log_destroy(logger_sockets);
+    log_destroy(logger_memoria);
     config_destroy(memoria_tconfig);
 
     return 0;
