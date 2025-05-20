@@ -36,4 +36,14 @@ extern kernelconfigs kernel_configs;
 void inicializar_configs();
 
 
+/**
+ * @brief Destruye el struct kernelconfigs
+ * 
+ * Esta función no recibe parámetros. Destruye el struct kernelconfigs y libera la memoria
+ * 
+ */
+void destruir_configs();
+
+
+
 #endif

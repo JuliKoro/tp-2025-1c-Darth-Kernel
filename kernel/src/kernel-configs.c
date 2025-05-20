@@ -25,3 +25,13 @@ void inicializar_configs(){
 }
 
 
+void destruir_configs() {
+    //LIbero memoria
+    free(kernel_configs.ipmemoria);
+    free(kernel_configs.cortoplazo);
+    free(kernel_configs.ingreasoaready);
+    free(kernel_configs.loglevel);
+
+    //Destruyo el config
+    config_destroy(kernel_tconfig);
+}

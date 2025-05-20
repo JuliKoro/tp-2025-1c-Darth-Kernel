@@ -4,8 +4,6 @@
 t_log* logger_sockets;
 
 // Funciones auxiliares
-
-
 const char* int_a_string(int numero) {
     static char buffer[6];
     sprintf(buffer, "%d", numero);
@@ -25,7 +23,13 @@ char* nombre_modulo(id_modulo_t modulo) {
     }
     return NULL;
 }   
-// Funciones de conexión
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de conexión
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 int iniciar_servidor(const char* puerto) {
     int socket_servidor;
     struct addrinfo hints, *server_info;
@@ -139,7 +143,12 @@ int esperar_cliente(int socket_servidor) {
     return socket_cliente;
 }
 
-// Funciones de mensajes
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de envio y recepcion de mensajes
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 void enviar_mensaje(char* mensaje, int socket) {
     if(mensaje == NULL || logger_sockets == NULL){
         return;
@@ -182,7 +191,12 @@ char* recibir_mensaje(int socket) {
     return buffer;
 }
 
-// Funciones de handshake
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de handshake
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 int enviar_handshake(int socket, id_modulo_t modulo) {
     //Casteo enum a uint8_t
     u_int8_t id = (u_int8_t)modulo;
@@ -210,5 +224,63 @@ int recibir_handshake(int socket, id_modulo_t* modulo_recibido) {
     
     log_info(logger_sockets, "Handshake de %s (ID %d) recibido!", nombre_modulo((id_modulo_t)id), id);
     
+    return 0;
+}
+
+int enviar_pcb(int socket, t_pcb* pcb) {
+    //Envio el pcb al socket, chequeo errores
+    if(send(socket, pcb, sizeof(t_pcb), 0) == -1){
+        log_error(logger_sockets, "Error al enviar pcb (SOCKET %d): %s", socket, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int recibir_pcb(int socket) {
+    t_pcb* pcb = malloc(sizeof(t_pcb));
+    if(pcb == NULL){
+        log_error(logger_sockets, "Error al reservar memoria para el pcb (SOCKET %d): %s", socket, strerror(errno));
+        return -1;
+    }
+    //Recibo el pcb, chequeo errores
+    if(recv(socket, pcb, sizeof(t_pcb), 0) == -1){
+        log_error(logger_sockets, "Error al recibir pcb (SOCKET %d): %s", socket, strerror(errno));
+        free(pcb);
+        return -1;
+    }
+    return 0;
+}
+
+bool enviar_bool(int socket, bool resultado) {
+    //Envio el bool al socket, chequeo errores
+    if(send(socket, &resultado, sizeof(bool), 0) == -1){
+        log_error(logger_sockets, "Error al enviar bool (SOCKET %d): %s", socket, strerror(errno));
+        return false;
+    }
+    return true;
+}
+
+bool recibir_bool(int socket) {
+    bool resultado;
+    //Recibo el bool, chequeo errores
+    if(recv(socket, &resultado, sizeof(bool), 0) == -1){
+        log_error(logger_sockets, "Error al recibir bool (SOCKET %d): %s", socket, strerror(errno));
+        return false;
+    }
+    return resultado;
+}
+
+int enviar_handshake_io(int socket, char* nombre_io) {
+    // Enviamos el nombre del IO como mensaje
+    enviar_mensaje(nombre_io, socket);
+    return 0;
+}
+
+int recibir_handshake_io(int socket, char** nombre_io) {
+    // Recibimos el nombre del IO como mensaje
+    *nombre_io = recibir_mensaje(socket);
+    if (*nombre_io == NULL) {
+        return -1;
+    }
     return 0;
 }

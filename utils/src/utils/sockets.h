@@ -18,14 +18,18 @@
 
 // Includes locales
 #include <utils/logger.h>
+#include <utils/pcb.h>
 
 #define IPLOCAL "127.0.0.1"
 
 extern t_log* logger_sockets;
 
-/**
-* @brief Tipos de modulo para handshake, arranca en 1
-*/
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Tipos de modulo para handshake
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 typedef enum {
     HANDSHAKE_CPU = 1,
     HANDSHAKE_KERNEL,
@@ -41,6 +45,12 @@ char* nombre_modulo(id_modulo_t modulo);
 * @return Devuelve el descriptor del socket
 */
 int iniciar_servidor(const char* puerto);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de conexión
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /**
 * @brief Obtiene informacion de la ip, crea un socket, lo conecta con el 
@@ -67,6 +77,13 @@ int esperar_cliente(int socket_servidor);
 * @param logger el logger del modulo que envia el mensaje
 * @return Nada 
 */
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de envio y recepcion de mensajes
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 void enviar_mensaje(char* mensaje, int socket);
 
 /**
@@ -104,5 +121,68 @@ int enviar_handshake(int socket, id_modulo_t modulo);
 */
 int recibir_handshake(int socket, id_modulo_t* modulo_recibido);
 
+/**
+* @brief Envia un pcb
+* @param socket el socket al cual se envia el pcb
+* @param pcb el pcb a enviar
+* @return 
+*/  
+int enviar_pcb(int socket, t_pcb* pcb);
+
+
+
+/**
+* @brief Recibe un pcb
+* @param socket el socket desde el cual se recibe el pcb
+* @return el pcb recibido
+*/
+int recibir_pcb(int socket);
+
+
+
+/**
+* @brief Envia un bool
+* @param socket el socket al cual se envia el bool
+* @param resultado el bool a enviar
+* @return 
+*/
+bool enviar_bool(int socket, bool resultado);
+
+
+/**
+* @brief Recibe un bool
+* @param socket el socket desde el cual se recibe el bool
+* @return el bool recibido
+*/
+bool recibir_bool(int socket);
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de handshake IO
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+* @brief Envia handshake
+* @param socket el socket al cual se envia el mensaje de handshake
+* @param nombre_io el nombre del io, el cual seria el valor del handshake
+* @return 
+*/
+int enviar_handshake_io(int socket, char* nombre_io);
+
+/**
+* @brief Recibe handshake
+* @param socket el socket desde el cual se recibe el mensaje de handshake
+* @param nombre_io puntero donde se guardará el nombre del io recibido
+* @return 
+*/
+int recibir_handshake_io(int socket, char** nombre_io);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de handshake CPU
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 #endif

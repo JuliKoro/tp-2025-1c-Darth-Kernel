@@ -7,6 +7,9 @@
 #include <utils/logger.h>
 
 #include "kernel-configs.h"
+#include "planificacion.h"
+#include "syscalls.h"
+#include "kernel-log.h"
 
 //Conexion con CPU
 
@@ -42,5 +45,12 @@ int iniciar_servidor_io(void);
 * @return Devuelve socket del cliente para comunicarse con memoria
 */
 int kernel_conectar_a_memoria(void);
+
+/**
+* @brief Solicita la creación de un proceso a memoria
+* @param pcb: PCB del proceso a crear
+* @return Devuelve true si la solicitud es exitosa, false en caso contrario
+*/
+bool solicitar_creacion_proceso(t_pcb* pcb);
 
 #endif
