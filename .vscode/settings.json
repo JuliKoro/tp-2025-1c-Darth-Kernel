@@ -13,6 +13,7 @@
         "io.h": "c",
         "kernel-conexiones.h": "c",
         "io-conexiones.h": "c",
+        "memoria.h": "c",
         "pcb.h": "c",
         "planificacion-largo-plazo.h": "c",
         "kernel-log.h": "c",
