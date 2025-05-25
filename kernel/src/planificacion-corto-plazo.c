@@ -1,8 +1,8 @@
 #include "planificacion-corto-plazo.h"
 
 void iniciar_planificador_corto_plazo() {
-    switch (obtener_algoritmo(kernel_configs.cortoplazo)) {
-        case FIFO:
+    switch (obtener_algoritmo_corto_plazo(kernel_configs.cortoplazo)) {
+        case FIFOX:
             while(true) {
             //1. Envio proceso desde cola NEW a cola READY
             t_pcb* pcb = obtener_pcb_de_cola_new();
@@ -38,9 +38,9 @@ void iniciar_planificador_corto_plazo() {
     }
 }
 
-algoritmo_corto_plazo obtener_algoritmo(char* algoritmo) {
+algoritmo_corto_plazo obtener_algoritmo_corto_plazo(char* algoritmo) {
     if (strcmp(algoritmo, "FIFO") == 0) {
-        return FIFO;
+        return FIFOX;
     }
     if (strcmp(algoritmo, "SJF_SIN_DESALOJO") == 0) {
         return SJF_SIN_DESALOJO;

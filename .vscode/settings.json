@@ -18,6 +18,9 @@
         "planificacion-largo-plazo.h": "c",
         "kernel-log.h": "c",
         "planificacion.h": "c",
-        "hello.h": "c"
+        "hello.h": "c",
+        "manejo-io.h": "c",
+        "syscalls.h": "c",
+        "planificacion-corto-plazo.h": "c"
     }
 }

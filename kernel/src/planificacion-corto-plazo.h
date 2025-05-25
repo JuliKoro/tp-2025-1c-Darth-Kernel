@@ -5,6 +5,6 @@
 
 void iniciar_planificador_corto_plazo();
 
-algoritmo_corto_plazo obtener_algoritmo(char* algoritmo);
+algoritmo_corto_plazo obtener_algoritmo_corto_plazo(char* algoritmo);
 
 #endif

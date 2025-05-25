@@ -45,8 +45,8 @@ void io (char* nombre_io, int tiempo_io) {
     //Si existe, proceso va a BLOCKED
 
     //Se envia la peticion al IO
-    pthread_mutex_lock(&io->mutex_cola_blocked_io);
-    queue_push(io->cola_blocked_io, obtener_pid_actual()); // Esto esta mal
+    //pthread_mutex_lock(&io->mutex_cola_blocked_io);
+    //queue_push(io->cola_blocked_io, obtener_pid_actual()); // Esto esta mal
     pthread_mutex_unlock(&io->mutex_cola_blocked_io);
     //Se espera a que el IO finalice la operacion
 

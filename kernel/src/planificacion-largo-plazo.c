@@ -1,13 +1,13 @@
 #include "planificacion-largo-plazo.h"
 
-algoritmo_largo_plazo obtener_algoritmo(char* algoritmo) {
+algoritmo_largo_plazo obtener_algoritmo_largo_plazo(char* algoritmo) {
    if (strcmp(algoritmo, "FIFO") == 0) {
       return FIFO;
    }
    return PMCP;
 }
 void iniciar_planificador_largo_plazo() {
-    switch (obtener_algoritmo(kernel_configs.ingreasoaready)) {
+    switch (obtener_algoritmo_largo_plazo(kernel_configs.ingreasoaready)) {
         case FIFO:
             while(true) {
                 //1. Verifico si hay procesos en cola running que hayan terminado
@@ -20,7 +20,7 @@ void iniciar_planificador_largo_plazo() {
                     continue;
                 }
                 if(solicitar_creacion_proceso(pcb)) { 
-                    log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY");
+                    log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY", pcb->pid);
                     pcb = obtener_pcb_de_cola_new();
                     agregar_pcb_a_cola_ready(pcb);
                 }

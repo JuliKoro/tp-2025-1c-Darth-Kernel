@@ -7,8 +7,6 @@
 #include <utils/logger.h>
 
 #include "kernel-configs.h"
-#include "planificacion.h"
-#include "syscalls.h"
 #include "kernel-log.h"
 
 //Conexion con CPU

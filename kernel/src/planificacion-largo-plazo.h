@@ -9,6 +9,6 @@
 
 void iniciar_planificador_largo_plazo();
 
-algoritmo_largo_plazo obtener_algoritmo(char* algoritmo);
+algoritmo_largo_plazo obtener_algoritmo_largo_plazo(char* algoritmo);
 
 #endif

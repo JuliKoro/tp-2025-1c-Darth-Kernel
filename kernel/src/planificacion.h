@@ -6,7 +6,7 @@
 
 // External libraries
 #include <commons/collections/list.h>
-#include <commons/collections/queue.h>n
+#include <commons/collections/queue.h>
 
 // Local includes
 #include <utils/pcb.h>
@@ -41,7 +41,7 @@ typedef enum {
 } algoritmo_largo_plazo;
 
 typedef enum {
-    FIFO,
+    FIFOX,
     SJF_SIN_DESALOJO,
     SFJ_CON_DESALOJO
 } algoritmo_corto_plazo;
