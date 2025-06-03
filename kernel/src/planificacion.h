@@ -300,4 +300,7 @@ void disminuir_grado_multiprogramacion();
  */
 bool comprobar_grado_multiprogramacion_maximo();
 
+
+
+
 #endif

@@ -21,6 +21,8 @@
         "hello.h": "c",
         "manejo-io.h": "c",
         "syscalls.h": "c",
-        "planificacion-corto-plazo.h": "c"
+        "planificacion-corto-plazo.h": "c",
+        "memoria-configs.h": "c",
+        "memoria-log.h": "c"
     }
 }
