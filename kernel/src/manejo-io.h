@@ -3,7 +3,8 @@
 
 #include "planificacion.h"
 #include "kernel-conexiones.h"
-
+#include <kernel-log.h>
+#include <utils/listas.h>
 
 
 
@@ -15,6 +16,13 @@
  */
 void* iniciar_receptor_io();
 
+/**
+ * @brief Compara el nombre de un IO
+ * 
+ * Esta función compara el nombre de un IO con el nombre de un IO
+ * 
+ */
+bool comparar_nombre_io(void* elemento, void* nombre_a_comparar);
 
 /**
  * @brief Guarda el IO en la lista de IO
@@ -23,6 +31,8 @@ void* iniciar_receptor_io();
  * 
  */
 void* guardar_io(void* socket_ptr);
+
+
 
 
 /**
@@ -34,5 +44,7 @@ void* guardar_io(void* socket_ptr);
 void agregar_io_a_lista(t_io* io);
 
 void mostrar_lista_io();
+
+void aumentar_instancias_disponibles(char* nombre_io);
 
 #endif

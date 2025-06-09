@@ -28,11 +28,16 @@ extern u_int32_t grado_multiprogramacion;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 typedef struct {
-    char* nombre_io;
     int socket_io; //El socket de la conexion lo guardamos para poder enviar las peticiones al modulo.
+    int pid_actual; //El PID del proceso actual que esta esperando la respuesta del modulo IO. -1 si esta libre
+} t_instancia_io;
+
+typedef struct {
+    char* nombre_io;
+    t_list* instancias_io; //Lista con las instancias disponibles del modulo IO. Contiene el socket y el pid actual de cada instancia.
     t_queue* cola_blocked_io; //Esta es la cola de procesos que estan bloqueados esperando la respuesta del modulo IO, contiene los PIDs
-    int pid_actual; //El PID del proceso actual que esta esperando la respuesta del modulo IO.
     pthread_mutex_t mutex_cola_blocked_io; //Mutex para la cola de procesos bloqueados, ya que vamos a modificar la cola
+    int instancias_disponibles; //Cantidad de instancias disponibles del modulo IO.
 } t_io;
 
 typedef enum {

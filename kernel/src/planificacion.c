@@ -16,13 +16,13 @@ u_int32_t grado_multiprogramacion = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-t_queue* cola_new;
-t_queue* cola_ready;
-t_queue* cola_exit;
-t_queue* cola_blocked;
-t_queue* cola_executing;
+t_queue* cola_new = NULL;
+t_queue* cola_ready = NULL;
+t_queue* cola_exit = NULL;
+t_queue* cola_blocked = NULL;
+t_queue* cola_executing = NULL;
 
-t_list* lista_io;
+t_list* lista_io = NULL;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +52,6 @@ void inicializar_colas() {
     cola_exit = queue_create();
     cola_blocked = queue_create();
     cola_executing = queue_create();
-    lista_io = list_create();
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {

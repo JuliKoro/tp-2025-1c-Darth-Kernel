@@ -14,6 +14,7 @@ int main(int argc, char* argv[]) {
     // char* archivo_pseudocodigo = argv[1];
 
     //Primero levanto las configs, despues el logger
+    lista_io = list_create();
     inicializar_colas();
     inicializar_configs();
     inicializar_logger_kernel();
@@ -25,8 +26,11 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread_receptor_io, NULL, iniciar_receptor_io, NULL);
     pthread_detach(thread_receptor_io);
 
+    
+    
     while(1) {
         sleep(1);
+        mostrar_lista_io();
     }
    
     destruir_logger_kernel();
