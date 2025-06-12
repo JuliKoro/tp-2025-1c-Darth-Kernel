@@ -6,7 +6,12 @@
 #include <kernel-log.h>
 #include <utils/listas.h>
 
+//Estructura de mensaje para modulo IO
 
+typedef struct {
+    int pid;
+    int tiempo;
+} t_solicitud_io;
 
 /**
  * @brief Inicia el receptor de IO
