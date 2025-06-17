@@ -33,9 +33,9 @@ int main(int argc, char* argv[]) {
     // Logica del envio de mensajes con kernel delegada (esta abajo de todo fuera del main)
     manejar_kernel(socket_kernel, logger_io, nombre_io);
 
-    while(1) {
-        sleep(1);
-    }
+    // while(1) {
+    //     sleep(1);
+    // }
 
     shutdown(socket_kernel, SHUT_RDWR);    
     close(socket_kernel);
@@ -63,8 +63,24 @@ int manejar_kernel(int socket_kernel, t_log* io_logger, char* nombre_io) { // se
     log_info(io_logger, "Mensaje recibido del kernel: %s", mensaje);
 
     free(mensaje);
+    while(1) {
+        t_paquete* paquete = recibir_paquete(socket_kernel);
+        if(paquete == NULL) {
+            log_error(io_logger, "Error al recibir paquete de Kernel. Cerrando conexion");
+            return -1;
+        }
+        if(paquete->codigo_operacion == PAQUETE_SOLICITUD_IO) {
+            log_info(io_logger, "Recibido paquete de solicitud de IO");
+            t_solicitud_io* solicitud = deserializar_solicitud_io(paquete->buffer);
+            log_info(io_logger, "PID: %d, Tiempo: %d", solicitud->pid, solicitud->tiempo);
+            usleep(solicitud->tiempo * 1000000);
+            enviar_mensaje("IO finalizada", socket_kernel);
+        }
 
-    //xd
+        liberar_paquete(paquete);
+        
+    }
+    
 
     return 0;
 }

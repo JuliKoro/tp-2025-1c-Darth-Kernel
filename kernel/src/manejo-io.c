@@ -60,6 +60,56 @@ void aumentar_instancias_disponibles(char* nombre_io) {
     pthread_mutex_unlock(&mutex_io);
 }
 
+void eliminar_instancia_io(int socket_io){
+    pthread_mutex_lock(&mutex_io);
+
+    for(int i = 0; i < list_size(lista_io); i++) {
+        t_io* io = list_get(lista_io, i);
+        for(int j = 0; j < list_size(io->instancias_io); j++) {
+            t_instancia_io* instancia_io = list_get(io->instancias_io, j);
+            if(instancia_io->socket_io == socket_io) {
+                list_remove(io->instancias_io, j);
+                free(instancia_io);
+                io->instancias_disponibles--;
+                log_info(logger_kernel, "[IO] Instancia de IO eliminada. Instancias disponibles de %s: %d", io->nombre_io, io->instancias_disponibles);
+                
+                if(list_is_empty(io->instancias_io)) {
+
+                    list_remove(lista_io, i);
+                    free(io);
+                    log_info(logger_kernel, "[IO] IO eliminada de la lista");
+                }
+                break;
+            }
+        }
+    }
+    
+    pthread_mutex_unlock(&mutex_io);
+}
+
+void* atender_io(void* socket_ptr){
+    int socket_io = (int)(intptr_t)socket_ptr;
+
+    char buffer[1];
+    ssize_t bytes_recibidos;
+
+
+    while(1){
+        bytes_recibidos = recv(socket_io, buffer, sizeof(buffer), 0);
+        if(bytes_recibidos == 0) {
+            log_warning(logger_kernel, "[IO] Conexion cerrada en el socket %d", socket_io);
+            break;
+        } else if(bytes_recibidos < 0) {
+            log_error(logger_kernel, "[IO] Error al recibir datos de IO. Cerrando conexion.");
+            break;
+        }
+    }
+
+    close(socket_io);
+    eliminar_instancia_io(socket_io);
+    return NULL;
+}
+
 void* guardar_io(void* socket_ptr) {
     int socket_io = (int)(intptr_t)socket_ptr;
 
@@ -108,8 +158,9 @@ void* guardar_io(void* socket_ptr) {
         
         log_info(logger_kernel, "[IO] Mutex de cola blocked inicializado");
 
-        io_nueva->nombre_io = nombre_io;
+        io_nueva->nombre_io = strdup(nombre_io);
         log_info(logger_kernel, "[IO] Nombre del IO copiado");
+        free(nombre_io);
 
         io_nueva->instancias_io = list_create(); //Creo la lista de instancias para este IO
         if(io_nueva->instancias_io == NULL) {
@@ -138,7 +189,19 @@ void* guardar_io(void* socket_ptr) {
         io_nueva->instancias_disponibles = 1;
         log_info(logger_kernel, "[IO] Instancias disponibles de IO aumentadas a 1");
         agregar_io_a_lista(io_nueva);
-        log_info(logger_kernel, "[IO] IO %s agregado a la lista", nombre_io);
+        log_info(logger_kernel, "[IO] IO %s agregado a la lista", io_nueva->nombre_io);
+
+        //Despues de agregar la IO a la lista, creo el hilo de atencion
+
+         pthread_t hilo_atencion_io;
+
+        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)(intptr_t)socket_io) == 0) {
+            pthread_detach(hilo_atencion_io);
+        } else {
+            log_error(logger_kernel, "[IO] Error al crear hilo de atencion de IO");
+        }
+
+        
     } else {
         t_instancia_io* instancia_io = malloc(sizeof(t_instancia_io)); //Creo una instancia de este IO
         if(instancia_io == NULL) {
@@ -152,10 +215,22 @@ void* guardar_io(void* socket_ptr) {
         list_add(io->instancias_io, instancia_io); //Agrego esta instancia en la lista de instancias del IO
         io->instancias_disponibles++;
         log_info(logger_kernel, "[IO] Instancias disponibles de %s aumentadas a %d", io->nombre_io, io->instancias_disponibles);
+
+        //Despues de agregar la instancia a la lista, creo el hilo de atencion
+
+        pthread_t hilo_atencion_io;
+
+        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)(intptr_t)socket_io) == 0) {
+            pthread_detach(hilo_atencion_io);
+        }
     }
     //pthread_mutex_unlock(&mutex_io);
     
     enviar_mensaje("IO agregado a la lista", socket_io);
+
+   
+   
+
 
     //mostrar_lista_io();
 

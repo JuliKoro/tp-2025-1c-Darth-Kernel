@@ -2,6 +2,11 @@
 #define SERIALIZACION_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +91,7 @@ char *buffer_read_string(t_buffer *buffer, uint32_t *length);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-t_buffer serializar_solicitud_io(t_solicitud_io* solicitud);
+t_buffer* serializar_solicitud_io(t_solicitud_io* solicitud);
 
 t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer);
 

@@ -24,11 +24,11 @@ void buffer_destroy(t_buffer *buffer) {
 }
 
 void buffer_add(t_buffer *buffer, void *data, uint32_t size) {
-    memcpy(buffer->stream + buffer->offset, data, size);
     if(buffer->offset + size > buffer->size){
         printf("Error: Buffer overflow\n");
         exit(1);
     }
+    memcpy(buffer->stream + buffer->offset, data, size);
     buffer->offset += size;
 }
 
@@ -86,7 +86,7 @@ char *buffer_read_string(t_buffer *buffer, uint32_t *length) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 t_buffer* serializar_solicitud_io(t_solicitud_io* solicitud) {
-    t_buffer* buffer = buffer_create(sizeof(t_solicitud_io));
+    t_buffer* buffer = buffer_create(2 * sizeof(uint32_t));
     buffer_add_uint32(buffer, solicitud->pid);
     buffer_add_uint32(buffer, solicitud->tiempo);
     return buffer;
@@ -158,6 +158,7 @@ t_paquete* recibir_paquete(int socket){
     //Recibir tamaño del buffer
     recv(socket, &(paquete->buffer->size), sizeof(uint32_t), 0);
     paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->offset = 0;
 
     //Recibir buffer
     recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);

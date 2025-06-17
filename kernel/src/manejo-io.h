@@ -5,13 +5,8 @@
 #include "kernel-conexiones.h"
 #include <kernel-log.h>
 #include <utils/listas.h>
+#include <utils/serializacion.h>
 
-//Estructura de mensaje para modulo IO
-
-typedef struct {
-    int pid;
-    int tiempo;
-} t_solicitud_io;
 
 /**
  * @brief Inicia el receptor de IO
@@ -51,5 +46,9 @@ void agregar_io_a_lista(t_io* io);
 void mostrar_lista_io();
 
 void aumentar_instancias_disponibles(char* nombre_io);
+
+void* atender_io(void* socket_ptr);
+
+void eliminar_instancia_io(int socket_io);
 
 #endif

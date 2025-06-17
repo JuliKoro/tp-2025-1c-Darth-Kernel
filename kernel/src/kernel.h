@@ -4,6 +4,7 @@
 #include <utils/sockets.h>
 #include <utils/hello.h>
 #include <utils/configs.h> //borrar?
+#include <utils/serializacion.h>
 
 #include "kernel-conexiones.h"
 #include "kernel-configs.h"
