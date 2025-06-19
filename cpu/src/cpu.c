@@ -29,19 +29,24 @@ int main(int argc, char* argv[]) {
 
    // Conexion con Memoria
    int socket_memoria = cpu_conectar_a_memoria(id_cpu);
-
-   enviar_mensaje("Hola memoria como andas :3 soy el CPU", socket_memoria);
-
-   char* mensaje = recibir_mensaje(socket_memoria);
-
-   log_info(logger_sockets, "Me llego esto: %s", mensaje);
    
-   // Aca reciben las instrucciones de Memoria :)
-   char* paquete = recibir_mensaje(socket_memoria);
-   printf("Instrucciones recibidas:\n%s\n", paquete);
-   free(paquete);
+   while(1){ // loop de CPU
+      // ASIGANCION DE PROCESO
+      // Espero y recibo desde Kernel (PID + PC)
+      t_list* paquete_proceso = recibir_paquete(socket_kernel_dispatch);
+      int* pid = list_get (paquete_proceso, 1);
+      int* pc = list_get (paquete_proceso, 2);
+      printf("Proceso recibido:\n");
+      log_info(logger_cpu, "## PID: %ls - FETCH - Program Counter: %ls", pid, pc);
 
-   free(mensaje);
+      //CICLO DE INSTRUCCION
+      ciclo_instruccion(pid, pc, socket_memoria);
+      
+
+   }
+
+   log_info(logger_cpu, "Finalizando ejecución del CPU %d", id_cpu);
+
    close(socket_memoria);
    log_destroy(logger_sockets);
    config_destroy(cpu_tconfig);

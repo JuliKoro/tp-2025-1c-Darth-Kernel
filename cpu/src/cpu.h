@@ -3,6 +3,7 @@
 
 #include "cpu-conexiones.h"
 #include "cpu-configs.h"
+#include "ciclo-instruccion.h"
 
 #include <utils/sockets.h>
 #include <utils/hello.h>
