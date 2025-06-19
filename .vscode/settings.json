@@ -24,6 +24,7 @@
         "planificacion-corto-plazo.h": "c",
         "memoria-configs.h": "c",
         "memoria-log.h": "c",
-        "serializacion.h": "c"
+        "serializacion.h": "c",
+        "cpu-conexiones.h": "c"
     }
 }
