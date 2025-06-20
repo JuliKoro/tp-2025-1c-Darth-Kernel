@@ -22,6 +22,7 @@ typedef struct {
     int pid;
     char** instrucciones;
     int cantidad_instrucciones;
+    t_list* paginas_asignadas; // Lista de páginas asignadas a este proceso
 } t_proceso;
 
 int obtener_espacio_libre_mock();
@@ -37,5 +38,6 @@ void cargar_procesos_en_memoria();
 void mostrar_proceso(char* key, void* value);
 
 const char* obtener_instruccion(int pid, int pc);
+
 
 #endif

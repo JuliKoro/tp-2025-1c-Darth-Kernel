@@ -1,4 +1,5 @@
 #include "instrucciones.h"
+#include "memoria.h"
 
 t_dictionary* procesos_en_memoria;
 
@@ -35,21 +36,30 @@ t_proceso* leer_archivo_de_proceso(const char* filepath, int pid) {
 
 void destruir_proceso(void* proceso_void) {
     t_proceso* proceso = (t_proceso*) proceso_void;
-    for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
-        free(proceso->instrucciones[i]);
+    
+    // Liberar páginas
+    t_tabla_paginas* tabla = dictionary_get(administrador_memoria->tablas_paginas, string_itoa(proceso->pid));
+    if (tabla) {
+        // Liberar marcos y entradas swap
+        dictionary_remove(administrador_memoria->tablas_paginas, string_itoa(proceso->pid));
     }
     
-    log_info(logger_memoria, "## PID: %d - Proceso Destruido - ...", proceso->pid);
-
+    // Mostrar métricas
+    t_metricas_proceso* metricas = dictionary_get(administrador_memoria->metricas_proceso, string_itoa(proceso->pid));
+    if (metricas) {
+        log_info(logger_memoria, 
+               "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d; Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
+               proceso->pid, 
+               metricas->accesos_tablas_paginas,
+               metricas->instrucciones_solicitadas,
+               metricas->bajadas_swap,
+               metricas->subidas_memoria,
+               metricas->lecturas_memoria,
+               metricas->escrituras_memoria);
+    }
+    
     free(proceso->instrucciones);
     free(proceso);
-
-    
-    /*
-    ESTE ES EL LOGGER OBLIGATORIO, POR AHORA (check 2) HAY INFO QUE TODAVÍA NO TENGO, POR LO QUE SOLO VOY A AVISAR DE LA DESTRUCCION DEL PROCESO CON SU RESPECTIVO PID
-    Destrucción de Proceso: "## PID: <PID> - Proceso Destruido - Métricas - Acc.T.Pag: <ATP>; Inst.Sol.: <Inst.Sol.>; 
-    SWAP: <SWAP>; Mem.Prin.: <Mem.Prin.>; Lec.Mem.: <Lec.Mem.>; Esc.Mem.: <Esc.Mem.>"
-     */
 }
 
 void cargar_proceso(int pid, const char* nombre_archivo) {
@@ -112,8 +122,7 @@ const char* obtener_instruccion(int pid, int pc) {
         return instruccion;
     }
 
-    //log_info(logger_memoria, "No se encontró el proceso con PID %d o PC fuera de rango", pid);
-    log_info(logger_memoria, ":)) Disculpe, me puede mandar una patrulla acá a la colonia Morelos, 5º sector, pero desde ya porque va a dar chingazos.");
+    log_info(logger_memoria, "No se encontró el proceso con PID %d o PC fuera de rango", pid);
 
     return NULL;
 }
