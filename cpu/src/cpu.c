@@ -35,9 +35,11 @@ int main(int argc, char* argv[]) {
       // Espero y recibo desde Kernel (PID + PC)
       t_list* paquete_proceso = recibir_paquete(socket_kernel_dispatch);
       int* pid = list_get (paquete_proceso, 1);
-      int* pc = list_get (paquete_proceso, 2);
+      uint32_t* pc = list_get (paquete_proceso, 2);
       printf("Proceso recibido:\n");
       log_info(logger_cpu, "## PID: %ls - FETCH - Program Counter: %ls", pid, pc);
+
+      // LIMPIAR TLB Y CACHE DE PAGINAS
 
       //CICLO DE INSTRUCCION
       ciclo_instruccion(pid, pc, socket_memoria);

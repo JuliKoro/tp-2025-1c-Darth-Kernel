@@ -1,16 +1,22 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(int pid, int pc, int socket_memoria){
+void ciclo_instruccion(int pid, uint32_t pc, int socket_memoria){
     while(1){ // loop ciclo de instruccion
         
-        fetch(pid, pc, socket_memoria);
-        decode();
+        char* paquete_instruccion = fetch(pid, pc, socket_memoria);
+        instruccion_decodificada* instruccion = decodificar_instruccion(paquete_instruccion, pc);
         check_interrupt();
+
+
+        // LIMPIAR INSTRUCCIONES
+        destruir_instruccion(instruccion);
+        free(paquete_instruccion);
     }
     
 }
 
-void fetch(int pid, int pc, int socket_memoria){
+// ETAPA FETCH
+char* fetch(int pid, uint32_t pc, int socket_memoria){
     //Le pido a memoria la instruccion
     t_paquete* paquete = crear_paquete();
     agregar_a_paquete(paquete, pid);
@@ -22,5 +28,65 @@ void fetch(int pid, int pc, int socket_memoria){
     char* instruccion = recibir_mensaje(socket_memoria);
     printf("Instruccion recibida:\n%s\n", instruccion);
 
-   return instruccion;
+    return instruccion;
+}
+
+// ETAPA DECODE
+instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pc_actual) {
+    instruccion_decodificada* instruccion = malloc(sizeof(instruccion_decodificada));
+    memset(instruccion, 0, sizeof(instruccion_decodificada));
+    
+    char** tokens = string_split(instruccion_str, " ");
+    
+    if(strcmp(tokens[0], "NOOP") == 0) {
+        instruccion->tipo = NOOP;
+    }
+    else if(strcmp(tokens[0], "WRITE") == 0) {
+        instruccion->tipo = WRITE;
+        instruccion->direccion = atoi(tokens[1]);
+        instruccion->datos = strdup(tokens[2]);
+    }
+    else if(strcmp(tokens[0], "READ") == 0) {
+        instruccion->tipo = READ;
+        instruccion->direccion = atoi(tokens[1]);
+        instruccion->tamanio = atoi(tokens[2]);
+    }
+    else if(strcmp(tokens[0], "GOTO") == 0) {
+        instruccion->tipo = GOTO;
+        instruccion->pc_destino = atoi(tokens[1]);
+    }
+    else if(strcmp(tokens[0], "IO") == 0) {
+        instruccion->tipo = IO;
+        instruccion->dispositivo_io = strdup(tokens[1]);
+        instruccion->tiempo_io = atoi(tokens[2]);
+    }
+    else if(strcmp(tokens[0], "INIT_PROC") == 0) {
+        instruccion->tipo = INIT_PROC;
+        instruccion->archivo_proceso = strdup(tokens[1]);
+        instruccion->tamanio = atoi(tokens[2]);
+    }
+    else if(strcmp(tokens[0], "DUMP_MEMORY") == 0) {
+        instruccion->tipo = DUMP_MEMORY;
+    }
+    else if(strcmp(tokens[0], "EXIT") == 0) {
+        instruccion->tipo = EXIT;
+    }
+    else {
+        instruccion->tipo = INSTRUCCION_DESCONOCIDA;
+    }
+    
+    // Liberar memoria de los tokens
+    for(int i = 0; tokens[i] != NULL; i++) {
+        free(tokens[i]);
+    }
+    free(tokens);
+    
+    return instruccion;
+}
+
+void destruir_instruccion(instruccion_decodificada* instruccion) {
+    if(instruccion->datos != NULL) free(instruccion->datos);
+    if(instruccion->dispositivo_io != NULL) free(instruccion->dispositivo_io);
+    if(instruccion->archivo_proceso != NULL) free(instruccion->archivo_proceso);
+    free(instruccion);
 }

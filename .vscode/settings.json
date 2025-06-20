@@ -26,6 +26,8 @@
         "memoria-log.h": "c",
         "serializacion.h": "c",
         "cpu-conexiones.h": "c",
-        "ciclo-instruccion.h": "c"
+        "ciclo-instruccion.h": "c",
+        "cpu-configs.h": "c",
+        "string.h": "c"
     }
 }
