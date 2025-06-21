@@ -27,6 +27,7 @@ void inicializar_configs(){
     configcargado.loglevel = cargar_variable_string(cpu_tconfig, "LOG_LEVEL");
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo
     cpu_configs = configcargado;
+    fprintf(stderr, "Archivo de configuración de CPU cargado con exito.\n");
 }
 
 void destruir_configs() {
