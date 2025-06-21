@@ -1,0 +1,32 @@
+#ifndef CPU_LOG_H
+#define CPU_LOG_H
+
+#include <commons/log.h>
+
+#include "cpu-configs.h"
+
+/**
+ * @var logger_cpu
+ * @brief Estructura global de logger del CPU
+ * 
+ * Esta variable global permite loggear actividades del CPU
+ * desde cualquier archivo del módulo.
+ */
+extern t_log* logger_cpu;
+
+/**
+ * @brief Crea logger cpu_<id>.log por cada CPU
+ * @param id_cpu ID del CPU pasado como argumento a main
+ * @return t_log* logger_cpu iniciado
+ */
+t_log* iniciar_logger_cpu(int id_cpu);
+
+/** 
+ * @brief Destruye el logger del kernel
+ * 
+ * Esta función no recibe parámetros. Destruye el logger del kernel
+ * 
+ */
+void destruir_logger_cpu();
+
+#endif

@@ -1,8 +1,11 @@
 #ifndef CPU_H_
 #define  CPU_H_
 
+#include <pthread.h>
+
 #include "cpu-conexiones.h"
 #include "cpu-configs.h"
+#include "cpu-log.h"
 #include "ciclo-instruccion.h"
 
 #include <utils/sockets.h>

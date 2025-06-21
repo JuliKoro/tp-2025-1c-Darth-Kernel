@@ -3,8 +3,10 @@
 void ciclo_instruccion(int pid, uint32_t pc, int socket_memoria){
     while(1){ // loop ciclo de instruccion
         
-        char* paquete_instruccion = fetch(pid, pc, socket_memoria);
-        instruccion_decodificada* instruccion = decodificar_instruccion(paquete_instruccion, pc);
+        char* paquete_instruccion = fetch(pid, pc, socket_memoria); // ETAPA FETCH
+
+        instruccion_decodificada* instruccion = decodificar_instruccion(paquete_instruccion, pc); // ETAPA DECODE
+
         check_interrupt();
 
 
@@ -16,7 +18,7 @@ void ciclo_instruccion(int pid, uint32_t pc, int socket_memoria){
 }
 
 // ETAPA FETCH
-char* fetch(int pid, uint32_t pc, int socket_memoria){
+char* fetch(uint32_t pid, uint32_t pc, int socket_memoria){
     //Le pido a memoria la instruccion
     t_paquete* paquete = crear_paquete();
     agregar_a_paquete(paquete, pid);
@@ -33,6 +35,9 @@ char* fetch(int pid, uint32_t pc, int socket_memoria){
 
 // ETAPA DECODE
 instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pc_actual) {
+
+    log_info(logger_cpu, "Decodificando instrucción: %s", instruccion_str);
+   
     instruccion_decodificada* instruccion = malloc(sizeof(instruccion_decodificada));
     memset(instruccion, 0, sizeof(instruccion_decodificada));
     

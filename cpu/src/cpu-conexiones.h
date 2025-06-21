@@ -21,11 +21,4 @@ int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu);
 */
 int cpu_conectar_a_memoria(int id_cpu);
 
-/**
- * @brief Crea logger cpu_<id>.log por cada CPU
- * @param id_cpu ID del CPU pasado como argumento a main
- * @return t_log* logger_cpu iniciado
- */
-t_log* iniciar_logger_cpu(int id_cpu);
-
 #endif

@@ -8,6 +8,7 @@
 #include <commons/string.h>
 
 #include "cpu-configs.h"
+#include "cpu-log.h"
 
 #include <utils/configs.h>
 #include <utils/sockets.h>

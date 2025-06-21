@@ -31,7 +31,7 @@ int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu){
 
 int cpu_conectar_a_memoria(int id_cpu){
     t_log* cpu_logger = iniciar_logger_cpu(id_cpu);
-    
+
     int socket_memoria = crear_conexion (cpu_configs.ipmemoria, int_a_string(cpu_configs.puertomemoria));
 
     log_info(cpu_logger, "FD de conexion con la MEMORIA %d", socket_memoria);
@@ -58,10 +58,3 @@ int cpu_conectar_a_memoria(int id_cpu){
     return 0;
 
 }
-
-t_log* iniciar_logger_cpu(int id_cpu){
-    char log_filename[64]; // Crear nombre de log dinámico (log por cada CPU)
-    snprintf(log_filename, sizeof(log_filename), "cpu_%d.log", id_cpu); // formato nombre del archvio 
-    t_log* logger_cpu = iniciar_logger(log_filename, "[CPU]"); // crea logger cpu_<id>.log
-    return logger_cpu;
- }
