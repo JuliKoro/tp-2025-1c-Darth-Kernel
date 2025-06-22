@@ -34,17 +34,27 @@ int main(int argc, char* argv[]) {
    
    while(1){ // LOOP CPU
       // ASIGANCION DE PROCESO
+
       // Espero y recibo desde Kernel (PID + PC)
-      t_list* paquete_proceso = recibir_paquete(socket_kernel_dispatch);
-      uint32_t* pid = list_get (paquete_proceso, 1);
-      uint32_t* pc = list_get (paquete_proceso, 2);
-      printf("Proceso recibido:\n");
-      log_info(logger_cpu, "## PID: %ls - FETCH - Program Counter: %ls", pid, pc);
+      t_instruccion_cpu* instruccion = NULL;
+
+      t_paquete* paquete = recibir_paquete(socket_kernel_dispatch);
+      if(paquete == NULL) {
+         log_error(logger_cpu, "Error al recibir paquete de Kernel. Cerrando conexion");
+         return -1;
+      }
+      if(paquete->codigo_operacion == PAQUETE_INSTRUCCION_CPU) {
+         log_info(logger_cpu, "Recibido paquete de instruccion de Kernel");
+         instruccion = deserializar_instruccion_cpu(paquete->buffer);
+         log_info(logger_cpu, "PID: %d, PC: %d", instruccion->pid, instruccion->pc);
+      }
+
+      liberar_paquete(paquete);
 
       // LIMPIAR TLB Y CACHE DE PAGINAS
 
       //CICLO DE INSTRUCCION
-      ciclo_instruccion(pid, pc, socket_memoria);
+      ciclo_instruccion(instruccion, socket_memoria);
       
    }
 

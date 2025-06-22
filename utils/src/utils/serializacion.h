@@ -14,15 +14,26 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-//Estructura de mensaje para modulo IO
+//Codigos de operacion
+
 typedef enum {
-    PAQUETE_SOLICITUD_IO=1
+    PAQUETE_SOLICITUD_IO=1,
+    PAQUETE_INSTRUCCION_CPU=2
 } t_codigo_operacion;
+
+//Estructura de mensaje para modulo IO
 
 typedef struct {
     uint32_t pid;
     uint32_t tiempo;
 } t_solicitud_io;
+
+//Estructura de mensaje para modulo CPU
+
+typedef struct {
+    uint32_t pid;
+    uint32_t pc;
+} t_instruccion_cpu;
 
 
 //Estructura de buffer para serializacion y deserializacion
@@ -94,6 +105,16 @@ char *buffer_read_string(t_buffer *buffer, uint32_t *length);
 t_buffer* serializar_solicitud_io(t_solicitud_io* solicitud);
 
 t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                        Funciones de serializacion y deserializacion CPU
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_instruccion_cpu(t_instruccion_cpu* instruccion);
+
+t_instruccion_cpu* deserializar_instruccion_cpu(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

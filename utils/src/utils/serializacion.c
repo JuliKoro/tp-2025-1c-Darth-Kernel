@@ -101,6 +101,26 @@ t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer) {
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+                                        Funciones de serializacion y deserializacion CPU
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_instruccion_cpu(t_instruccion_cpu* instruccion) {
+    t_buffer* buffer = buffer_create(2 * sizeof(uint32_t));
+    buffer_add_uint32(buffer, instruccion->pid);
+    buffer_add_uint32(buffer, instruccion->pc);
+    return buffer;
+}
+
+t_instruccion_cpu* deserializar_instruccion_cpu(t_buffer* buffer) {
+    t_instruccion_cpu* instruccion = malloc(sizeof(t_instruccion_cpu));
+    instruccion->pid = buffer_read_uint32(buffer);
+    instruccion->pc = buffer_read_uint32(buffer);
+    return instruccion;
+}
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
                                         Funciones de empaquetado y desempaquetado
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
