@@ -19,6 +19,8 @@ void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
 
 // ETAPA FETCH
 char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
+    log_info(logger_cpu, "## PID: %d - FETCH - Program Counter: %d", instruccion->pid, instruccion->pc);
+
     // Verificar conexión
     if (socket_memoria < 0) {
         log_error(logger_cpu, "Error: Socket de memoria no válido.");
@@ -49,17 +51,18 @@ char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
 // ETAPA DECODE
 instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pc_actual) {
 
-    log_info(logger_cpu, "Decodificando instrucción: %s", instruccion_str);
+    log_info(logger_cpu, "DECODE: %s", instruccion_str);
    
     instruccion_decodificada* instruccion = malloc(sizeof(instruccion_decodificada));
     memset(instruccion, 0, sizeof(instruccion_decodificada));
     
-    char** tokens = string_split(instruccion_str, " ");
-    
+    char** tokens = string_split(instruccion_str, " "); // Separar la instrucción en tokens (partes)
+
+    // Identificación del tipo
     if(strcmp(tokens[0], "NOOP") == 0) {
         instruccion->tipo = NOOP;
     }
-    else if(strcmp(tokens[0], "WRITE") == 0) {
+    else if(strcmp(tokens[0], "WRITE") == 0) { // Segun el tipo, parsea los parámetros adicionales
         instruccion->tipo = WRITE;
         instruccion->direccion = atoi(tokens[1]);
         instruccion->datos = strdup(tokens[2]);
