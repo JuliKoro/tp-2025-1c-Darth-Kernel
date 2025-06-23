@@ -30,9 +30,13 @@ typedef struct {
 
 //Estructura de mensaje para modulo CPU
 
+/**
+ * @struct t_instruccion_cpu
+ * @brief Estructura que representa una instrucción del CPU (PID y PC)
+ */
 typedef struct {
-    uint32_t pid;
-    uint32_t pc;
+    uint32_t pid; // Identificador del proceso asociado a la instrucción
+    uint32_t pc;  // Contador de programa que indica la dirección de la instrucción
 } t_instruccion_cpu;
 
 
@@ -112,8 +116,29 @@ t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+/**
+ * @brief Serializa una instrucción del CPU en un buffer
+ * 
+ * Se utiliza para enviar la instrucción a otro modulo.
+ * 
+ * @param instruccion Puntero a la estructura de instrucción del CPU
+ *                    que se desea serializar.
+ * @return t_buffer* Puntero al buffer que contiene la instrucción
+ *                   serializada. El buffer debe ser liberado.
+ */
 t_buffer* serializar_instruccion_cpu(t_instruccion_cpu* instruccion);
 
+/**
+ * @brief Deserializa una instrucción del CPU desde un buffer
+ * 
+ * Se utiliza para recibir instrucciones a través de
+ * la red o para leerlas desde un formato binario.
+ * 
+ * @param buffer Puntero al buffer que contiene la instrucción
+ *               serializada.
+ * @return t_instruccion_cpu* Puntero a la estructura de instrucción
+ *                             del CPU deserializada. Se debe liberar.
+ */
 t_instruccion_cpu* deserializar_instruccion_cpu(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
