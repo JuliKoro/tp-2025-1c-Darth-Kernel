@@ -26,7 +26,10 @@ typedef enum {
     IO,             // Operación de entrada/salida
     INIT_PROC,      // Inicialización de proceso
     DUMP_MEMORY,    // Volcado de memoria
-    EXIT,           // Finalización de proceso
+
+    //Me salta error de redeclaracion
+    //EXIT,           // Finalización de proceso
+
     INSTRUCCION_DESCONOCIDA // Tipo reservado para errores
 } tipo_instruccion;
 
@@ -50,8 +53,7 @@ typedef struct {
 
 /**
 * @brief Funcion que realiza el ciclo de intrucciones fetch-decode-execute para una determinada instruccion
-* @param pid identificador del proceso que se ejecutara
-* @param pc Program Counter que representa el número de instrucción a buscar
+* @param instruccion Estructura de una instruccion que contiene el PID y el PC
 * @param socket_memoria socket de memoria al que se le pediran las instrucciones
 * @return nada
 */
@@ -63,7 +65,7 @@ void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria);
 * @param socket_memoria socket de memoria al que se le pedira la instruccion
 * @return nada
 */
-char* fetch(int pid, int pc, int socket_memoria);
+char* fetch(t_instruccion_cpu* instruccion, int socket_memoria);
 
 /**
  * @brief Decodifica una instrucción en string a estructura

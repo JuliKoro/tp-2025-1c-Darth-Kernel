@@ -1,51 +1,49 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(int pid, uint32_t pc, int socket_memoria){
+void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
     while(1){ // loop ciclo de instruccion
         
-        char* paquete_instruccion = fetch(pid, pc, socket_memoria); // ETAPA FETCH
+        char* paquete_instruccion = fetch(instruccion, socket_memoria); // ETAPA FETCH
 
-        instruccion_decodificada* instruccion = decodificar_instruccion(paquete_instruccion, pc); // ETAPA DECODE
+        instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pc); // ETAPA DECODE
 
         check_interrupt();
 
 
         // LIMPIAR INSTRUCCIONES
-        destruir_instruccion(instruccion);
+        destruir_instruccion(instruccion_decodificada);
         free(paquete_instruccion);
     }
     
 }
 
 // ETAPA FETCH
-char* fetch(uint32_t pid, uint32_t pc, int socket_memoria){
+char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
     // Verificar conexión
     if (socket_memoria < 0) {
         log_error(logger_cpu, "Error: Socket de memoria no válido.");
         return NULL;
     }
-
-    //Le pido a memoria la instruccion
-    t_paquete* paquete = crear_paquete();
-    agregar_a_paquete(paquete, pid);
-    agregar_a_paquete(paquete, pc);
-    enviar_paquete(paquete, socket_memoria);
-    free(paquete);
+    
+    //Serializo la instruccion y envio
+    t_buffer* buffer = serializar_instruccion_cpu(instruccion);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_INSTRUCCION_CPU, buffer);
+    enviar_paquete(socket_memoria, paquete);
     
     // Recibe la instruccion de Memoria :)
-    char* instruccion = recibir_mensaje(socket_memoria);
-    printf("Instruccion recibida:\n%s\n", instruccion);
+    char* instruccion_identificada = recibir_mensaje(socket_memoria);
+    printf("Instruccion recibida:\n%s\n", instruccion_identificada);
 
     // Validar la instrucción recibida
-    if (instruccion == NULL) {
+    if (instruccion_identificada == NULL) {
         log_error(logger_cpu, "Error: No se recibió ninguna instrucción de memoria.");
         return NULL; // Manejar el error adecuadamente
     }
 
     // Log de instrucción recibida
-    log_info(logger_cpu, "Instrucción recibida: %s", instruccion);
+    log_info(logger_cpu, "Instrucción recibida: %s", instruccion_identificada);
 
-    return instruccion;
+    return instruccion_identificada;
 }
 
 // ETAPA DECODE
