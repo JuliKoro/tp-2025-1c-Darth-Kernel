@@ -9,6 +9,7 @@
 
 #include "cpu-configs.h"
 #include "cpu-log.h"
+#include "execute.h"
 
 #include <utils/configs.h>
 #include <utils/sockets.h>
@@ -41,6 +42,7 @@ typedef enum {
  * Todos los campos de datos son opcionales según el tipo de instrucción.
  */
 typedef struct {
+    uint32_t pid;             // PID al que pertenece la instruccion (para logs)
     tipo_instruccion tipo;    // Tipo de instrucción
     uint32_t direccion;         // Dirección de memoria (READ/WRITE)
     char* datos;                // Datos a escribir (WRITE)
@@ -71,13 +73,13 @@ char* fetch(t_instruccion_cpu* instruccion, int socket_memoria);
  * @brief Decodifica una instrucción en string a estructura
  * 
  * @param instruccion_str Cadena con la instrucción (ej: "WRITE 0x1A 'HOLA'")
- * @param pc_actual Program Counter actual (para logs)
+ * @param pid PID al que pertenece la instruccion (para logs)
  * @return instruccion_decodificada* Estructura decodificada. DEBE liberarse con destruir_instruccion()
  * 
  * @example 
  * instruccion_decodificada* instr = decodificar_instruccion("WRITE 0x1A 42", 15);
  */
-instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pc_actual);
+instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pid);
 
 /**
  * @brief Libera los recursos de una instrucción decodificada

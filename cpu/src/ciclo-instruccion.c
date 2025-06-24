@@ -7,6 +7,9 @@ void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pc); // ETAPA DECODE
 
+        
+        execute(instruccion_decodificada, socket_memoria);
+
         check_interrupt();
 
 
@@ -49,13 +52,15 @@ char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
 }
 
 // ETAPA DECODE
-instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pc_actual) {
+instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pid) {
 
-    log_info(logger_cpu, "DECODE: %s", instruccion_str);
+    log_info(logger_cpu, "## PID: %d - DECODE: %s",pid, instruccion_str);
    
     instruccion_decodificada* instruccion = malloc(sizeof(instruccion_decodificada));
     memset(instruccion, 0, sizeof(instruccion_decodificada));
     
+    instruccion->pid = pid;
+
     char** tokens = string_split(instruccion_str, " "); // Separar la instrucción en tokens (partes)
 
     // Identificación del tipo
