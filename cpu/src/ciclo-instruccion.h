@@ -29,7 +29,7 @@ typedef enum {
     DUMP_MEMORY,    // Volcado de memoria
 
     //Me salta error de redeclaracion
-    //EXIT,           // Finalización de proceso
+    EXIT,           // Finalización de proceso
 
     INSTRUCCION_DESCONOCIDA // Tipo reservado para errores
 } tipo_instruccion;
