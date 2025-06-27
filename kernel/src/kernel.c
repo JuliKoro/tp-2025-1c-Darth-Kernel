@@ -4,38 +4,40 @@ void enviar_solicitud_io(char* nombre_io, uint32_t pid, uint32_t tiempo);
 
 int main(int argc, char* argv[]) {
 
-    // //Chequeo que los parametros sean correctos
-    // if(argc != 3) {
-    //     fprintf(stderr, "Uso: %s [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]); 
-    //     return EXIT_FAILURE;
-    // }
+    //Chequeo que los parametros sean correctos
+    if(argc != 3) {
+        fprintf(stderr, "Uso: %s [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]); 
+        return EXIT_FAILURE;
+    }
 
-    // //Obtengo los parametros
-    // int tamanio_proceso = atoi(argv[2]);
-    // char* archivo_pseudocodigo = argv[1];
+    //Obtengo los parametros
+    int tamanio_proceso = atoi(argv[2]);
+    char* archivo_pseudocodigo = argv[1];
 
     //Primero levanto las configs, despues el logger
     lista_io = list_create();
-    inicializar_colas();
+    inicializar_colas_y_sem();
     inicializar_configs();
     inicializar_logger_kernel();
 
-    //planificar_proceso_inicial(archivo_pseudocodigo, tamanio_proceso);
     
-    //Inicia el receptor de IO
+    
+    //Inicia el receptor de IO, esto recibe todos los IO y los agrega en la lista de IOs. Mantiene las conexiones abiertas para que puedan recibir solicitudes.
     pthread_t thread_receptor_io;
     pthread_create(&thread_receptor_io, NULL, iniciar_receptor_io, NULL);
     pthread_detach(thread_receptor_io); 
+    log_info(logger_kernel, "Receptor de IO iniciado");
 
+    planificar_proceso_inicial(archivo_pseudocodigo, tamanio_proceso);
 
-    sleep(5);
-    enviar_solicitud_io("impresora", 1, 5);
+    //Inicia el planificador largo plazo
+    pthread_t thread_planificador_largo_plazo;
+    pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
+    pthread_detach(thread_planificador_largo_plazo);
 
-    // while(1) {
-    //     sleep(20);
-    //     mostrar_lista_io();
-    // }
-   
+   while(true){
+    sleep(1);
+   }
 
 
     destruir_logger_kernel();
@@ -69,6 +71,8 @@ void enviar_solicitud_io(char* nombre_io, uint32_t pid, uint32_t tiempo){
     if(instancia_disponible == NULL) {
         log_error(logger_kernel, "[IO-SOLICITUD] No hay instancias disponibles para %s", nombre_io);
         pthread_mutex_unlock(&mutex_io);
+        //TODO:Agregar PID a la cola de blocked del io
+
         return;
     }
     

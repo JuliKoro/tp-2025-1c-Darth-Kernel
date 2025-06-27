@@ -6,12 +6,21 @@ algoritmo_largo_plazo obtener_algoritmo_largo_plazo(char* algoritmo) {
    }
    return PMCP;
 }
-void iniciar_planificador_largo_plazo() {
-    switch (obtener_algoritmo_largo_plazo(kernel_configs.ingreasoaready)) {
+void* iniciar_planificador_largo_plazo() {
+    
+    
+    algoritmo_largo_plazo algoritmo = obtener_algoritmo_largo_plazo(kernel_configs.ingreasoaready);
+    
+    switch (algoritmo) {
         case FIFO:
+            
             while(true) {
-                //1. Verifico si hay procesos en cola running que hayan terminado
-                mover_procesos_terminados();
+                log_info(logger_kernel, "Planificador largo plazo iniciado en FIFO");
+                sem_wait(&sem_procesos_en_new); //Si no hay procesos en new, se bloquea el hilo
+
+                //1. Verifico si hay procesos en cola running que hayan terminado, si terminaron se mueven a la cola exit
+                //Puede no haberlos
+                mover_procesos_terminados(); 
 
                 //2. Verifico si hay procesos en cola new
                 t_pcb* pcb = peek_cola_new();
@@ -20,14 +29,14 @@ void iniciar_planificador_largo_plazo() {
                     continue;
                 }
                 if(solicitar_creacion_proceso(pcb)) { 
-                    log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY", pcb->pid);
                     pcb = obtener_pcb_de_cola_new();
                     agregar_pcb_a_cola_ready(pcb);
+                    log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY", pcb->pid);
                 }
             }
         break;
         case PMCP:
-            printf("No implementado aun\n");
+            printf("PMCP No implementado aun\n");
             break;
         default:
             printf("No tenido en cuenta o incorrecto\n");

@@ -31,7 +31,7 @@ t_proceso* leer_archivo_de_proceso(const char* filepath, int pid);
 
 void destruir_proceso(void* proceso_void);
 
-void cargar_proceso(int pid, const char* nombre_archivo);
+int cargar_proceso(int pid, const char* nombre_archivo);
 
 void cargar_procesos_en_memoria();
 
@@ -39,5 +39,6 @@ void mostrar_proceso(char* key, void* value);
 
 const char* obtener_instruccion(int pid, int pc);
 
+void* recibir_peticiones_kernel(void* socket_memoria);
 
 #endif

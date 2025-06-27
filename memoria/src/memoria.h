@@ -4,6 +4,7 @@
 
 #include "memoria-conexiones.h"
 #include "instrucciones.h"
+#include "utils/serializacion.h"
 
 typedef struct {
     int pid;

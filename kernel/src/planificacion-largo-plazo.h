@@ -7,7 +7,7 @@
 
 
 
-void iniciar_planificador_largo_plazo();
+void* iniciar_planificador_largo_plazo();
 
 algoritmo_largo_plazo obtener_algoritmo_largo_plazo(char* algoritmo);
 

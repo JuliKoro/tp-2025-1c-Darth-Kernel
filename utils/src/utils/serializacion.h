@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "pcb.h"
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Estructuras usadas
@@ -18,7 +20,8 @@
 
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
-    PAQUETE_INSTRUCCION_CPU=2
+    PAQUETE_INSTRUCCION_CPU=2,
+    PAQUETE_PCB=3
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -171,6 +174,20 @@ void enviar_paquete(int socket, t_paquete* paquete);
 t_paquete* recibir_paquete(int socket);
 
 void liberar_paquete(t_paquete* paquete);
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                        Funciones de serializacion y deserializacion PCB
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+//Serializa las partes necesarias de un pcb para enviarlas a memoria
+t_buffer* serializar_pcb(t_pcb* pcb);
+
+t_pcb* deserializar_pcb(t_buffer* buffer);
+
+
 
 #endif
 

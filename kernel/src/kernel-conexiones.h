@@ -5,6 +5,8 @@
 #include <utils/sockets.h>
 #include <utils/configs.h>
 #include <utils/logger.h>
+#include <utils/serializacion.h>
+#include <utils/pcb.h>
 
 #include "kernel-configs.h"
 #include "kernel-log.h"

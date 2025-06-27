@@ -28,6 +28,8 @@
         "cpu-conexiones.h": "c",
         "ciclo-instruccion.h": "c",
         "cpu-configs.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "memoria-conexiones.h": "c",
+        "instrucciones.h": "c"
     }
 }

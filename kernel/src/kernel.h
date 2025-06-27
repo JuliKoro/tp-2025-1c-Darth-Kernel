@@ -8,7 +8,8 @@
 
 #include "kernel-conexiones.h"
 #include "kernel-configs.h"
-#include "planificacion.h"
+#include "planificacion-largo-plazo.h"
+#include "planificacion-corto-plazo.h"
 #include "manejo-io.h"
 
 #include <pthread.h>

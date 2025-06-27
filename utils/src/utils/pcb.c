@@ -9,5 +9,7 @@ t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tama
     pcb->tamanio_proceso = tamanio_proceso;
     pcb->metricas_estado = list_create();
     pcb->metricas_tiempo = list_create();
+    pcb->estado = NEW;
+    pcb->pc = 0;
     return pcb;
 }

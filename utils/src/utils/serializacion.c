@@ -191,3 +191,32 @@ void liberar_paquete(t_paquete* paquete){
     free(paquete->buffer);
     free(paquete);
 }
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                        Funciones de serializacion y deserializacion PCB
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_pcb(t_pcb* pcb){
+    uint32_t tamanio_string = strlen(pcb->archivo_pseudocodigo);
+    uint32_t tamanio_total = 3 * sizeof(uint32_t) + sizeof(uint32_t) + tamanio_string;
+    t_buffer* buffer = buffer_create(tamanio_total);
+    buffer_add_uint32(buffer, pcb->pid);
+    buffer_add_uint32(buffer, pcb->pc);
+    buffer_add_uint32(buffer, pcb->tamanio_proceso);
+    buffer_add_string(buffer, tamanio_string, pcb->archivo_pseudocodigo);
+    return buffer;
+}
+
+t_pcb* deserializar_pcb(t_buffer* buffer){
+    t_pcb* pcb = malloc(sizeof(t_pcb));
+    pcb->pid = buffer_read_uint32(buffer);
+    pcb->pc = buffer_read_uint32(buffer);
+    pcb->tamanio_proceso = buffer_read_uint32(buffer);
+
+    uint32_t length;
+    pcb->archivo_pseudocodigo = buffer_read_string(buffer, &length);
+    return pcb;
+}

@@ -11,7 +11,7 @@
 // Local includes
 #include <utils/pcb.h>
 #include "kernel-conexiones.h"
-
+#include <semaphore.h>
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -66,6 +66,7 @@ extern pthread_mutex_t mutex_cola_exit;
 extern pthread_mutex_t mutex_cola_executing;
 extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
+extern sem_t sem_procesos_en_new;
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -118,7 +119,7 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
  * Esta función no recibe parámetros. Crea las colas new, ready, exit, blocked y executing
  * 
  */
-void inicializar_colas();
+void inicializar_colas_y_sem();
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

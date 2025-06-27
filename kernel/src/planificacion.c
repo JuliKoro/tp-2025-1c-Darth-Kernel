@@ -38,7 +38,7 @@ pthread_mutex_t mutex_cola_exit = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_executing = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
-
+sem_t sem_procesos_en_new;
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                             Funciones de planificacion
@@ -46,12 +46,13 @@ pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 
-void inicializar_colas() {
+void inicializar_colas_y_sem() {
     cola_new = queue_create();
     cola_ready = queue_create();
     cola_exit = queue_create();
     cola_blocked = queue_create();
     cola_executing = queue_create();
+    sem_init(&sem_procesos_en_new, 0, 0);
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
@@ -99,6 +100,7 @@ void agregar_pcb_a_cola_new(t_pcb* pcb) {
     queue_push(cola_new, pcb);
     pthread_mutex_unlock(&mutex_cola_new);
     log_info(logger_kernel, "## (%d) Se crea el proceso - Estado: NEW", pcb->pid);
+    sem_post(&sem_procesos_en_new); //Aviso al planificador largo plazo que hay un proceso en new
 }
 
 
@@ -218,12 +220,21 @@ t_pcb* obtener_pcb_de_cola_executing() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void mover_procesos_terminados() {
-    while(!queue_is_empty(cola_executing)) {
+    int elementos_procesados = 0;
+    int total_elementos = queue_size(cola_executing);
+
+    while(elementos_procesados < total_elementos) {
         t_pcb* pcb = peek_cola_executing();
+
         if(pcb != NULL && pcb->estado == EXIT) {
             t_pcb* pcb_exit = obtener_pcb_de_cola_executing();
             agregar_pcb_a_cola_exit(pcb_exit);
+        } else {
+            t_pcb* pcb_temp = obtener_pcb_de_cola_executing();
+            agregar_pcb_a_cola_executing(pcb_temp);
         }
+
+        elementos_procesados++;
     }
 }
 

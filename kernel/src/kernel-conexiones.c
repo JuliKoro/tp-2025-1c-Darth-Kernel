@@ -50,10 +50,13 @@ int kernel_conectar_a_memoria(){
 
 bool solicitar_creacion_proceso(t_pcb* pcb) {
     int socket_memoria;
-    if(socket_memoria = kernel_conectar_a_memoria() == -1) {
+    socket_memoria = kernel_conectar_a_memoria();
+    if(socket_memoria == -1) {
         log_error(logger_kernel, "Error al solicitar creacion de un proceso a memoria, conexion con memoria fallida");
         return false;
     }
-   enviar_pcb(socket_memoria, pcb);
-   return recibir_bool(socket_memoria);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_PCB, serializar_pcb(pcb));
+    enviar_paquete(socket_memoria, paquete);
+    //liberar_paquete(paquete); doble liberacion, testeando
+    return recibir_bool(socket_memoria);
 }

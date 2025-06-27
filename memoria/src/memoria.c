@@ -109,21 +109,26 @@ int main(int argc, char* argv[]) {
     
     inicializar_configs();
     inicializar_logger_memoria();
-    inicializar_administrador_memoria(); // Nuevo
+    //inicializar_administrador_memoria(); // Nuevo
 
 
 
     procesos_en_memoria = dictionary_create();  // Inicializamos antes del servidor
     int socket_memoria = iniciar_servidor_memoria();
+    //Hilo que va a estar recibiendo peticiones del kernel
+    pthread_t hilo_peticiones_kernel;
+    pthread_create(&hilo_peticiones_kernel, NULL, recibir_peticiones_kernel, (void*) &socket_memoria);
     log_info(logger_memoria, "Iniciando módulo Memoria...");
     
-    cargar_procesos_en_memoria();
+    pthread_join(hilo_peticiones_kernel, NULL);
+    
+    //cargar_procesos_en_memoria();
     dictionary_iterator(procesos_en_memoria, mostrar_proceso);
-    obtener_instruccion(1234, 1); // Estas dos lineas están simulando el pedido de una instrucción por parte de CPU
-    obtener_instruccion(1234, 4);
+    //obtener_instruccion(1234, 1); // Estas dos lineas están simulando el pedido de una instrucción por parte de CPU
+    //obtener_instruccion(1234, 4);
 
 
-    dictionary_destroy_and_destroy_elements(procesos_en_memoria, free); // Si querés liberar también instrucciones hay que hacer free de cada string
+    //dictionary_destroy_and_destroy_elements(procesos_en_memoria, free); // Si querés liberar también instrucciones hay que hacer free de cada string
     log_destroy(logger_sockets);
     log_destroy(logger_memoria);
     config_destroy(memoria_tconfig);
