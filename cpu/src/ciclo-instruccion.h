@@ -16,6 +16,12 @@
 #include <utils/serializacion.h>
 
 /**
+ * @brief Variable global para el PC
+ * @note Si se usan hilos, hay que proteger la variable con mutex
+ */
+extern uint32_t pc; // Variable global para el PC
+
+/**
  * @enum tipo_instruccion
  * @brief Tipos de instrucciones soportadas por la CPU
  */

@@ -7,7 +7,6 @@
 
 #include "ciclo-instruccion.h"
 #include "cpu-conexiones.h"
-#include "cpu.h"
 
 /**
  * @brief Ejecuta una instrucción decodificada del CPU

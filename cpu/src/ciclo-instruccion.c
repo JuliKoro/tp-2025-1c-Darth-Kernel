@@ -1,12 +1,12 @@
 #include "ciclo-instruccion.h"
-#include "cpu.h"
 
 void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
     while(1){ // loop ciclo de instruccion
+        pc = instruccion->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
         
         char* paquete_instruccion = fetch(instruccion, socket_memoria); // ETAPA FETCH
 
-        instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pc); // ETAPA DECODE
+        instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pid); // ETAPA DECODE
 
         execute(instruccion_decodificada, socket_memoria); //ETAPA EXECUTE
 

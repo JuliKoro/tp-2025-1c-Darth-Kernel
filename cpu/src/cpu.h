@@ -12,9 +12,4 @@
 #include <utils/hello.h>
 #include <utils/configs.h>
 
-/**
- * @brief Variable global para el PC
- */
-extern uint32_t pc; // Variable global para el PC
-
 #endif
