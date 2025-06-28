@@ -7,6 +7,7 @@
 
 #include "ciclo-instruccion.h"
 #include "cpu-conexiones.h"
+#include "cpu.h"
 
 /**
  * @brief Ejecuta una instrucción decodificada del CPU
@@ -14,7 +15,7 @@
  * Esta función toma una instrucción decodificada y la ejecuta.
  * Dependiendo del tipo de instrucción, puede realizar diferentes
  * acciones, como leer o escribir en memoria, realizar un salto,
- * o manejar operaciones de entrada/salida.
+ * o manejar operaciones de entrada/salida. Actualiza el PC global.
  * 
  * @param instruccion Puntero a la estructura de instrucción decodificada
  *                    que se desea ejecutar.

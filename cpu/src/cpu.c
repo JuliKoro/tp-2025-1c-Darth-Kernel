@@ -14,7 +14,9 @@ int main(int argc, char* argv[]) {
    if (id_cpu <= 0) {
       fprintf(stderr, "El ID del CPU debe ser un número positivo.\n");
       return EXIT_FAILURE;
-  }
+   }
+
+   uint32_t pc = 0; // Inicio PC (Program Counter)
 
    // CARGA CONFIGS
    // Se cargar la variable global 'cpu_configs'
@@ -46,6 +48,7 @@ int main(int argc, char* argv[]) {
       if(paquete->codigo_operacion == PAQUETE_INSTRUCCION_CPU) {
          log_info(logger_cpu, "Recibido paquete de instruccion de Kernel");
          instruccion = deserializar_instruccion_cpu(paquete->buffer);
+         pc = instruccion->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
          log_info(logger_cpu, "PID: %d, PC: %d", instruccion->pid, instruccion->pc);
       }
 

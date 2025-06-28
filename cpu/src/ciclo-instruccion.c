@@ -1,4 +1,5 @@
 #include "ciclo-instruccion.h"
+#include "cpu.h"
 
 void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
     while(1){ // loop ciclo de instruccion
@@ -7,8 +8,7 @@ void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pc); // ETAPA DECODE
 
-        
-        execute(instruccion_decodificada, socket_memoria);
+        execute(instruccion_decodificada, socket_memoria); //ETAPA EXECUTE
 
         check_interrupt();
 

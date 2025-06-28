@@ -20,6 +20,7 @@ t_log* iniciar_logger_cpu(int id_cpu){
 
 char* instruccion_str(tipo_instruccion tipo){
     switch (tipo) {
+        case NOOP: return "NOOP";
         case WRITE: return "WRITE";
         case READ: return "READ";
         case GOTO: return "GOTO";
