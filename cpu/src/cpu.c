@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
       // ASIGANCION DE PROCESO
 
       // Espero y recibo desde Kernel (PID + PC)
-      t_instruccion_cpu* instruccion = NULL;
+      t_proceso* proceso = NULL;
 
       t_paquete* paquete = recibir_paquete(socket_kernel_dispatch);
       if(paquete == NULL) {
@@ -45,8 +45,8 @@ int main(int argc, char* argv[]) {
       }
       if(paquete->codigo_operacion == PAQUETE_INSTRUCCION_CPU) {
          log_info(logger_cpu, "Recibido paquete de instruccion de Kernel");
-         instruccion = deserializar_instruccion_cpu(paquete->buffer);
-         log_info(logger_cpu, "PID: %d, PC: %d", instruccion->pid, instruccion->pc);
+         proceso = deserializar_instruccion_cpu(paquete->buffer);
+         log_info(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
       }
 
       liberar_paquete(paquete);
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
       // LIMPIAR TLB Y CACHE DE PAGINAS
 
       //CICLO DE INSTRUCCION
-      ciclo_instruccion(instruccion, socket_memoria);
+      ciclo_instruccion(proceso, socket_memoria, socket_kernel_dispatch, socket_kernel_interrupt);
       
    }
 

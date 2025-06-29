@@ -1,12 +1,12 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
+void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
     while(1){ // loop ciclo de instruccion
-        pc = instruccion->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
+        pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
         
-        char* paquete_instruccion = fetch(instruccion, socket_memoria); // ETAPA FETCH
+        char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
 
-        instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, instruccion->pid); // ETAPA DECODE
+        instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
         execute(instruccion_decodificada, socket_memoria); //ETAPA EXECUTE
 
@@ -21,8 +21,9 @@ void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria){
 }
 
 // ETAPA FETCH
-char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
-    log_info(logger_cpu, "## PID: %d - FETCH - Program Counter: %d", instruccion->pid, instruccion->pc);
+char* fetch(t_proceso* proceso, int socket_memoria){
+    proceso->pc = pc; // Actualiza el PC del struct de proceso para enviar a memoria
+    log_info(logger_cpu, "## PID: %d - FETCH - Program Counter: %d", proceso->pid, proceso->pc);
 
     // Verificar conexión
     if (socket_memoria < 0) {
@@ -31,7 +32,7 @@ char* fetch(t_instruccion_cpu* instruccion, int socket_memoria){
     }
     
     //Serializo la instruccion y envio
-    t_buffer* buffer = serializar_instruccion_cpu(instruccion);
+    t_buffer* buffer = serializar_proceso_cpu(proceso);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_INSTRUCCION_CPU, buffer);
     enviar_paquete(socket_memoria, paquete);
     

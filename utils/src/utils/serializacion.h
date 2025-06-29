@@ -56,11 +56,11 @@ typedef struct {
     uint32_t tiempo;
 } t_solicitud_io;
 
-//Estructura de mensaje para modulo CPU
+//Estructura de proceso para modulo CPU
 
 /**
- * @struct t_instruccion_cpu
- * @brief Estructura que representa una instrucción del CPU (PID y PC)
+ * @struct t_proceso
+ * @brief Estructura que representa un proceso del Kernel (PID y PC)
  * 
  * @param pid: Identificador del proceso asociado a la instrucción
  * @param pc: Contador de programa que indica la dirección de la instrucción
@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     uint32_t pid; // Identificador del proceso asociado a la instrucción
     uint32_t pc;  // Contador de programa que indica la dirección de la instrucción
-} t_instruccion_cpu;
+} t_proceso;
 
 
 //Estructura de buffer para serializacion y deserializacion
@@ -218,29 +218,29 @@ t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /**
- * @brief Serializa una instrucción del CPU en un buffer
+ * @brief Serializa una proceso del Kernel (PID+PC) en un buffer.
  * 
- * Se utiliza para enviar la instrucción a otro modulo.
+ * Se utiliza para enviar el PID y PC de un proceso a un CPU.
  * 
- * @param instruccion Puntero a la estructura de instrucción del CPU
+ * @param proceso Puntero a la estructura de proceso del Kernel
  *                    que se desea serializar.
- * @return t_buffer* Puntero al buffer que contiene la instrucción
- *                   serializada. El buffer debe ser liberado.
+ * @return t_buffer* Puntero al buffer que contiene el proceso
+ *                   serializado. El buffer debe ser liberado.
  */
-t_buffer* serializar_instruccion_cpu(t_instruccion_cpu* instruccion);
+t_buffer* serializar_proceso_cpu(t_proceso* proceso);
 
 /**
- * @brief Deserializa una instrucción del CPU desde un buffer
+ * @brief Deserializa un proceso del Kernel desde un buffer
  * 
- * Se utiliza para recibir instrucciones a través de
+ * Se utiliza para recibir PID+PC a través de
  * la red o para leerlas desde un formato binario.
  * 
- * @param buffer Puntero al buffer que contiene la instrucción
+ * @param buffer Puntero al buffer que contiene el proceso
  *               serializada.
- * @return t_instruccion_cpu* Puntero a la estructura de instrucción
- *                             del CPU deserializada. Se debe liberar.
+ * @return t_proceso* Puntero a la estructura de proceso
+ *                             del Kernel deserializada. Se debe liberar.
  */
-t_instruccion_cpu* deserializar_instruccion_cpu(t_buffer* buffer);
+t_proceso* deserializar_proceso_cpu(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
