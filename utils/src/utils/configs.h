@@ -16,9 +16,30 @@
 
 t_config* iniciar_config (char* path);
 
+/**
+* @brief Carga una variable entera de un archivo config
+* @param config el t_config*
+* @param nombre el nombre de la variable
+* @return devuelve el valor de la variable
+*/
+
 int cargar_variable_int(t_config* config, char* nombre);
 
+/**
+* @brief Carga una variable string de un archivo config
+* @param config el t_config*
+* @param nombre el nombre de la variable
+* @return devuelve el valor de la variable
+*/
+
 char* cargar_variable_string(t_config* config, char* nombre);
+
+/**
+* @brief Carga una variable double de un archivo config
+* @param config el t_config*
+* @param nombre el nombre de la variable
+* @return devuelve el valor de la variable
+*/
 
 double cargar_variable_double(t_config* config, char* nombre);
 

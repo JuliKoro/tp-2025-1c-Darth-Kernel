@@ -20,6 +20,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 #define GRADO_MULTIPROGRAMACION_MAXIMO 3
 extern u_int32_t grado_multiprogramacion;
+//Esto no se si hace falta usarlo
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -27,29 +28,66 @@ extern u_int32_t grado_multiprogramacion;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+
+/**
+ * @brief Estructura que representa una instancia de IO
+ * 
+ * @param socket_io: El socket de la conexion lo guardamos para poder enviar las peticiones al modulo.
+ * @param pid_actual: El PID del proceso actual que esta esperando la respuesta del modulo IO. -1 si esta libre
+ */
 typedef struct {
     int socket_io; //El socket de la conexion lo guardamos para poder enviar las peticiones al modulo.
     int pid_actual; //El PID del proceso actual que esta esperando la respuesta del modulo IO. -1 si esta libre
 } t_instancia_io;
 
+
+/**
+ * @brief Estructura que representa un modulo IO
+ * 
+ * @param nombre_io: El nombre del modulo IO
+ * @param instancias_io: Lista con las instancias disponibles del modulo IO. Cada elemento de la lista es un t_instancia_io, que contiene
+ * el socket y el pid actual de cada instancia.
+ * @param instancias_disponibles: Cantidad de instancias disponibles del modulo IO.
+ */
 typedef struct {
     char* nombre_io;
     t_list* instancias_io; //Lista con las instancias disponibles del modulo IO. Contiene el socket y el pid actual de cada instancia.
-    t_queue* cola_blocked_io; //Esta es la cola de procesos que estan bloqueados esperando la respuesta del modulo IO, contiene los PIDs
-    pthread_mutex_t mutex_cola_blocked_io; //Mutex para la cola de procesos bloqueados, ya que vamos a modificar la cola
     int instancias_disponibles; //Cantidad de instancias disponibles del modulo IO.
 } t_io;
 
+/**
+ * @brief Estructura que representa un proceso bloqueado esperando la respuesta del modulo IO
+ * 
+ * @param pid: El PID del proceso
+ * @param nombre_io: El nombre del IO que el proceso esta esperando
+ */
+
+
+/**
+ * @brief Enum que representa los algoritmos de planificacion
+ * 
+ * @param FIFO: Planificacion FIFO (para ambos planificadores)
+ * @param PMCP: Planificacion PMCP (para el planificador largo plazo)
+ * @param SJF_SIN_DESALOJO: Planificacion SJF sin desalojo (para el planificador corto plazo)
+ * @param SFJ_CON_DESALOJO: Planificacion SFJ con desalojo (para el planificador corto plazo)
+ */
 typedef enum {
     FIFO,
-    PMCP
-} algoritmo_largo_plazo;
-
-typedef enum {
-    FIFOX,
+    PMCP,
     SJF_SIN_DESALOJO,
     SFJ_CON_DESALOJO
-} algoritmo_corto_plazo;
+} algoritmos_de_planificacion;
+
+/**
+ * @brief Estructura que representa un proceso bloqueado esperando la respuesta del modulo IO
+ * 
+ * @param pid: El PID del proceso
+ * @param nombre_io: El nombre del IO que el proceso esta esperando
+ */
+typedef struct {
+    int pid;
+    char* nombre_io;
+} t_blocked_io;
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,6 +102,8 @@ extern pthread_mutex_t mutex_cola_blocked;
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_exit;
 extern pthread_mutex_t mutex_cola_executing;
+extern pthread_mutex_t mutex_cola_susp_ready;
+extern pthread_mutex_t mutex_cola_susp_blocked;
 extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern sem_t sem_procesos_en_new;
@@ -80,6 +120,9 @@ extern t_queue* cola_ready;
 extern t_queue* cola_exit;
 extern t_queue* cola_blocked;
 extern t_queue* cola_executing;
+extern t_queue* cola_susp_ready;
+extern t_queue* cola_susp_blocked;
+extern t_queue* cola_susp_blocked_io; //Esta cola debe contener structs de t_blocked_io
 
 extern t_list* lista_io;
 
@@ -101,6 +144,15 @@ u_int32_t obtener_pid_actual();
 
 
 /**
+ * @brief Recibe un string que representa el algoritmo de planificacion, viene del archivo de configs. Devuelve el enum correspondiente
+ * al algoritmo de planificacion. 
+ * 
+ * @param algoritmo: El string que representa el algoritmo de planificacion
+ * @return El enum correspondiente al algoritmo de planificacion
+ */
+algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo);
+
+/**
  * @brief Planifica el proceso inicial
  * 
  * Esta función recibe un archivo de pseudocódigo y un tamaño de proceso, que son cargados desde el main, por parametros
@@ -120,6 +172,18 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
  * 
  */
 void inicializar_colas_y_sem();
+
+/**
+ * @brief Recibe un mensaje de la CPU, un paquete. Interpreta el codigo de operacion del paquete y llama a la funcion que corresponda.
+ * 
+ * Esta función recibe un socket de la CPU y recibe un paquete
+ * 
+ */
+int recibir_mensaje_cpu (int socket_cpu);
+
+
+
+
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -306,6 +370,68 @@ void disminuir_grado_multiprogramacion();
  */
 bool comprobar_grado_multiprogramacion_maximo();
 
+
+
+
+
+
+            /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                                               SYSCALLS
+
+            /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                funciones auxiliares para las syscalls
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * @brief Busca un IO por su nombre
+ * 
+ * @param nombre_buscado: El nombre del IO a buscar
+ * @return El IO encontrado o NULL si no existe
+ */
+t_io* buscar_io_por_nombre(char* nombre_buscado);
+
+
+/**
+ * @brief Recibe una syscall en formato string, lee hasta el primer espacio. Interpreta el tipo de syscall.ADJ_FREQUENCY
+ * Y llama a la funcion de la syscall que corresponda, con sus parametros.
+ * 
+ * @param syscall: La syscall a manejar
+ * @return El resultado de la syscall
+ */
+int manejar_syscall(char* syscall);
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones que ejecutan la syscall propiamente
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+
+/**
+ * @brief Inicializa un proceso. Esta syscall se llama cuando CPU ejecute la instruccion INIT_PROC
+ * 
+ * @param archivo_pseudocodigo: El archivo de pseudocódigo del proceso
+ * @param tamanio_proceso: El tamaño del proceso
+ */
+int init_proc(char* archivo_pseudocodigo, int tamanio_proceso);
+
+
+/**
+ * @brief Ejecuta la syscall de IO
+ * 
+ * @param nombre_io: El nombre del IO
+ * @param tiempo_io: El tiempo de IO en milisegundos
+ */
+int io (char* nombre_io, u_int32_t tiempo_io);
 
 
 

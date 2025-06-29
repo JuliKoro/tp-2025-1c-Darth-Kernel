@@ -1,6 +1,7 @@
 #include "execute.h"
 
 // Implementación de la función execute
+//Nahuel> Faltaria que reciba por parametro el socket de kernel para poder enviar las syscalls
 int execute(instruccion_decodificada* instruccion, int socket_memoria) {
     // Log de inicio de ejecución
     char* parametros = parametros_str(instruccion);
@@ -56,4 +57,114 @@ int execute(instruccion_decodificada* instruccion, int socket_memoria) {
     
     free(parametros);
     return 0; // Retorna 0 para indicar éxito
+}
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                    Agrego funciones de syscalls relevantes a kernel, por ahora solo envia la syscall.
+                                    Falta recibir la respuesta segun corresponda en cada syscall.
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+int enviar_syscall(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
+    //Recibo instruccion decodificada, me fijo el tipo. Segun el tipo, llamo a la funcion que corresponde
+    tipo_instruccion tipo = instruccion->tipo;
+    switch(tipo){
+        case IO:
+            enviar_syscall_io(instruccion, socket_kernel_dispatch);
+            break;
+        case INIT_PROC:
+            enviar_syscall_init_proc(instruccion, socket_kernel_dispatch);
+            break;
+        case DUMP_MEMORY:
+            enviar_syscall_dump_memory(instruccion, socket_kernel_dispatch);
+            break;
+        case EXIT:
+            enviar_syscall_exit(instruccion, socket_kernel_dispatch);
+            break;
+        default:
+            printf("Error: syscall desconocida\n");
+            return -1;
+    }
+    return 0;
+}
+
+void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
+    t_syscall* syscall = malloc(sizeof(t_syscall));
+    syscall->syscall = malloc(sizeof(char) * 100);
+    //Armo el string de la syscall. Tiene el formato: "IO <dispositivo_io> <tiempo_io>"
+    sprintf(syscall->syscall, "IO %s %d", instruccion->dispositivo_io, instruccion->tiempo_io);
+    //Asigno el pid del proceso que llamo la syscall
+    syscall->pid = instruccion->pid;
+    //Serializo la syscall y armo un paquete, luego lo envio
+    t_buffer* buffer = serializar_syscall(syscall);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_SYSCALL, buffer);
+    if(enviar_paquete(socket_kernel_dispatch, paquete) == -1){
+        log_error(logger_cpu, "Error: No se pudo enviar la syscall a kernel");
+        return;
+    }
+    //Libero la memoria de la syscall y el buffer
+    free(syscall->syscall);
+    free(syscall);
+    free(buffer);
+    free(paquete);
+}
+
+void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
+    t_syscall* syscall = malloc(sizeof(t_syscall));
+    syscall->syscall = malloc(sizeof(char) * 100);
+    //Armo el string de la syscall. Tiene el formato: "INIT_PROC <archivo_proceso> <tamanio>"
+    sprintf(syscall->syscall, "INIT_PROC %s %d", instruccion->archivo_proceso, instruccion->tamanio);
+    //Asigno el pid del proceso que llamo la syscall
+    syscall->pid = instruccion->pid;
+    //Serializo la syscall y armo un paquete, luego lo envio
+    t_buffer* buffer = serializar_syscall(syscall);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_SYSCALL, buffer);
+    if(enviar_paquete(socket_kernel_dispatch, paquete) == -1){
+        log_error(logger_cpu, "Error: No se pudo enviar la syscall a kernel");
+        return;
+    }
+    //Libero la memoria de la syscall y el buffer despues de enviarlo
+    free(syscall->syscall);
+    free(syscall);
+    free(buffer);
+    free(paquete);
+}
+
+void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
+    t_syscall* syscall = malloc(sizeof(t_syscall));
+    syscall->syscall = malloc(sizeof(char) * 100);
+    sprintf(syscall->syscall, "DUMP_MEMORY");
+    syscall->pid = instruccion->pid;
+    //Serializo la syscall y armo un paquete, luego lo envio
+    t_buffer* buffer = serializar_syscall(syscall);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_SYSCALL, buffer);
+    if(enviar_paquete(socket_kernel_dispatch, paquete) == -1){
+        log_error(logger_cpu, "Error: No se pudo enviar la syscall a kernel");
+        return;
+    }
+    //Libero la memoria de la syscall y el buffer despues de enviarlo
+    free(syscall->syscall);
+    free(syscall);
+    free(buffer);
+    free(paquete);
+}
+
+void enviar_syscall_exit(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
+    t_syscall* syscall = malloc(sizeof(t_syscall));
+    syscall->syscall = malloc(sizeof(char) * 100);
+    sprintf(syscall->syscall, "EXIT");
+    syscall->pid = instruccion->pid;
+    //Serializo la syscall y armo un paquete, luego lo envio
+    t_buffer* buffer = serializar_syscall(syscall);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_SYSCALL, buffer);
+    if(enviar_paquete(socket_kernel_dispatch, paquete) == -1){
+        log_error(logger_cpu, "Error: No se pudo enviar la syscall a kernel");
+        return;
+    }   
+    //Libero la memoria de la syscall y el buffer despues de enviarlo
+    free(syscall->syscall);
+    free(syscall);
+    free(buffer);
+    free(paquete);
 }

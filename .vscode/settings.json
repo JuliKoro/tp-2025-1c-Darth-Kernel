@@ -30,6 +30,8 @@
         "cpu-configs.h": "c",
         "string.h": "c",
         "memoria-conexiones.h": "c",
-        "instrucciones.h": "c"
+        "instrucciones.h": "c",
+        "execute.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -13,3 +13,7 @@ t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tama
     pcb->pc = 0;
     return pcb;
 }
+
+estado_pcb obtener_estado_pcb(t_pcb* pcb) {
+    return pcb->estado;
+}

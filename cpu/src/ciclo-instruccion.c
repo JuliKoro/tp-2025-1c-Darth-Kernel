@@ -116,3 +116,4 @@ void destruir_instruccion(instruccion_decodificada* instruccion) {
     if(instruccion->archivo_proceso != NULL) free(instruccion->archivo_proceso);
     free(instruccion);
 }
+

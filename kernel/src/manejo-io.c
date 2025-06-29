@@ -139,59 +139,51 @@ void* guardar_io(void* socket_ptr) {
     t_io* io = list_find_con_param(lista_io, comparar_nombre_io, nombre_io);
 
     if(io == NULL) { //No existe en la lista, la agrego
-        log_info(logger_kernel, "[IO] IO no encontrada en la lista, la agrego");
+        log_info(logger_kernel, "[IO] IO no encontrada en la lista, la agrego");\
+        //Reservo memoria para la IO
         t_io* io_nueva = malloc(sizeof(t_io));
         if(io_nueva == NULL) {
             log_error(logger_kernel, "[IO] Error al reservar memoria para la IO");
             pthread_mutex_unlock(&mutex_io);
             return NULL;
         }
-        log_info(logger_kernel, "[IO] IO nueva reservada");
+        log_info(logger_kernel, "[IO] Memoria para IO nueva reservada");
 
-
-        if(pthread_mutex_init(&io_nueva->mutex_cola_blocked_io,  NULL) != 0) {
-            log_error(logger_kernel, "[IO] Error al inicializar mutex de cola blocked");
-            free(io_nueva);
-            pthread_mutex_unlock(&mutex_io);
-            return NULL;
-        }
-        
-        log_info(logger_kernel, "[IO] Mutex de cola blocked inicializado");
-
+        //Copio el nombre del IO
         io_nueva->nombre_io = strdup(nombre_io);
         log_info(logger_kernel, "[IO] Nombre del IO copiado");
         free(nombre_io);
 
-        io_nueva->instancias_io = list_create(); //Creo la lista de instancias para este IO
+        //Creo la lista de instancias para este IO
+        io_nueva->instancias_io = list_create(); 
         if(io_nueva->instancias_io == NULL) {
             log_error(logger_kernel, "[IO] Error al reservar memoria para la lista de instancias");
             pthread_mutex_unlock(&mutex_io);
             return NULL;
         }
         log_info(logger_kernel, "[IO] Lista de instancias creada");
-        io_nueva->cola_blocked_io = queue_create(); //Creo la cola de procesos bloqueados para este IO
-        if(io_nueva->cola_blocked_io == NULL) {
-            log_error(logger_kernel, "[IO] Error al reservar memoria para la cola de procesos bloqueados");
-            pthread_mutex_unlock(&mutex_io);
-            return NULL;
-        }
-        log_info(logger_kernel, "[IO] Cola de procesos bloqueados creada");
-        t_instancia_io* instancia_io = malloc(sizeof(t_instancia_io)); //Creo una instancia de este IO
+
+        //Creo la instancia de IO
+        t_instancia_io* instancia_io = malloc(sizeof(t_instancia_io)); 
         if(instancia_io == NULL) {
             log_error(logger_kernel, "[IO] Error al reservar memoria para la instancia de IO");
             pthread_mutex_unlock(&mutex_io);
             return NULL;
         }
         log_info(logger_kernel, "[IO] Instancia de IO creada");
+
+        //Agrego la instancia en la lista de instancias del IO
         instancia_io->socket_io = socket_io;
         instancia_io->pid_actual = -1;
-        list_add(io_nueva->instancias_io, instancia_io); //Agrego esta instancia en la lista de instancias del IO
+        //Agrego la instancia en la lista de instancias del IO
+        list_add(io_nueva->instancias_io, instancia_io); 
         io_nueva->instancias_disponibles = 1;
         log_info(logger_kernel, "[IO] Instancias disponibles de IO aumentadas a 1");
         agregar_io_a_lista(io_nueva);
         log_info(logger_kernel, "[IO] IO %s agregado a la lista", io_nueva->nombre_io);
 
-        //Despues de agregar la IO a la lista, creo el hilo de atencion
+        //Despues de agregar la IO a la lista, creo el hilo de atencion. Este hilo mantiene viva la conexion con el modulo 
+        //y maneja posibles desconexiones.
 
          pthread_t hilo_atencion_io;
 

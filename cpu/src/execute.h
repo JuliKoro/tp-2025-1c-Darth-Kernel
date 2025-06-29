@@ -25,4 +25,48 @@
  */
 int execute(instruccion_decodificada* instruccion, int socket_memoria);
 
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                    Agrego funciones de syscalls relevantes a kernel
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/**
+ * @brief Envia una syscall a kernel a partir de interpretar la instruccion decodificada
+ * 
+ * @param instruccion Instruccion decodificada
+ * @param socket_kernel socket de kernel al que se le enviara la syscall
+ */
+int enviar_syscall(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
+
+/**
+ * @brief Envia una syscall de IO a kernel
+ * 
+ * @param instruccion Instruccion decodificada
+ * @param socket_kernel_io socket de kernel al que se le enviara la syscall
+ */
+void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
+
+
+/**
+ * @brief Envia una syscall de inicializacion de proceso a kernel
+ * 
+ * @param instruccion Instruccion decodificada
+ * @param socket_kernel_dispatch socket de kernel al que se le enviara la syscall
+ */
+void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
+
+
+/**
+ * @brief Envia una syscall de volcado de memoria a kernel
+ * 
+ * @param instruccion Instruccion decodificada
+ * @param socket_kernel_dispatch socket de kernel al que se le enviara la syscall
+ */
+void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
+
+
+
 #endif 

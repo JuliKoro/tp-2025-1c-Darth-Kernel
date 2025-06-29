@@ -1,15 +1,10 @@
 #include "planificacion-largo-plazo.h"
 
-algoritmo_largo_plazo obtener_algoritmo_largo_plazo(char* algoritmo) {
-   if (strcmp(algoritmo, "FIFO") == 0) {
-      return FIFO;
-   }
-   return PMCP;
-}
+
 void* iniciar_planificador_largo_plazo() {
     
-    
-    algoritmo_largo_plazo algoritmo = obtener_algoritmo_largo_plazo(kernel_configs.ingreasoaready);
+    //Obtengo el enum correspondiente al algoritmo de planificacion
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
     
     switch (algoritmo) {
         case FIFO:
@@ -18,11 +13,15 @@ void* iniciar_planificador_largo_plazo() {
                 log_info(logger_kernel, "Planificador largo plazo iniciado en FIFO");
                 sem_wait(&sem_procesos_en_new); //Si no hay procesos en new, se bloquea el hilo
 
+                printf("Presione ENTER para continuar con la planificación a largo plazo...\n");
+                getchar();
+
                 //1. Verifico si hay procesos en cola running que hayan terminado, si terminaron se mueven a la cola exit
                 //Puede no haberlos
                 mover_procesos_terminados(); 
 
                 //2. Verifico si hay procesos en cola new
+                //TODO: Verificar que no haya procesos en la cola de susp ready
                 t_pcb* pcb = peek_cola_new();
                 if(pcb == NULL) {
                     log_error(logger_kernel, "Error al peekear la cola new");

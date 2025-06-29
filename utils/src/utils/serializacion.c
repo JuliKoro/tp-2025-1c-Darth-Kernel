@@ -161,11 +161,18 @@ void* stream_para_enviar(t_paquete* paquete){
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void enviar_paquete(int socket, t_paquete* paquete){
+int enviar_paquete(int socket, t_paquete* paquete){
+    //Arma el stream a partir del paquete, que contiene un codigo de operacion y un buffer
     void* stream = stream_para_enviar(paquete);
-    send(socket, stream, paquete->buffer->size + sizeof(t_codigo_operacion) + sizeof(uint32_t), 0);
-    liberar_paquete(paquete);
-    free(stream);
+    //Envia el stream al socket recibido por parametro
+    if(send(socket, stream, paquete->buffer->size + sizeof(t_codigo_operacion) + sizeof(uint32_t), 0) == -1){
+        liberar_paquete(paquete); //Libera el paquete recibido por parametro porque fallo el envio
+        free(stream); //Libera el stream creado despues de enviarlo porque fallo el envio
+        return -1;
+    };
+    liberar_paquete(paquete); //Libera el paquete recibido por parametro despues de enviarlo
+    free(stream); //Libera el stream creado despues de enviarlo
+    return 0;
 }
 
 t_paquete* recibir_paquete(int socket){
@@ -219,4 +226,26 @@ t_pcb* deserializar_pcb(t_buffer* buffer){
     uint32_t length;
     pcb->archivo_pseudocodigo = buffer_read_string(buffer, &length);
     return pcb;
+}
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                        Funciones de serializacion y deserializacion syscalls
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_syscall(t_syscall* syscall){
+    t_buffer* buffer = buffer_create(sizeof(t_syscall));
+    buffer_add_uint32(buffer, syscall->pid);
+    buffer_add_string(buffer, strlen(syscall->syscall), syscall->syscall);
+    return buffer;
+}
+
+t_syscall* deserializar_syscall(t_buffer* buffer){
+    t_syscall* syscall = malloc(sizeof(t_syscall));
+    uint32_t length;
+    syscall->syscall = buffer_read_string(buffer, &length);
+    syscall->pid = buffer_read_uint32(buffer);
+    return syscall;
 }

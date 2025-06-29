@@ -94,4 +94,6 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
  */
 void destruir_instruccion(instruccion_decodificada* instruccion);
 
+
+
 #endif

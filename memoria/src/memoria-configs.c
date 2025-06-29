@@ -24,3 +24,21 @@ void inicializar_configs(){
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo
     memoria_configs = configcargado;
 }
+
+void destruir_configs(){
+     //LIbero memoria
+    free(memoria_configs.pathswapfile);
+    free(memoria_configs.loglevel);
+    free(memoria_configs.dumppath);
+    free(memoria_configs.pathinstrucciones);
+    free(memoria_configs.puertoescucha);
+    free(memoria_configs.tammemoria);
+    free(memoria_configs.tampagina);
+    free(memoria_configs.entradasportabla);
+    free(memoria_configs.cantidadniveles);
+    free(memoria_configs.retardomemoria);
+    free(memoria_configs.retardoswap);
+
+    //Destruyo el config
+    config_destroy(memoria_tconfig);
+}

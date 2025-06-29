@@ -21,7 +21,9 @@ t_queue* cola_ready = NULL;
 t_queue* cola_exit = NULL;
 t_queue* cola_blocked = NULL;
 t_queue* cola_executing = NULL;
-
+t_queue* cola_susp_ready = NULL;
+t_queue* cola_susp_blocked = NULL;
+t_queue* cola_susp_blocked_io = NULL;
 t_list* lista_io = NULL;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,6 +38,9 @@ pthread_mutex_t mutex_cola_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_exit = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_executing = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_susp_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_susp_blocked_io = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_procesos_en_new;
@@ -46,13 +51,16 @@ sem_t sem_procesos_en_new;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 
-void inicializar_colas_y_sem() {
-    cola_new = queue_create();
-    cola_ready = queue_create();
-    cola_exit = queue_create();
-    cola_blocked = queue_create();
-    cola_executing = queue_create();
-    sem_init(&sem_procesos_en_new, 0, 0);
+algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo) {
+    if(strcmp(algoritmo, "FIFO") == 0) {
+        return FIFO;
+    } else if(strcmp(algoritmo, "PMCP") == 0) {
+        return PMCP;
+    } else if(strcmp(algoritmo, "SJF_SIN_DESALOJO") == 0) {
+        return SJF_SIN_DESALOJO;
+    } else if(strcmp(algoritmo, "SFJ_CON_DESALOJO") == 0)   {
+        return SFJ_CON_DESALOJO;
+    }
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
@@ -65,6 +73,43 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
     log_info(logger_kernel, "## (%d) Se crea el proceso inicial - Estado: NEW", pcb->pid);
 }
 
+void inicializar_colas_y_sem() {
+    cola_new = queue_create();
+    cola_ready = queue_create();
+    cola_exit = queue_create();
+    cola_blocked = queue_create();
+    cola_executing = queue_create();
+    cola_susp_ready = queue_create();
+    cola_susp_blocked = queue_create();
+    cola_susp_blocked_io = queue_create();
+    sem_init(&sem_procesos_en_new, 0, 0);
+}
+
+int recibir_mensaje_cpu(int socket_cpu) {
+    t_paquete* paquete = recibir_paquete(socket_cpu);
+    if(paquete == NULL) {
+        log_error(logger_kernel, "Error al recibir mensaje (paquete) de CPU");
+        return -1;
+    }
+    
+    switch(paquete->codigo_operacion) {
+        
+        case PAQUETE_SYSCALL:
+            log_info(logger_kernel, "Se recibio un pedido de syscall de CPU");
+            t_syscall* syscall = deserializar_syscall(paquete->buffer);
+            if(syscall == NULL) {
+                log_error(logger_kernel, "Error al deserializar syscall");
+                return -1;
+            }
+            //llamo a la funcion de manejo de la syscall en formato string
+            manejar_syscall(syscall->syscall);
+            free(syscall);
+            free(paquete);
+        default:
+            log_error(logger_kernel, "Codigo de operacion invalido recibido de CPU");
+            return -1;
+    }
+}
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -262,4 +307,111 @@ bool comprobar_grado_multiprogramacion_maximo() {
     bool valor = grado_multiprogramacion < GRADO_MULTIPROGRAMACION_MAXIMO;
     pthread_mutex_unlock(&mutex_grado_multiprogramacion);
     return valor;
+}
+
+
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                        SYSCALLS
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares para las syscalls
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_io* buscar_io_por_nombre(char* nombre_buscado) {
+    pthread_mutex_lock(&mutex_io);
+
+    for(int i = 0; i < list_size(lista_io); i++) {
+        t_io* io = list_get(lista_io, i);
+        if(strcmp(io->nombre_io, nombre_buscado) == 0) {
+            pthread_mutex_unlock(&mutex_io);
+            return io;
+        }
+    }
+    pthread_mutex_unlock(&mutex_io);
+    return NULL;
+}
+
+
+int manejar_syscall(char* syscall) {
+    //Leo hasta el primer espacio, obtengo syscall
+    char* tipo_syscall = strtok(syscall, " ");
+
+    //Evaluo el tipo de syscall 
+
+    if(strcmp(tipo_syscall, "IO") == 0) {
+        //Leo hasta el siguiente espacio, obtengo nombre_io
+        char* nombre_io = strtok(NULL, " ");
+        //Leo hasta el siguiente espacio, obtengo tiempo_io
+        char* tiempo_io = strtok(NULL, " ");
+        //Llamo a la funcion io
+        if(io(nombre_io, (u_int32_t)atoi(tiempo_io)) == -1) {
+            printf("Error al ejecutar syscall IO\n");
+            return -1;
+        }
+    } else if(strcmp(tipo_syscall, "INIT_PROC") == 0) { 
+        //Leo hasta el siguiente espacio, obtengo archivo_pseudocodigo
+        char* archivo_pseudocodigo = strtok(NULL, " ");
+        //Leo hasta el siguiente espacio, obtengo tamanio_proceso
+        char* tamanio_proceso = strtok(NULL, " ");
+        //Llamo a la funcion init_proc
+        if(init_proc(archivo_pseudocodigo, (u_int32_t)atoi(tamanio_proceso)) == -1) {
+            printf("Error al ejecutar syscall INIT_PROC\n");
+            return -1;
+        }
+    } else if(strcmp(tipo_syscall, "EXIT") == 0) {
+        //TODO: enviar a exit
+    } else if(strcmp(tipo_syscall, "DUMP_MEMORIA") == 0) {
+        //TODO: dump_memoria
+    } else {
+        printf("Syscall no valida\n");
+        return -1;
+    }
+    return 0;
+}
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Syscalls como tal
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
+    t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso);
+    agregar_pcb_a_cola_new(pcb);
+    return 0;
+} 
+
+int io (char* nombre_io, u_int32_t tiempo_io) {
+    //Buscar IO en la lista de IO
+    t_io* io = buscar_io_por_nombre(nombre_io);
+    //Si no existe, proceso va a EXIT
+    if(io == NULL) {
+        //TODO: enviar a exit
+    }
+    //Si existe, proceso va a BLOCKED
+
+    //Se envia la peticion al IO
+    //pthread_mutex_lock(&io->mutex_cola_blocked_io);
+    //queue_push(io->cola_blocked_io, obtener_pid_actual()); // Esto esta mal
+    pthread_mutex_unlock(&io->mutex_cola_blocked_io);
+    //Se espera a que el IO finalice la operacion
+
+    //Se actualiza la cola de ready
+
+    //Se actualiza la cola de blocked
+
+    //Se actualiza la cola de executing
+
+    //Se actualiza la cola de exit
+
+    //Se actualiza la cola de new   
 }

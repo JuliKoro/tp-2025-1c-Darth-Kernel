@@ -16,6 +16,18 @@ extern t_config* cpu_tconfig;
  * @struct cpuconfigs
  * @brief Estructura que contiene la configuración del CPU
  * 
+ * @param ipmemoria: Dirección IP del módulo de memoria
+ * @param puertomemoria: Puerto del módulo de memoria
+ * @param ipkernel: Dirección IP del módulo del kernel
+ * @param puertokerneldispatch: Puerto de dispatch del kernel
+ * @param puertokernelinterrupt: Puerto de interrupción del kernel
+ * @param entradastlb: Número de entradas en la TLB
+ * @param reemplazotlb: Algoritmo de reemplazo de la TLB
+ * @param entradascache: Número de entradas en la caché
+ * @param reemplazocache: Algoritmo de reemplazo de la caché
+ * @param retardocache: Retardo de acceso a la caché
+ * @param loglevel: Nivel de log para el módulo
+ * 
  * Esta estructura almacena la configuración necesaria para el
  * funcionamiento del CPU, incluyendo direcciones IP, puertos y
  * parámetros de reemplazo de caché y TLB.

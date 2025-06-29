@@ -84,6 +84,12 @@ int esperar_cliente(int socket_servidor);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+/**
+ * @brief Envia un mensaje string a un socket
+ * 
+ * @param mensaje el mensaje a enviar
+ * @param socket el socket de destino
+ */
 void enviar_mensaje(char* mensaje, int socket);
 
 /**
@@ -120,23 +126,6 @@ int enviar_handshake(int socket, id_modulo_t modulo);
 * @return 
 */
 int recibir_handshake(int socket, id_modulo_t* modulo_recibido);
-
-/**
-* @brief Envia un pcb
-* @param socket el socket al cual se envia el pcb
-* @param pcb el pcb a enviar
-* @return 
-*/  
-int enviar_pcb(int socket, t_pcb* pcb);
-
-
-
-/**
-* @brief Recibe un pcb
-* @param socket el socket desde el cual se recibe el pcb
-* @return el pcb recibido
-*/
-int recibir_pcb(int socket);
 
 
 
@@ -185,4 +174,5 @@ int recibir_handshake_io(int socket, char** nombre_io);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+//TODO: EVALUAR mover funciones de handshake de cpu aca
 #endif

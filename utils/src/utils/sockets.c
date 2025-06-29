@@ -10,6 +10,7 @@ const char* int_a_string(int numero) {
     return buffer;
 }
 
+
 char* nombre_modulo(id_modulo_t modulo) {
     switch(modulo) {
         case HANDSHAKE_CPU:
@@ -224,30 +225,6 @@ int recibir_handshake(int socket, id_modulo_t* modulo_recibido) {
     
     log_info(logger_sockets, "Handshake de %s (ID %d) recibido!", nombre_modulo((id_modulo_t)id), id);
     
-    return 0;
-}
-
-int enviar_pcb(int socket, t_pcb* pcb) {
-    //Envio el pcb al socket, chequeo errores
-    if(send(socket, pcb, sizeof(t_pcb), 0) == -1){
-        log_error(logger_sockets, "Error al enviar pcb (SOCKET %d): %s", socket, strerror(errno));
-        return -1;
-    }
-    return 0;
-}
-
-int recibir_pcb(int socket) {
-    t_pcb* pcb = malloc(sizeof(t_pcb));
-    if(pcb == NULL){
-        log_error(logger_sockets, "Error al reservar memoria para el pcb (SOCKET %d): %s", socket, strerror(errno));
-        return -1;
-    }
-    //Recibo el pcb, chequeo errores
-    if(recv(socket, pcb, sizeof(t_pcb), 0) == -1){
-        log_error(logger_sockets, "Error al recibir pcb (SOCKET %d): %s", socket, strerror(errno));
-        free(pcb);
-        return -1;
-    }
     return 0;
 }
 
