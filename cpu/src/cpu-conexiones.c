@@ -8,7 +8,7 @@ int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu){
     log_info(logger_sockets, "FD de conexion con el KERNEL %d", socket_kernel);
     log_info(logger_sockets, "[HANDSHAKE] Enviando handhsake a KERNEL...");
 
-    if(enviar_handshake (socket_kernel, id_cpu) == -1){
+    if(enviar_handshake_cpu(socket_kernel, id_cpu) == -1){
         log_error(logger_sockets, "[HANDSHAKE] Fallo al enviar handshake a KERNEL. Cierro conexion.");
         close(socket_kernel);
         return -1;
@@ -37,7 +37,7 @@ int cpu_conectar_a_memoria(int id_cpu){
     log_info(cpu_logger, "FD de conexion con la MEMORIA %d", socket_memoria);
     log_info(cpu_logger, "Enviando handhsake a MEMORIA...");
 
-    if(enviar_handshake (socket_memoria, HANDSHAKE_CPU) == -1){
+    if(enviar_handshake_cpu(socket_memoria, id_cpu) == -1){
         log_error(cpu_logger, "Fallo al enviar handshake a MEMORIA. Cierro conexion.");
         close(socket_memoria);
         return -1;

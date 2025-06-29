@@ -168,6 +168,22 @@ int enviar_handshake_io(int socket, char* nombre_io);
 */
 int recibir_handshake_io(int socket, char** nombre_io);
 
+/**
+* @brief Envia handshake CPU
+* @param socket el socket al cual se envia el mensaje de handshake
+* @param id_cpu el id de la cpu, el cual seria el valor del handshake
+* @return 
+*/
+int enviar_handshake_cpu(int socket, int id_cpu);
+
+/**
+* @brief Recibe handshake
+* @param socket el socket desde el cual se recibe el mensaje de handshake
+* @param id_cpu puntero entero donde se guardará el id del CPU recibido
+* @return 
+*/
+int recibir_handshake_cpu(int socket, int* id_cpu);
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones de handshake CPU
