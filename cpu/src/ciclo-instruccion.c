@@ -1,8 +1,8 @@
 #include "ciclo-instruccion.h"
 
 void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
+    pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
-        pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
         
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
 
@@ -11,7 +11,6 @@ void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel
         execute(instruccion_decodificada, socket_memoria); //ETAPA EXECUTE
 
         check_interrupt();
-
 
         // LIMPIAR INSTRUCCIONES
         destruir_instruccion(instruccion_decodificada);
