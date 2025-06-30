@@ -20,10 +20,11 @@
  *                    que se desea ejecutar.
  * @param socket_memoria Socket de memoria para realizar operaciones
  *                       de lectura y escritura.
+ * @param socket_kernel_dispatch socket de kernel para enviar las syscalls
  * @return int Retorna 0 si la ejecución fue exitosa, o un código de error
  *             en caso de fallo.
  */
-int execute(instruccion_decodificada* instruccion, int socket_memoria);
+int execute(instruccion_decodificada* instruccion, int socket_memoria, int socket_kernel_dispatch);
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////

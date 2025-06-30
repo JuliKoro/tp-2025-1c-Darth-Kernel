@@ -1,8 +1,7 @@
 #include "execute.h"
 
 // Implementación de la función execute
-//Nahuel> Faltaria que reciba por parametro el socket de kernel para poder enviar las syscalls
-int execute(instruccion_decodificada* instruccion, int socket_memoria) {
+int execute(instruccion_decodificada* instruccion, int socket_memoria, int socket_kernel_dispatch) {
     // Log de inicio de ejecución
     char* parametros = parametros_str(instruccion);
     log_info(logger_cpu, "## PID: %d - Ejecutando: %s - %s", instruccion->pid, instruccion_str(instruccion->tipo), parametros);
@@ -29,20 +28,24 @@ int execute(instruccion_decodificada* instruccion, int socket_memoria) {
 
         case IO: // SYSCALL (Dispositivo, Tiempo)
             // manejar operaciones de entrada/salida
-            // manejar_io(instruccion->dispositivo_io, instruccion->tiempo_io);
+            enviar_syscall(instruccion, socket_kernel_dispatch);
+            
             break;
 
         case INIT_PROC: // SYSCALL (Archivo de instrucciones, Tamaño)
             // inicializar un proceso
-            // inicializar_proceso(instruccion->archivo_proceso);
+            enviar_syscall(instruccion, socket_kernel_dispatch);
+
             break;
 
         case DUMP_MEMORY: // SYSCALL
             // volcar la memoria
-            // volcar_memoria();
+            enviar_syscall(instruccion, socket_kernel_dispatch);
+
             break;
 
         case EXIT: // SYSCALL
+            enviar_syscall(instruccion, socket_kernel_dispatch);
             
             break;
 
