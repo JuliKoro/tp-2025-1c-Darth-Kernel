@@ -21,7 +21,6 @@ void destruir_configs(){
       //LIbero memoria
     free(io_configs.ipkernel);
     free(io_configs.loglevel);
-    free(io_configs.puertokernel);
 
     //Destruyo el config
     config_destroy(io_tconfig);

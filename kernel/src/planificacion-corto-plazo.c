@@ -24,7 +24,7 @@ void iniciar_planificador_corto_plazo() {
                     log_error(logger_kernel, "Error al obtener pcb de cola ready");
                     continue;
                 }
-                agregar_pcb_a_cola_executing(pcb);
+                //agregar_pcb_a_cola_executing(pcb);
                 
                 //TODO: Manejar cola de executing, mandar procesos a CPU
                 //3. Envio proceso desde cola EXECUTING a cola BLOCKED

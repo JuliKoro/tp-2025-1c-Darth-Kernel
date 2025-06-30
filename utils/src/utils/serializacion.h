@@ -330,7 +330,7 @@ t_pcb* deserializar_pcb(t_buffer* buffer);
  * y el resto son parametros
  * @return t_buffer* Puntero al buffer que contiene la serializacion de la syscall
  */
-t_buffer* serializar_syscall(char* syscall);
+t_buffer* serializar_syscall(t_syscall* syscall);
 
 //Deserializa un buffer en una syscall
 /**

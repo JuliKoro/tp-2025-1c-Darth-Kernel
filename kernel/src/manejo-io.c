@@ -21,7 +21,11 @@ bool comparar_nombre_io(void* elemento, void* nombre_a_comparar) {
     return strcmp(io->nombre_io, nombre_io) == 0;
 }
 
-
+bool comparar_socket_io(void* elemento, void* socket_a_comparar) {
+    int socket = (int)(intptr_t)socket_a_comparar;
+    t_instancia_io* instancia_io = (t_instancia_io*)elemento;
+    return instancia_io->socket_io == socket;
+}
 
 
 void agregar_io_a_lista(t_io* io) {
@@ -60,6 +64,20 @@ void aumentar_instancias_disponibles(char* nombre_io) {
     pthread_mutex_unlock(&mutex_io);
 }
 
+void disminuir_instancias_disponibles(char* nombre_io) {
+    pthread_mutex_lock(&mutex_io);
+    t_io* io = list_find_con_param(lista_io, comparar_nombre_io, nombre_io);
+    if(io != NULL) {
+        io->instancias_disponibles--;
+        log_info(logger_kernel, "[IO] Instancias disponibles de %s disminuidas a %d", io->nombre_io, io->instancias_disponibles);
+    } else{
+        log_error(logger_kernel, "[IO] IO no encontrada");
+    }
+
+    pthread_mutex_unlock(&mutex_io);
+}
+
+
 void eliminar_instancia_io(int socket_io){
     pthread_mutex_lock(&mutex_io);
 
@@ -87,22 +105,119 @@ void eliminar_instancia_io(int socket_io){
     pthread_mutex_unlock(&mutex_io);
 }
 
-void* atender_io(void* socket_ptr){
-    int socket_io = (int)(intptr_t)socket_ptr;
+t_io* buscar_io_por_socket(int socket_io){
+    pthread_mutex_lock(&mutex_io);
+    t_io* io = list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
+    pthread_mutex_unlock(&mutex_io);
+    return io;
+}
 
-    char buffer[1];
-    ssize_t bytes_recibidos;
+t_blocked_io* buscar_proceso_en_blocked_io(int socket_io) {
+    t_io* io = buscar_io_por_socket(socket_io);
+    if(io == NULL) {
+        log_error(logger_kernel, "[IO] No se encontró el IO con socket %d", socket_io);
+        return NULL;
+    }
 
+    pthread_mutex_lock(&mutex_lista_blocked_io);
+
+    for(int i = 0; i < list_size(lista_blocked_io); i++) {
+        t_blocked_io* pcb_blocked = list_get(lista_blocked_io, i);
+        if(strcmp(pcb_blocked->nombre_io, io->nombre_io) == 0) {
+            pthread_mutex_unlock(&mutex_lista_blocked_io);
+            return pcb_blocked;
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_lista_blocked_io);
+    
+    return NULL;
+}
+
+
+
+void* atender_io(void* instancia_io){
+    t_instancia_io* instancia_io_a_manejar = (t_instancia_io*)instancia_io;
+    int socket_io = instancia_io_a_manejar->socket_io;
+
+    
 
     while(1){
-        bytes_recibidos = recv(socket_io, buffer, sizeof(buffer), 0);
-        if(bytes_recibidos == 0) {
-            log_warning(logger_kernel, "[IO] Conexion cerrada en el socket %d", socket_io);
-            break;
-        } else if(bytes_recibidos < 0) {
-            log_error(logger_kernel, "[IO] Error al recibir datos de IO. Cerrando conexion.");
+        char* mensaje = recibir_mensaje(socket_io);
+
+        if (mensaje == NULL){ //Si es NULL es porque se cerro la conexion
+            log_info(logger_kernel, "[IO] Instancia de IO %d desconectada", socket_io);
+
+            pthread_mutex_lock(&mutex_io); //Critica
+            
+            //Si habia un proceso usando la instancia que se desconecto, lo muevo a EXIT
+            if(instancia_io_a_manejar->pid_actual != -1){
+                log_info(logger_kernel, "[IO] PID %d estaba usando la instancia desconectada. Pasa a EXIT", instancia_io_a_manejar->pid_actual);
+                mover_pcb_a_exit_desde_executing(instancia_io_a_manejar->pid_actual);
+            }
+
+            //Elimino la instancia de la lista
+            eliminar_instancia_io(socket_io);
+
+            //Cierro el socket de esa instancia
+            close(socket_io);
+            pthread_mutex_unlock(&mutex_io);// Termina critica
+            free(instancia_io_a_manejar);
             break;
         }
+
+        if (strcmp(mensaje, "IO finalizada") == 0){
+            log_info(logger_kernel, "[IO] IO finalizada");
+            pthread_mutex_lock(&mutex_io);
+
+            int pid = instancia_io_a_manejar->pid_actual;
+            instancia_io_a_manejar->pid_actual = -1;
+
+            t_io* io = buscar_io_por_socket(socket_io); 
+            aumentar_instancias_disponibles(io->nombre_io);
+
+            mover_pcb_a_ready_desde_blocked(pid);
+            log_info(logger_kernel, "[IO] PID (%d) finalizo IO y pasa a READY", pid);
+
+            //Me fijo si hay un proceso esperando usar esta IO que se libero, si la hay
+            //tengo que mandar la solicitud a la IO.
+            t_blocked_io* pcb_en_blocked = buscar_proceso_en_blocked_io(socket_io);
+            
+            if(pcb_en_blocked != NULL){
+                log_info(logger_kernel, "[IO] PID (%d) estaba bloqueado esperando a IO %s", pcb_en_blocked->pid, pcb_en_blocked->nombre_io);
+                log_info(logger_kernel, "[IO] PID (%d) encontrado en blocked_io. Proceso sigue en blocked general, pero envio solicitud a IO", pcb_en_blocked->pid);
+                //Envio solicitud a IO
+                instancia_io_a_manejar->pid_actual = pcb_en_blocked->pid;
+                disminuir_instancias_disponibles(pcb_en_blocked->nombre_io);
+
+                  t_solicitud_io solicitud_io = {
+                    .pid = pcb_en_blocked->pid,
+                    .tiempo = pcb_en_blocked->tiempo_io
+                };
+
+
+                t_buffer* buffer_io = serializar_solicitud_io(&solicitud_io);
+                t_paquete* paquete_io = empaquetar_buffer(PAQUETE_SOLICITUD_IO, buffer_io);
+
+                if(enviar_paquete(socket_io, paquete_io) == -1){
+                    log_error(logger_kernel, "[IO] Error al enviar solicitud de IO a IO");
+                    return NULL;
+                }
+
+                sacar_pcb_de_blocked_io(pcb_en_blocked); //Implementar
+
+                liberar_paquete(paquete_io);
+                free(pcb_en_blocked->nombre_io);
+                free(pcb_en_blocked);
+
+
+            }
+            
+
+            
+        }
+
+        free(mensaje);
     }
 
     close(socket_io);
@@ -187,7 +302,7 @@ void* guardar_io(void* socket_ptr) {
 
          pthread_t hilo_atencion_io;
 
-        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)(intptr_t)socket_io) == 0) {
+        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)instancia_io) == 0) {
             pthread_detach(hilo_atencion_io);
         } else {
             log_error(logger_kernel, "[IO] Error al crear hilo de atencion de IO");
@@ -212,7 +327,7 @@ void* guardar_io(void* socket_ptr) {
 
         pthread_t hilo_atencion_io;
 
-        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)(intptr_t)socket_io) == 0) {
+        if(pthread_create(&hilo_atencion_io, NULL, atender_io, (void*)instancia_io) == 0) {
             pthread_detach(hilo_atencion_io);
         }
     }

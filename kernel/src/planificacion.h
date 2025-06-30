@@ -12,6 +12,7 @@
 #include <utils/pcb.h>
 #include "kernel-conexiones.h"
 #include <semaphore.h>
+#include <utils/listas.h>
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -56,14 +57,6 @@ typedef struct {
 } t_io;
 
 /**
- * @brief Estructura que representa un proceso bloqueado esperando la respuesta del modulo IO
- * 
- * @param pid: El PID del proceso
- * @param nombre_io: El nombre del IO que el proceso esta esperando
- */
-
-
-/**
  * @brief Enum que representa los algoritmos de planificacion
  * 
  * @param FIFO: Planificacion FIFO (para ambos planificadores)
@@ -83,12 +76,42 @@ typedef enum {
  * 
  * @param pid: El PID del proceso
  * @param nombre_io: El nombre del IO que el proceso esta esperando
+ * @param tiempo_io: El tiempo de IO que el proceso esta esperando
  */
 typedef struct {
-    int pid;
+    u_int32_t pid;
     char* nombre_io;
+    u_int32_t tiempo_io;
 } t_blocked_io;
 
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares a estructuras
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/**
+ * @brief Crea un t_blocked_io
+ * 
+ * @param pid: El pid del pcb a mover
+ * @param nombre_io: El nombre del io
+ * @param tiempo_io: El tiempo de io
+ * @return El t_blocked_io creado
+ */
+t_blocked_io* crear_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io);
+
+bool comparar_pid(void* elemento, void* pid);
+
+
+/**
+ * @brief Actualiza el estado de un pcb
+ * 
+ * @param pid: El pid del pcb a actualizar
+ * @param estado: El estado del pcb
+ * @return 0 si el estado se actualiza correctamente
+ */
+int actualizar_estado_pcb(u_int32_t pid, estado_pcb estado);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -98,14 +121,15 @@ typedef struct {
 
 extern pthread_mutex_t mutex_io;
 extern pthread_mutex_t mutex_cola_new;
-extern pthread_mutex_t mutex_cola_blocked;
+extern pthread_mutex_t mutex_lista_blocked;
 extern pthread_mutex_t mutex_cola_ready;
-extern pthread_mutex_t mutex_cola_exit;
-extern pthread_mutex_t mutex_cola_executing;
-extern pthread_mutex_t mutex_cola_susp_ready;
-extern pthread_mutex_t mutex_cola_susp_blocked;
+extern pthread_mutex_t mutex_lista_exit;
+extern pthread_mutex_t mutex_lista_executing;
+extern pthread_mutex_t mutex_lista_susp_ready;
+extern pthread_mutex_t mutex_lista_susp_blocked;
 extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
+extern pthread_mutex_t mutex_lista_blocked_io;
 extern sem_t sem_procesos_en_new;
 
 
@@ -117,12 +141,14 @@ extern sem_t sem_procesos_en_new;
 
 extern t_queue* cola_new;
 extern t_queue* cola_ready;
-extern t_queue* cola_exit;
-extern t_queue* cola_blocked;
-extern t_queue* cola_executing;
-extern t_queue* cola_susp_ready;
-extern t_queue* cola_susp_blocked;
-extern t_queue* cola_susp_blocked_io; //Esta cola debe contener structs de t_blocked_io
+
+extern t_list* lista_ready_pmcp; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_exit; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_blocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_executing; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_susp_ready; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_susp_blocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_blocked_io; //Esta cola debe contener structs de t_blocked_io
 
 extern t_list* lista_io;
 
@@ -200,37 +226,14 @@ int recibir_mensaje_cpu (int socket_cpu);
 void agregar_pcb_a_cola_new(t_pcb* pcb);
 
 /**
- * @brief Agrega un pcb a la cola ready
+ * @brief Agrega un pcb a la lista ready
  * 
- * Esta función recibe un pcb y lo agrega a la cola ready
+ * Esta función recibe un pcb y lo agrega a la lista ready
  * 
  */
 void agregar_pcb_a_cola_ready(t_pcb* pcb);
 
-/**
- * @brief Agrega un pcb a la cola blocked
- * 
- * Esta función recibe un pcb y lo agrega a la cola blocked
- * 
- */
-void agregar_pcb_a_cola_blocked(t_pcb* pcb);
 
-
-/**
- * @brief Agrega un pcb a la cola exit
- * 
- * Esta función recibe un pcb y lo agrega a la cola exit
- * 
- */
-void agregar_pcb_a_cola_exit(t_pcb* pcb);
-
-/**
- * @brief Agrega un pcb a la cola executing
- * 
- * Esta función recibe un pcb y lo agrega a la cola executing
- * 
- */
-void agregar_pcb_a_cola_executing(t_pcb* pcb);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -254,33 +257,10 @@ t_pcb* peek_cola_new();
  */
 t_pcb* peek_cola_ready();
 
-/**
- * @brief Obtiene un pcb de la cola blocked
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola blocked
- * 
- */
-t_pcb* peek_cola_blocked();
-
-/**
- * @brief Obtiene un pcb de la cola exit
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola exit
- * 
- */
-t_pcb* peek_cola_exit();
-
-/**
- * @brief Obtiene un pcb de la cola executing
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola executing
- * 
- */
-t_pcb* peek_cola_executing();
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para obtener pcb de las colas
+                                Funciones para obtener pcb de las colas & listas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -301,29 +281,78 @@ t_pcb* obtener_pcb_de_cola_new();
 t_pcb* obtener_pcb_de_cola_ready();
 
 
-/**
- * @brief Obtiene un pcb de la cola executing
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola executing
- * 
- */
-t_pcb* obtener_pcb_de_cola_executing();
 
 /**
- * @brief Obtiene un pcb de la cola blocked
+ * @brief Mueve un pcb de la lista executing a la lista blocked_io
  * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola blocked
+ * @return 0 si el pcb se mueve correctamente.
+ * 
+ * Esta función recibe un pid y un nombre de io. Mueve un pcb de la lista executing a la lista blocked_io
  * 
  */
-t_pcb* obtener_pcb_de_cola_blocked();
+int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io);
+
 
 /**
- * @brief Obtiene un pcb de la cola exit
+ * @brief Saca un t_blocked_io de la lista blocked_io
  * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola exit
+ * @param io_a_sacar: El t_blocked_io a sacar de la lista blocked_io
  * 
  */
-t_pcb* obtener_pcb_de_cola_exit();
+int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_exit_desde_executing(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista blocked
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_blocked_desde_executing(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista ready
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
+
+
+
+
+/**
+ * @brief Saca un pcb de la lista blocked_io
+ * 
+ * @param io_a_sacar: El pcb a sacar de la lista blocked_io
+ * 
+ */
+int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_exit_desde_executing(u_int32_t pid);
+
+
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista ready
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,13 +428,12 @@ t_io* buscar_io_por_nombre(char* nombre_buscado);
 
 
 /**
- * @brief Recibe una syscall en formato string, lee hasta el primer espacio. Interpreta el tipo de syscall.ADJ_FREQUENCY
- * Y llama a la funcion de la syscall que corresponda, con sus parametros.
+ * @brief Recibe una estructura t_syscall, maneja el string con la instruccion contenido en dicha estructura e interpreta el tipo de syscall
  * 
- * @param syscall: La syscall a manejar
+ * @param syscall: La estructura t_syscall que contiene la instruccion a manejar
  * @return El resultado de la syscall
  */
-int manejar_syscall(char* syscall);
+int manejar_syscall(t_syscall* syscall);
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -422,7 +450,7 @@ int manejar_syscall(char* syscall);
  * @param archivo_pseudocodigo: El archivo de pseudocódigo del proceso
  * @param tamanio_proceso: El tamaño del proceso
  */
-int init_proc(char* archivo_pseudocodigo, int tamanio_proceso);
+int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso);
 
 
 /**
@@ -431,7 +459,7 @@ int init_proc(char* archivo_pseudocodigo, int tamanio_proceso);
  * @param nombre_io: El nombre del IO
  * @param tiempo_io: El tiempo de IO en milisegundos
  */
-int io (char* nombre_io, u_int32_t tiempo_io);
+int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid);
 
 
 

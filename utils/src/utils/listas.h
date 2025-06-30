@@ -6,6 +6,7 @@
 
 /**
  * @brief Busca un elemento en una lista con un parametro
+ * La funcion de comparacion debe ser una funcion que reciba un void* elemento y un void* cosa a comparar
  * 
  * @param lista Lista en la que se busca
  * @param comparar Función de comparación

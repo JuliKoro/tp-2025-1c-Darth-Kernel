@@ -18,13 +18,43 @@ u_int32_t grado_multiprogramacion = 0;
 
 t_queue* cola_new = NULL;
 t_queue* cola_ready = NULL;
-t_queue* cola_exit = NULL;
-t_queue* cola_blocked = NULL;
-t_queue* cola_executing = NULL;
-t_queue* cola_susp_ready = NULL;
-t_queue* cola_susp_blocked = NULL;
-t_queue* cola_susp_blocked_io = NULL;
+
+t_list* lista_ready_pmcp = NULL;
+t_list* lista_exit = NULL;
+t_list* lista_blocked = NULL;
+t_list* lista_executing = NULL;
+t_list* lista_susp_ready = NULL;
+t_list* lista_susp_blocked = NULL;
+t_list* lista_blocked_io = NULL;
+
 t_list* lista_io = NULL;
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares a estructuras
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_blocked_io* crear_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io){
+    t_blocked_io* blocked_io = malloc(sizeof(t_blocked_io));
+    blocked_io->pid = pid;
+    blocked_io->nombre_io = nombre_io;
+    blocked_io->tiempo_io = tiempo_io;
+    return blocked_io;
+}
+
+bool comparar_pid(void* elemento, void* pid) {
+    t_pcb* pcb = (t_pcb*)elemento;
+    u_int32_t pid_pcb = pcb->pid;
+    return pid_pcb == *(u_int32_t*)pid;
+}
+
+
+int actualizar_estado_pcb(u_int32_t pid, estado_pcb estado) {
+    t_pcb* pcb = list_find_con_param(lista_executing, comparar_pid, &pid);
+    pcb->estado = estado;
+    return 0;
+}
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -34,13 +64,13 @@ t_list* lista_io = NULL;
 
 pthread_mutex_t mutex_io = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_new = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_blocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_exit = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_executing = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_susp_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_susp_blocked_io = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_exit = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_executing = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_susp_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_blocked_io = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_procesos_en_new;
@@ -76,12 +106,12 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
 void inicializar_colas_y_sem() {
     cola_new = queue_create();
     cola_ready = queue_create();
-    cola_exit = queue_create();
-    cola_blocked = queue_create();
-    cola_executing = queue_create();
-    cola_susp_ready = queue_create();
-    cola_susp_blocked = queue_create();
-    cola_susp_blocked_io = queue_create();
+    lista_exit = list_create();
+    lista_blocked  = list_create();
+    lista_executing = list_create();
+    lista_susp_ready = list_create();
+    lista_susp_blocked = list_create();
+    lista_blocked_io = list_create();
     sem_init(&sem_procesos_en_new, 0, 0);
 }
 
@@ -102,7 +132,7 @@ int recibir_mensaje_cpu(int socket_cpu) {
                 return -1;
             }
             //llamo a la funcion de manejo de la syscall en formato string
-            manejar_syscall(syscall->syscall);
+            manejar_syscall(syscall);
             free(syscall);
             free(paquete);
         default:
@@ -136,7 +166,7 @@ u_int32_t obtener_pid_actual() {
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                        Funciones para agregar a las colas
+                                        Funciones para manejo de las colas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -155,23 +185,7 @@ void agregar_pcb_a_cola_ready(t_pcb* pcb) {
     pthread_mutex_unlock(&mutex_cola_ready);
 }
 
-void agregar_pcb_a_cola_blocked(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_cola_blocked);
-    queue_push(cola_blocked, pcb);
-    pthread_mutex_unlock(&mutex_cola_blocked);
-}
 
-void agregar_pcb_a_cola_exit(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_cola_exit);
-    queue_push(cola_exit, pcb);
-    pthread_mutex_unlock(&mutex_cola_exit);
-}
-
-void agregar_pcb_a_cola_executing(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_cola_executing);
-    queue_push(cola_executing, pcb);
-    pthread_mutex_unlock(&mutex_cola_executing);
-}
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,30 +208,9 @@ t_pcb* peek_cola_ready() {
     return pcb;
 }   
 
-t_pcb* peek_cola_blocked() {
-    pthread_mutex_lock(&mutex_cola_blocked);
-    t_pcb* pcb = queue_peek(cola_blocked);
-    pthread_mutex_unlock(&mutex_cola_blocked);
-    return pcb;
-}
-
-t_pcb* peek_cola_exit() {
-    pthread_mutex_lock(&mutex_cola_exit);
-    t_pcb* pcb = queue_peek(cola_exit);
-    pthread_mutex_unlock(&mutex_cola_exit);
-    return pcb;
-}
-
-t_pcb* peek_cola_executing() {
-    pthread_mutex_lock(&mutex_cola_executing);
-    t_pcb* pcb = queue_peek(cola_executing);
-    pthread_mutex_unlock(&mutex_cola_executing);
-    return pcb;
-}
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para obtener pcb de las colas
+                                Funciones para obtener pcb de las listas y colas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -235,28 +228,127 @@ t_pcb* obtener_pcb_de_cola_ready() {
     return pcb;
 }
 
-t_pcb* obtener_pcb_de_cola_blocked() {
-    pthread_mutex_lock(&mutex_cola_blocked);
-    t_pcb* pcb = queue_pop(cola_blocked);
-    pthread_mutex_unlock(&mutex_cola_blocked);
-    return pcb;
-}   
 
-t_pcb* obtener_pcb_de_cola_exit() {
-    pthread_mutex_lock(&mutex_cola_exit);
-    t_pcb* pcb = queue_pop(cola_exit);
-    pthread_mutex_unlock(&mutex_cola_exit);
-    return pcb; 
+
+int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+    
+    // Buscar el PCB en la lista
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb_temp = list_get(lista_executing, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = pcb_temp;
+            //Tambien lo muevo a la lista de blocked general
+            //Actualizo el estado del proceso
+            pcb_encontrado->estado = BLOCKED;
+            pthread_mutex_lock(&mutex_lista_blocked);
+            list_add(lista_blocked, pcb_encontrado);
+            pthread_mutex_unlock(&mutex_lista_blocked);
+
+            //Antes de removerlo, lo muevo a blocked_io
+
+            pthread_mutex_lock(&mutex_lista_blocked_io);
+            //Tengo que armar un struct de blocked_io
+            t_blocked_io* blocked_io = crear_blocked_io(pcb_encontrado->pid, nombre_io, tiempo_io);
+            list_add(lista_blocked_io, blocked_io);
+            pthread_mutex_unlock(&mutex_lista_blocked_io);
+
+            // Remover el elemento de la cola en la posición i
+            list_remove(lista_executing, i);
+            break;
+        }
+    }
+    
+    pthread_mutex_unlock(&mutex_lista_executing);
+
+    return 0;
 }
 
-t_pcb* obtener_pcb_de_cola_executing() {
-    pthread_mutex_lock(&mutex_cola_executing);
-    t_pcb* pcb = queue_pop(cola_executing);
-    pthread_mutex_unlock(&mutex_cola_executing);    
-    return pcb;
+int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar) {
+    pthread_mutex_lock(&mutex_lista_blocked_io);
+    int indice_a_eliminar = -1;
+    for(int i = 0; i < list_size(lista_blocked_io); i++) {
+        t_blocked_io* blocked_io_temp = list_get(lista_blocked_io, i);
+        if(blocked_io_temp->pid == io_a_sacar->pid && 
+           strcmp(blocked_io_temp->nombre_io, io_a_sacar->nombre_io) == 0 &&
+           blocked_io_temp->tiempo_io == io_a_sacar->tiempo_io) {
+            indice_a_eliminar = i;
+            break;
+        }
+    }
+    list_remove(lista_blocked_io, indice_a_eliminar);
+    pthread_mutex_unlock(&mutex_lista_blocked_io);
+    return 0;
 }
 
+int mover_pcb_a_exit_desde_executing(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
 
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb_temp = list_get(lista_executing, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = pcb_temp;
+            //Actualizo el estado del proceso
+            pcb_encontrado->estado = EXIT;
+            //Antes de removerlo, lo muevo a exit
+            list_add(lista_exit, pcb_encontrado);
+            list_remove(lista_executing, i);
+            break;
+        }
+    }
+    
+    pthread_mutex_unlock(&mutex_lista_executing);
+    
+    return 0;
+}
+
+int mover_pcb_a_blocked_desde_executing(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb_temp = list_get(lista_executing, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = pcb_temp;
+            //Actualizo el estado del proceso
+            pcb_encontrado->estado = BLOCKED;
+            //Antes de removerlo, lo muevo a blocked
+            pthread_mutex_lock(&mutex_lista_blocked);
+            list_add(lista_blocked, pcb_encontrado);
+            pthread_mutex_unlock(&mutex_lista_blocked);
+
+            list_remove(lista_executing, i);
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_lista_executing);
+
+    return 0;
+}
+
+int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_blocked);
+    for(int i = 0; i < list_size(lista_blocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_blocked, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = pcb_temp;
+            //Actualizo el estado del proceso
+            pcb_encontrado->estado = READY;
+            //Antes de removerlo, lo muevo a ready
+            pthread_mutex_lock(&mutex_cola_ready);
+            queue_push(cola_ready, pcb_encontrado);
+            pthread_mutex_unlock(&mutex_cola_ready);
+            //Despues de actualizar el estado y cambiarlo a lista ready, lo saco de lista blocked
+            list_remove(lista_blocked, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked);
+}
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -266,19 +358,16 @@ t_pcb* obtener_pcb_de_cola_executing() {
 
 void mover_procesos_terminados() {
     int elementos_procesados = 0;
-    int total_elementos = queue_size(cola_executing);
-
+    int total_elementos = list_size(lista_executing);
+    //Recorro la lista de executing
     while(elementos_procesados < total_elementos) {
-        t_pcb* pcb = peek_cola_executing();
-
+        t_pcb* pcb = list_get(lista_executing, elementos_procesados);
+        //Si encontre un pcb y su estado es EXIT, lo agrego a la lista de exit
         if(pcb != NULL && pcb->estado == EXIT) {
-            t_pcb* pcb_exit = obtener_pcb_de_cola_executing();
-            agregar_pcb_a_cola_exit(pcb_exit);
-        } else {
-            t_pcb* pcb_temp = obtener_pcb_de_cola_executing();
-            agregar_pcb_a_cola_executing(pcb_temp);
+            list_add(lista_exit, pcb);
+            //Lo saco de la lista de executing
+            list_remove(lista_executing, elementos_procesados);
         }
-
         elementos_procesados++;
     }
 }
@@ -340,9 +429,9 @@ t_io* buscar_io_por_nombre(char* nombre_buscado) {
 }
 
 
-int manejar_syscall(char* syscall) {
+int manejar_syscall(t_syscall* syscall) {
     //Leo hasta el primer espacio, obtengo syscall
-    char* tipo_syscall = strtok(syscall, " ");
+    char* tipo_syscall = strtok(syscall->syscall, " ");
 
     //Evaluo el tipo de syscall 
 
@@ -352,7 +441,7 @@ int manejar_syscall(char* syscall) {
         //Leo hasta el siguiente espacio, obtengo tiempo_io
         char* tiempo_io = strtok(NULL, " ");
         //Llamo a la funcion io
-        if(io(nombre_io, (u_int32_t)atoi(tiempo_io)) == -1) {
+        if(io(nombre_io, (u_int32_t)atoi(tiempo_io), (u_int32_t)(syscall->pid)) == -1) {
             printf("Error al ejecutar syscall IO\n");
             return -1;
         }
@@ -390,28 +479,72 @@ int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
     return 0;
 } 
 
-int io (char* nombre_io, u_int32_t tiempo_io) {
+int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
+
+    pthread_mutex_lock(&mutex_io);
+
     //Buscar IO en la lista de IO
     t_io* io = buscar_io_por_nombre(nombre_io);
+
     //Si no existe, proceso va a EXIT
     if(io == NULL) {
-        //TODO: enviar a exit
+        log_info(logger_kernel, "No existe el IO %s", nombre_io);
+        actualizar_estado_pcb(pid, EXIT); //Implementar
+        log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "EXIT");
+        pthread_mutex_unlock(&mutex_io);
+        return -1;
     }
-    //Si existe, proceso va a BLOCKED
 
-    //Se envia la peticion al IO
-    //pthread_mutex_lock(&io->mutex_cola_blocked_io);
-    //queue_push(io->cola_blocked_io, obtener_pid_actual()); // Esto esta mal
-    pthread_mutex_unlock(&io->mutex_cola_blocked_io);
-    //Se espera a que el IO finalice la operacion
+    //Si existe pero no hay instancias, proceso va a BLOCKED IO (tambien va a blocked general, esto se hace en mover_pcb_executing_a_blocked_io)
+    if(io->instancias_disponibles == 0) {
+        mover_pcb_executing_a_blocked_io(pid, nombre_io, tiempo_io);
+        log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "BLOCKED (por no haber instancias disponibles IO)");
+        log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io);
+        pthread_mutex_unlock(&mutex_io);
+        return -1;
+    
+    } else {//Existe el IO y hay instancias, proceso va a BLOCKED
+     // Busco una instancia disponible (pid_actual = -1)
+    t_instancia_io* instancia_disponible = NULL;
+    for(int i = 0; i < list_size(io->instancias_io); i++) {
+        t_instancia_io* instancia = list_get(io->instancias_io, i);
+        if(instancia->pid_actual == -1) {
+            instancia_disponible = instancia;
+            break;
+        }
+    }
 
-    //Se actualiza la cola de ready
+    // Marco la instancia como ocupada
+    instancia_disponible->pid_actual = pid;
+    io->instancias_disponibles--;
+    
+    log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "BLOCKED (esperando finalizacion de IO)");
+    log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io);
 
-    //Se actualiza la cola de blocked
+    log_info(logger_kernel, "[IO-SOLICITUD] Enviando solicitud a %s (PID: %d, tiempo: %d)", nombre_io, pid, tiempo_io);
+    // Creo la solicitud
+    t_solicitud_io solicitud;
+    solicitud.pid = pid;
+    solicitud.tiempo = tiempo_io;
+    // Serializo y envío
+    t_buffer* buffer = serializar_solicitud_io(&solicitud);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_SOLICITUD_IO, buffer);
+    
+    enviar_paquete(instancia_disponible->socket_io, paquete);
 
-    //Se actualiza la cola de executing
+    mover_pcb_a_blocked_desde_executing(pid);
 
-    //Se actualiza la cola de exit
+    }
+   
+    
+    
+    
+    
+    pthread_mutex_unlock(&mutex_io);
 
-    //Se actualiza la cola de new   
-}
+    return 0;
+    }
+   
+
+
+    
