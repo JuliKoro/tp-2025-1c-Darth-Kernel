@@ -105,18 +105,18 @@ t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-t_buffer* serializar_instruccion_cpu(t_instruccion_cpu* instruccion) {
+t_buffer* serializar_proceso_cpu(t_proceso* proceso) {
     t_buffer* buffer = buffer_create(2 * sizeof(uint32_t));
-    buffer_add_uint32(buffer, instruccion->pid);
-    buffer_add_uint32(buffer, instruccion->pc);
+    buffer_add_uint32(buffer, proceso->pid);
+    buffer_add_uint32(buffer, proceso->pc);
     return buffer;
 }
 
-t_instruccion_cpu* deserializar_instruccion_cpu(t_buffer* buffer) {
-    t_instruccion_cpu* instruccion = malloc(sizeof(t_instruccion_cpu));
-    instruccion->pid = buffer_read_uint32(buffer);
-    instruccion->pc = buffer_read_uint32(buffer);
-    return instruccion;
+t_proceso* deserializar_proceso_cpu(t_buffer* buffer) {
+    t_proceso* proceso = malloc(sizeof(t_proceso));
+    proceso->pid = buffer_read_uint32(buffer);
+    proceso->pc = buffer_read_uint32(buffer);
+    return proceso;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
