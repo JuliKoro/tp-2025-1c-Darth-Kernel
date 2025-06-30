@@ -261,3 +261,18 @@ int recibir_handshake_io(int socket, char** nombre_io) {
     }
     return 0;
 }
+
+int enviar_handshake_cpu(int socket, int id_cpu){
+    // Enviamos el id del CPU como mensaje
+    enviar_mensaje(id_cpu, socket);
+    return 0;
+}
+
+int recibir_handshake_cpu(int socket, int* id_cpu){
+    // Recibimos el id del CPU como mensaje
+    *id_cpu = recibir_mensaje(socket);
+    if (*id_cpu == NULL) {
+        return -1;
+    }
+    return 0;
+}

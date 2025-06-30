@@ -61,19 +61,21 @@ typedef struct {
 
 /**
 * @brief Funcion que realiza el ciclo de intrucciones fetch-decode-execute para una determinada instruccion
-* @param instruccion Estructura de una instruccion que contiene el PID y el PC
+* @param proceso Estructura de una proceso recibido desde Kernel que contiene el PID y el PC
 * @param socket_memoria socket de memoria al que se le pediran las instrucciones
+* @param socket_kernel_dispatch socket de kernel que se le pediran los procesos
+* @param socket_kernel_interrupt socket de kernel donde se haran las interrupciones
 * @return nada
 */
-void ciclo_instruccion(t_instruccion_cpu* instruccion, int socket_memoria);
+void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
 
 /**
 * @brief Realiza la etapa fetch del ciclo de instruccion de cpu
-* @param instruccion Estructura de una instruccion que contiene el PID y el PC
+* @param proceso Estructura de un proceso que contiene el PID y el PC
 * @param socket_memoria socket de memoria al que se le pedira la instruccion
 * @return nada
 */
-char* fetch(t_instruccion_cpu* instruccion, int socket_memoria);
+char* fetch(t_proceso* proceso, int socket_memoria);
 
 /**
  * @brief Decodifica una instrucción en string a estructura
