@@ -8,7 +8,7 @@ t_log* logger_cpu;
 // Mutex para proteger el acceso a la variable proceso
 pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización estática
 
-t_proceso* proceso = NULL;
+t_proceso_cpu* proceso = NULL;
 
 int main(int argc, char* argv[]) {
    

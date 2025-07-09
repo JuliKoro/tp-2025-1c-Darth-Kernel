@@ -1,6 +1,6 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
+void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
     pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
         
@@ -20,7 +20,7 @@ void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel
 }
 
 // ETAPA FETCH
-char* fetch(t_proceso* proceso, int socket_memoria){
+char* fetch(t_proceso_cpu* proceso, int socket_memoria){
     proceso->pc = pc; // Actualiza el PC del struct de proceso para enviar a memoria
     log_info(logger_cpu, "## PID: %d - FETCH - Program Counter: %d", proceso->pid, proceso->pc);
 

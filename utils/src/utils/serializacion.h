@@ -59,7 +59,7 @@ typedef struct {
 //Estructura de proceso para modulo CPU
 
 /**
- * @struct t_proceso
+ * @struct t_proceso_cpu
  * @brief Estructura que representa un proceso del Kernel (PID y PC)
  * 
  * @param pid: Identificador del proceso asociado a la instrucción
@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     uint32_t pid; // Identificador del proceso asociado a la instrucción
     uint32_t pc;  // Contador de programa que indica la dirección de la instrucción
-} t_proceso;
+} t_proceso_cpu;
 
 
 //Estructura de buffer para serializacion y deserializacion
@@ -227,7 +227,7 @@ t_solicitud_io* deserializar_solicitud_io(t_buffer* buffer);
  * @return t_buffer* Puntero al buffer que contiene el proceso
  *                   serializado. El buffer debe ser liberado.
  */
-t_buffer* serializar_proceso_cpu(t_proceso* proceso);
+t_buffer* serializar_proceso_cpu(t_proceso_cpu* proceso);
 
 /**
  * @brief Deserializa un proceso del Kernel desde un buffer
@@ -240,7 +240,7 @@ t_buffer* serializar_proceso_cpu(t_proceso* proceso);
  * @return t_proceso* Puntero a la estructura de proceso
  *                             del Kernel deserializada. Se debe liberar.
  */
-t_proceso* deserializar_proceso_cpu(t_buffer* buffer);
+t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

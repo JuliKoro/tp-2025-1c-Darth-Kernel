@@ -68,7 +68,7 @@ typedef struct {
 * @param socket_kernel_interrupt socket de kernel donde se haran las interrupciones
 * @return nada
 */
-void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
+void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
 
 /**
 * @brief Realiza la etapa fetch del ciclo de instruccion de cpu
@@ -76,7 +76,7 @@ void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel
 * @param socket_memoria socket de memoria al que se le pedira la instruccion
 * @return nada
 */
-char* fetch(t_proceso* proceso, int socket_memoria);
+char* fetch(t_proceso_cpu* proceso, int socket_memoria);
 
 /**
  * @brief Decodifica una instrucción en string a estructura
