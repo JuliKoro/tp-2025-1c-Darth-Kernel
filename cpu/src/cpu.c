@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
    }
 
    // CARGA CONFIGS
-   // Se cargar la variable global 'cpu_configs'
+   // Se carga la variable global 'cpu_configs'
    inicializar_configs();
 
    // INICIO LOGGERS

@@ -50,6 +50,7 @@ typedef enum {
 typedef struct {
     uint32_t pid;             // PID al que pertenece la instruccion (para logs)
     tipo_instruccion tipo;    // Tipo de instrucción
+    bool requiere_traduccion;   // Identificador para las instrucciones que requieren traducción
     uint32_t direccion;         // Dirección de memoria (READ/WRITE)
     char* datos;                // Datos a escribir (WRITE)
     uint32_t tamanio;           // Tamaño de operación (READ/INIT_PROC)

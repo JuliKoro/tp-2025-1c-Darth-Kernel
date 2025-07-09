@@ -8,7 +8,7 @@ void ciclo_instruccion(t_proceso* proceso, int socket_memoria, int socket_kernel
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
-        execute(instruccion_decodificada, socket_memoria); //ETAPA EXECUTE
+        execute(instruccion_decodificada, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
 
         check_interrupt();
 
@@ -66,20 +66,24 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
     // Identificación del tipo
     if(strcmp(tokens[0], "NOOP") == 0) {
         instruccion->tipo = NOOP;
+        instruccion->requiere_traduccion = false; 
     }
     else if(strcmp(tokens[0], "WRITE") == 0) { // Segun el tipo, parsea los parámetros adicionales
         instruccion->tipo = WRITE;
         instruccion->direccion = atoi(tokens[1]);
         instruccion->datos = strdup(tokens[2]);
+        instruccion->requiere_traduccion = true; 
     }
     else if(strcmp(tokens[0], "READ") == 0) {
         instruccion->tipo = READ;
         instruccion->direccion = atoi(tokens[1]);
         instruccion->tamanio = atoi(tokens[2]);
+        instruccion->requiere_traduccion = true; 
     }
     else if(strcmp(tokens[0], "GOTO") == 0) {
         instruccion->tipo = GOTO;
         instruccion->pc_destino = atoi(tokens[1]);
+        instruccion->requiere_traduccion = false; 
     }
     else if(strcmp(tokens[0], "IO") == 0) {
         instruccion->tipo = IO;
@@ -116,4 +120,3 @@ void destruir_instruccion(instruccion_decodificada* instruccion) {
     if(instruccion->archivo_proceso != NULL) free(instruccion->archivo_proceso);
     free(instruccion);
 }
-
