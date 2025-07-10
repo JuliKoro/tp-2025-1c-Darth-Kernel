@@ -39,7 +39,8 @@ typedef enum {
     PAQUETE_SOLICITUD_IO=1,
     PAQUETE_INSTRUCCION_CPU=2,
     PAQUETE_PCB=3,
-    PAQUETE_SYSCALL=4
+    PAQUETE_SYSCALL=4,
+    PAQUETE_INTERRUPCION=5
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO

@@ -4,13 +4,20 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
     pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
         
+        // CHECK INTERRUPT
+        /*
+        if (check_interrupt(proceso, socket_kernel_interrupt)) {
+            break; // Salir del ciclo en caso de interrupción
+        }
+        */
+        
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
         execute(instruccion_decodificada, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
 
-        check_interrupt();
+        
 
         // LIMPIAR INSTRUCCIONES
         destruir_instruccion(instruccion_decodificada);
@@ -113,6 +120,26 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
     
     return instruccion;
 }
+
+// CHECK INTERRUPT
+/*
+bool check_interrupt(t_proceso_cpu* proceso, int socket_kernel_interrupt) {
+    t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
+    if (paquete_interrupt != NULL) {
+        // Verifica si la interrupción es para el PID actual
+        if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION && paquete_interrupt->pid == proceso->pid) {
+            // Devuelve el PID y el PC actualizado al Kernel
+            t_paquete* paquete_respuesta = crear_paquete_respuesta(proceso->pid, proceso->pc);
+            enviar_paquete(socket_kernel_interrupt, paquete_respuesta);
+            liberar_paquete(paquete_respuesta);
+            liberar_paquete(paquete_interrupt);
+            return true; // Indica que se manejó una interrupción
+        }
+        liberar_paquete(paquete_interrupt); // Si no es para este PID, libera el paquete
+    }
+    return false; // Indica que no hubo interrupción
+}
+*/
 
 void destruir_instruccion(instruccion_decodificada* instruccion) {
     if(instruccion->datos != NULL) free(instruccion->datos);

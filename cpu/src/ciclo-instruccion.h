@@ -28,6 +28,17 @@
 void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
 
 /**
+ * @brief Verifica si hay una interrupción para el proceso actual.
+ * 
+ * @param proceso Proceso actual que se está ejecutando (PID y PC)
+ * @param socket_kernel_interrupt Socket utilizado para recibir paquetes de interrupción del kernel.
+ * 
+ * @return true Si se manejó una interrupción válida para el PID actual.
+ * @return false Si no hubo interrupción o si la interrupción no corresponde al PID actual.
+ */
+bool check_interrupt(t_proceso_cpu* proceso, int socket_kernel_interrupt);
+
+/**
 * @brief Realiza la etapa fetch del ciclo de instruccion de cpu
 * @param proceso Estructura de un proceso que contiene el PID y el PC
 * @param socket_memoria socket de memoria al que se le pedira la instruccion
