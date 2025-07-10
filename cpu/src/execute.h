@@ -5,7 +5,12 @@
 
 #include <commons/log.h>
 
-#include "ciclo-instruccion.h"
+#include <utils/sockets.h>
+#include <utils/serializacion.h>
+
+#include "registros.h"
+#include "instruccion.h"
+#include "cpu-log.h"
 #include "cpu-conexiones.h"
 
 /**

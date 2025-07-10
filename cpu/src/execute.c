@@ -44,7 +44,7 @@ int execute(instruccion_decodificada* instruccion, int socket_memoria, int socke
 
             break;
 
-        case EXIT: // SYSCALL
+        case EXIT_INSTR: // SYSCALL
             enviar_syscall(instruccion, socket_kernel_dispatch);
             
             break;
@@ -82,7 +82,7 @@ int enviar_syscall(instruccion_decodificada* instruccion, int socket_kernel_disp
         case DUMP_MEMORY:
             enviar_syscall_dump_memory(instruccion, socket_kernel_dispatch);
             break;
-        case EXIT:
+        case EXIT_INSTR:
             enviar_syscall_exit(instruccion, socket_kernel_dispatch);
             break;
         default:

@@ -4,7 +4,7 @@
 #include <commons/log.h>
 
 #include "cpu-configs.h"
-#include "ciclo-instruccion.h"
+#include "instruccion.h"
 
 /**
  * @var logger_cpu

@@ -1,6 +1,7 @@
 #include "cpu-conexiones.h"
 
 int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu){
+    // Modificar para que funcione junto a Kernel
 
     t_log* logger_sockets = iniciar_logger_cpu(id_cpu);
     int socket_kernel = crear_conexion (cpu_configs.ipkernel, int_a_string(puerto_kernel));
@@ -26,7 +27,7 @@ int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu){
     log_destroy(logger_sockets);
     close(socket_kernel);
 
-    return 0;
+    return 0; // tiene que devolver el fd del socket
 }
 
 int cpu_conectar_a_memoria(int id_cpu){
@@ -55,6 +56,6 @@ int cpu_conectar_a_memoria(int id_cpu){
     log_destroy(cpu_logger);
     close(socket_memoria);
 
-    return 0;
+    return 0; // tiene que devolver el fd del socket
 
 }

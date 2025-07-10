@@ -32,6 +32,7 @@
         "memoria-conexiones.h": "c",
         "instrucciones.h": "c",
         "execute.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "instruccion.h": "c"
     }
 }

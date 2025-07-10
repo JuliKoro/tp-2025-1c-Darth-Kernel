@@ -99,7 +99,7 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
         instruccion->tipo = DUMP_MEMORY;
     }
     else if(strcmp(tokens[0], "EXIT") == 0) {
-        instruccion->tipo = EXIT;
+        instruccion->tipo = EXIT_INSTR;
     }
     else {
         instruccion->tipo = INSTRUCCION_DESCONOCIDA;

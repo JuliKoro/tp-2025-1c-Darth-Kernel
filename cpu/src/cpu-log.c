@@ -27,7 +27,7 @@ char* instruccion_str(tipo_instruccion tipo){
         case IO: return "IO";
         case INIT_PROC: return "INIT_PROC";
         case DUMP_MEMORY: return "DUMP_MEMORY";
-        case EXIT: return "EXIT";
+        case EXIT_INSTR: return "EXIT";
         case INSTRUCCION_DESCONOCIDA: return "INSTRUCCION_DESCONOCIDA";
         default: return "Instrucción no reconocida";
     }
@@ -56,6 +56,9 @@ char* parametros_str(instruccion_decodificada* instruccion){
             snprintf(parametros, 256, "");
             break;
         case NOOP:
+            snprintf(parametros, 256, "");
+            break;
+        case EXIT_INSTR:
             snprintf(parametros, 256, "");
             break;
         case INSTRUCCION_DESCONOCIDA:
