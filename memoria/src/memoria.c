@@ -1,138 +1,82 @@
-#include "memoria.h"
+/**
+ * @brief Archivo principal del módulo de Memoria.
+ *
+ * Este archivo contiene la función `main` que inicializa el módulo de Memoria,
+ * carga las configuraciones, inicializa los loggers, el administrador de memoria,
+ * y levanta los servidores para atender peticiones del Kernel y la CPU.
+ * También se encarga de la liberación de recursos al finalizar.
+ */
 
+ #include "memoria.h"
+ #include "memoria-procesos.h" // <--- ¡Añadir esta línea! Necesaria para t_proceso y procesos_en_memoria
+ #include "memoria-conexiones.h"
+ #include "memoria-admin.h"
+ #include <pthread.h>
 
-// No olividar de incluir el log obligatorio: Conexión de Kernel: "## Kernel Conectado - FD del socket: <FD_DEL_SOCKET>" 
+ 
+ // Variables globales definidas en memoria.h
+ //t_administrador_memoria* administrador_memoria = NULL;
+ //t_bitarray* bitmap_swap = NULL;
+ 
 
-/*
-Check 2:
-    - Leer un archivo del directorio PATH_INSTRUCCIONES el cual va a tener las instrucciones del proceso
-    - Asociarlas a su PID para que estén disponibles cunado CPU las pida
-    - Tenerlas cargadas en mmemoria (puede ser una estructura tipo map<PID, lista de instrucciones>)
-*/
+//--------------------------------------------------------------------------------------
 
-/*
-    El dia de mañana que se implemente el PCB se hace uso del Program Counter (PC) para saber que instrucción ejecutar
-    y asi mismo no repetir archivos de instrucciones.
-*/
+ /**
+ * @brief Archivo principal del módulo de Memoria.
+ *
+ * Esta función contiene la inicialización del módulo de Memoria,
+ * carga las configuraciones, inicializa los loggers, el administrador de memoria,
+ * y levanta los servidores para atender peticiones del Kernel y la CPU.
+ * También se encarga de la liberación de recursos al finalizar.
+ */
 
-t_administrador_memoria* administrador_memoria = NULL;
+ int main(int argc, char* argv[]) {
+    // Inicializa las configuraciones del módulo de memoria.
+    inicializar_configs();
+    // Inicializa el logger específico del módulo de memoria.
+    inicializar_logger_memoria();
 
-void inicializar_administrador_memoria() {
-    if(administrador_memoria == NULL) {
-        administrador_memoria = malloc(sizeof(t_administrador_memoria));
-        administrador_memoria->memoria_principal = malloc(memoria_configs.tammemoria);
-        administrador_memoria->marcos_libres = list_create();
-        administrador_memoria->tablas_paginas = dictionary_create();
-        administrador_memoria->metricas_proceso = dictionary_create();
-        
-        inicializar_marcos();
-        inicializar_swap();
-    }
-}
-
-    // Resto de inicialización...
-    // 1. Reservar memoria principal según TAM_MEMORIA
-    // 2. Inicializar lista de marcos libres
-    // 3. Crear estructuras para tablas de páginas
-    // 4. Abrir/Crear archivo swap
-
-void inicializar_marcos() {
-    if(administrador_memoria == NULL) return; // a chequear
-
-    int total_marcos = memoria_configs.tammemoria / memoria_configs.tampagina;
-    for (int i = 0; i < total_marcos; i++) {
-        void* marco = administrador_memoria->memoria_principal + (i * memoria_configs.tampagina);
-        list_add(administrador_memoria->marcos_libres, marco);
-    }
-}
-
-void* obtener_marco_libre() {
-    if (list_size(administrador_memoria->marcos_libres) > 0) {
-        return list_remove(administrador_memoria->marcos_libres, 0);
-    }
-    // Implementar política de reemplazo (FIFO por ejemplo)
-    return NULL;
-}
-
-void liberar_marco(void* marco) {
-    // Liberar marco y agregarlo a lista de marcos libres
-}
-
-void actualizar_metricas(int pid, int tipo_operacion) {
-    // Actualizar métricas según tipo de operación
-}
-
-void inicializar_swap() {
-    if(administrador_memoria == NULL) return; //a chequear
-
-
-    administrador_memoria->swap_file = fopen(memoria_configs.pathswapfile, "wb+");
-    if (!administrador_memoria->swap_file) {
-        log_error(logger_memoria, "No se pudo abrir el archivo swap");
+    // Verifica que las configuraciones esenciales de memoria sean válidas.
+    if (memoria_configs.tammemoria <= 0 || memoria_configs.tampagina <= 0) {
+        log_error(logger_memoria, "Configuración de memoria inválida: TAM_MEMORIA o TAM_PAGINA son cero o negativos.");
         exit(EXIT_FAILURE);
     }
-}
 
-int escribir_pagina_swap(void* pagina) {
-    fseek(administrador_memoria->swap_file, 0, SEEK_END);
-    int pos = ftell(administrador_memoria->swap_file);
-    fwrite(pagina, memoria_configs.tampagina, 1, administrador_memoria->swap_file);
-    return pos;
-}
+    // Inicializa el administrador de memoria, incluyendo la memoria principal, marcos, tablas de páginas y SWAP.
+    inicializar_administrador_memoria();
 
-void realizar_memory_dump(int pid) {
-    char filename[256];
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    strftime(filename, sizeof(filename), "%Y%m%d%H%M%S", t);
-    
-    char path_dump[512];
-    snprintf(path_dump, sizeof(path_dump), "%s/%d-%s.dmp", 
-             memoria_configs.dumppath, pid, filename);
-    
-    FILE* dump_file = fopen(path_dump, "wb");
-    if (!dump_file) {
-        log_error(logger_memoria, "Error al crear dump file para PID %d", pid);
-        return;
-    }
-    
-    // Implementar lógica para escribir contenido de memoria del proceso
-    fclose(dump_file);
-    log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pid);
-}
+    // Inicia el servidor de memoria para escuchar conexiones entrantes.
+    int socket_servidor = iniciar_servidor_memoria();
+    // Log obligatorio: Conexión de Kernel.
+    log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", socket_servidor);
 
+    // Crea un hilo para atender las peticiones provenientes del módulo Kernel.
+    pthread_t hilo_kernel;
+    // Se pasa una copia del socket_servidor para evitar problemas de concurrencia si se modifica.
+    pthread_create(&hilo_kernel, NULL, recibir_peticiones_kernel, (void*)&socket_servidor);
 
-int main(int argc, char* argv[]) {
+    // Crea un hilo para atender las peticiones provenientes de las múltiples CPU.
+    //pthread_t hilo_cpus;
+    // Se pasa una copia del socket_servidor para evitar problemas de concurrencia si se modifica.
+    //pthread_create(&hilo_cpus, NULL, recibir_peticiones_cpu, (void*)&socket_servidor);
 
-    //const char* path = "/home/utnso/scripts/1234"; // esto despues hay que cambiarlo. 
-    // Tiene que ser un pseudocódigo por cada proceso dentro de la ruta que pide el enunciado (en /untso/scripts)
-    
-    inicializar_configs();
-    inicializar_logger_memoria();
-    //inicializar_administrador_memoria(); // Nuevo
+    // Espera a que los hilos de Kernel y CPU finalicen (en un sistema real, estos hilos suelen ser infinitos).
+    pthread_join(hilo_kernel, NULL);
+    //pthread_join(hilo_cpus, NULL);
 
-
-
-    procesos_en_memoria = dictionary_create();  // Inicializamos antes del servidor
-    int socket_memoria = iniciar_servidor_memoria();
-    //Hilo que va a estar recibiendo peticiones del kernel
-    pthread_t hilo_peticiones_kernel;
-    pthread_create(&hilo_peticiones_kernel, NULL, recibir_peticiones_kernel, (void*) &socket_memoria);
-    log_info(logger_memoria, "Iniciando módulo Memoria...");
-    
-    pthread_join(hilo_peticiones_kernel, NULL);
-    
-    //cargar_procesos_en_memoria();
-    dictionary_iterator(procesos_en_memoria, mostrar_proceso);
-    //obtener_instruccion(1234, 1); // Estas dos lineas están simulando el pedido de una instrucción por parte de CPU
-    //obtener_instruccion(1234, 4);
-
-
-    //dictionary_destroy_and_destroy_elements(procesos_en_memoria, free); // Si querés liberar también instrucciones hay que hacer free de cada string
+    // Libera todos los recursos utilizados por el módulo de memoria.
+    // Destruye el diccionario de procesos en memoria y sus elementos asociados.
+    dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);
+    // Destruye el logger de sockets.
     log_destroy(logger_sockets);
-    log_destroy(logger_memoria);
+    // Destruye el logger del módulo de memoria.
+    destruir_logger_memoria();
+    // Destruye la configuración cargada.
     config_destroy(memoria_tconfig);
+    // Destruye el administrador de memoria y libera la memoria principal, marcos, tablas de páginas y SWAP.
+    destruir_administrador_memoria();
 
     return 0;
 }
-
+ 
+ 

@@ -1,26 +1,36 @@
-#ifndef MEMORIA_LOG_H_
-#define MEMORIA_LOG_H_
-
-#include <commons/log.h>
-#include "memoria-configs.h"
-
-//Logger global que sera usado en todo el modulo
-extern t_log* logger_memoria;
-
 /**
- * @brief Inicializa el logger de la memoria
- * 
- * Esta función no recibe parámetros. Crea un logger con el nivel de log definido en el archivo de configuración
+ * @brief Cabecera para la gestión de logs del módulo de Memoria.
  *
- */ 
-void inicializar_logger_memoria();
+ * Declara la variable global `logger_memoria` que será utilizada para
+ * registrar eventos y mensajes en todo el módulo. También define los
+ * prototipos de las funciones para inicializar y destruir este logger.
+ */
 
-/**
- * @brief Destruye el logger de la memoria
- * 
- * Esta función no recibe parámetros. Destruye el logger de la memoria
- * 
- */  
-void destruir_logger_memoria();
-
-#endif
+ #ifndef MEMORIA_LOG_H_
+ #define MEMORIA_LOG_H_
+ 
+ #include <commons/log.h>
+ #include "memoria-configs.h" // Necesario para acceder a memoria_configs.loglevel
+ 
+ // Logger global que sera usado en todo el modulo
+ extern t_log* logger_memoria;
+ extern t_log* logger_sockets; // Logger para la capa de sockets, definido en utils/sockets.h
+ 
+ /**
+  * @brief Inicializa el logger del módulo de memoria.
+  *
+  * Crea un logger con el nombre de archivo "memoria.log", el nombre de programa "MEMORIA",
+  * y el nivel de log definido en las configuraciones (`memoria_configs.loglevel`).
+  */
+ void inicializar_logger_memoria();
+ 
+ /**
+  * @brief Destruye el logger del módulo de memoria.
+  *
+  * Libera los recursos asociados al logger si este ha sido inicializado.
+  */
+ void destruir_logger_memoria();
+ 
+ #endif /* MEMORIA_LOG_H_ */
+ 
+ 
