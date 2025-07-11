@@ -8,10 +8,6 @@ void* iniciar_planificador_largo_plazo() {
     
     switch (algoritmo) {
         case FIFO:
-            log_info(logger_kernel, "Planificador largo plazo iniciado en FIFO");
-            printf("\t Presione ENTER para continuar con la planificación a largo plazo...\n");
-            getchar();
-
             while(true) {
                 
                 sem_wait(&sem_procesos_en_new); //Si no hay procesos en new, se bloquea el hilo

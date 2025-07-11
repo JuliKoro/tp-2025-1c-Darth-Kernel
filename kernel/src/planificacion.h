@@ -84,6 +84,20 @@ typedef struct {
     u_int32_t tiempo_io;
 } t_blocked_io;
 
+
+/**
+ * @brief Estructura que representa una CPU en el kernel
+ * 
+ * @param socket_cpu_dispatch: El socket de la CPU para el dispatch
+ * @param socket_cpu_interrupt: El socket de la CPU para el interrupt
+ * @param id_cpu: El ID de la CPU 
+ */
+typedef struct {
+    int socket_cpu_dispatch;
+    int socket_cpu_interrupt;
+    int id_cpu;
+} t_cpu_en_kernel;
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones auxiliares a estructuras
@@ -107,11 +121,21 @@ bool comparar_pid(void* elemento, void* pid);
 /**
  * @brief Actualiza el estado de un pcb
  * 
- * @param pid: El pid del pcb a actualizar
+ * @param pcb: El puntero al  pcb a actualizar
  * @param estado: El estado del pcb
  * @return 0 si el estado se actualiza correctamente
  */
-int actualizar_estado_pcb(u_int32_t pid, estado_pcb estado);
+int actualizar_estado_pcb(t_pcb* pcb, estado_pcb estado);
+
+/**
+ * @brief Recibe un socket de una instancia de IO, y busca el proceso en la lista de blocked_io
+ * 
+ * @param socket_io Socket buscado
+ * @return Un t_blocked_io, es un PID del proceso que se bloqueo por esta IO
+ */
+t_blocked_io* buscar_proceso_en_blocked_io(int socket_io);
+
+
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -151,7 +175,7 @@ extern t_list* lista_susp_blocked; //Esto es una lista porque tengo que poder or
 extern t_list* lista_blocked_io; //Esta cola debe contener structs de t_blocked_io
 
 extern t_list* lista_io;
-
+extern t_list* lista_cpu;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -168,6 +192,19 @@ u_int32_t obtener_pid_actual();
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+/**
+ * @brief Encontra un pcb por su pid
+ * 
+ * Esta función recibe un elemento y un pid. Compara el pid del elemento con el pid recibido.
+ * 
+ * @param elemento: El elemento a comparar
+ * @param pid_a_comparar: El pid a comparar
+ * @return true si el pid del elemento es igual al pid recibido, false en caso contrario
+ */
+bool _encontrar_pcb_por_pid(void* elemento, void* pid_a_comparar);
+
+
+
 
 /**
  * @brief Recibe un string que representa el algoritmo de planificacion, viene del archivo de configs. Devuelve el enum correspondiente
@@ -177,6 +214,9 @@ u_int32_t obtener_pid_actual();
  * @return El enum correspondiente al algoritmo de planificacion
  */
 algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo);
+
+
+
 
 /**
  * @brief Planifica el proceso inicial
@@ -206,7 +246,7 @@ void inicializar_colas_y_sem();
  * 
  */
 int recibir_mensaje_cpu (int socket_cpu);
-
+//Revisar
 
 
 
@@ -263,6 +303,32 @@ t_pcb* peek_cola_ready();
                                 Funciones para obtener pcb de las colas & listas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/**
+ * @brief Compara el socket de un IO
+ * 
+ * Esta función compara el socket recibido en el segundo parametro con el socket de una instancia de IO
+ * 
+ */
+bool comparar_socket_io(void* elemento, void* socket_a_comparar);
+/**
+ * @brief Recibe un socket de una instancia de IO, y busca el IO en la lista de IO
+ * 
+ * @param socket_io Socket buscado
+ * @return IO encontrado
+ */
+t_io* buscar_io_por_socket(int socket_io);
+
+t_io* buscar_io_por_socket_unsafe(int socket_io);
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista exit. Ejecuta los procedimientos que se necesitan cada vez que se mueve un pcb a exit, desde cualquier lado.
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_exit (t_pcb* pcb);
 
 /**
  * @brief Obtiene un pcb de la cola new
@@ -325,7 +391,13 @@ int mover_pcb_a_blocked_desde_executing(u_int32_t pid);
  */
 int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
 
-
+/**
+ * @brief Mueve un pcb de la lista blocked_io a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid);
 
 
 /**
@@ -353,6 +425,16 @@ int mover_pcb_a_exit_desde_executing(u_int32_t pid);
  * 
  */
 int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
+
+
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_exit_desde_blocked(u_int32_t pid);
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////

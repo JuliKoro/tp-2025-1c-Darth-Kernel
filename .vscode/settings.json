@@ -33,6 +33,7 @@
         "instrucciones.h": "c",
         "execute.h": "c",
         "stdio.h": "c",
-        "instruccion.h": "c"
+        "instruccion.h": "c",
+        "manejo-cpu.h": "c"
     }
 }

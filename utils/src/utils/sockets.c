@@ -170,9 +170,14 @@ void enviar_mensaje(char* mensaje, int socket) {
 
 char* recibir_mensaje(int socket) {
     int size;
+    int bytes_recibidos;
+
     //Recibo tamanio del mensaje a recibir, chequeo errores
-    if(recv(socket, &size, sizeof(int), MSG_WAITALL) == -1){
-        log_error(logger_sockets, "Error al recibir tamanio del mensaje: %s", strerror(errno));
+    bytes_recibidos = recv(socket, &size, sizeof(int), MSG_WAITALL);
+    if(bytes_recibidos <= 0){
+        if (bytes_recibidos == -1) {
+            log_error(logger_sockets, "Error al recibir tamanio del mensaje: %s", strerror(errno));
+        }
         return NULL;
     }
     //Reservo espacio para recibir el mensaje
@@ -182,8 +187,11 @@ char* recibir_mensaje(int socket) {
         return NULL;
     }
     //Recibo mensaje, chequeo errores
-    if(recv(socket, buffer, size, MSG_WAITALL) == -1){
-        log_error(logger_sockets, "Error al recibir el mensaje: %s", strerror(errno));
+    bytes_recibidos = recv(socket, buffer, size, MSG_WAITALL);
+    if(bytes_recibidos <= 0){
+        if (bytes_recibidos == -1) {
+            log_error(logger_sockets, "Error al recibir el mensaje: %s", strerror(errno));
+        }
         //Libero memoria reservada para buffer antes de volver
         free(buffer);
         return NULL;
@@ -264,15 +272,18 @@ int recibir_handshake_io(int socket, char** nombre_io) {
 
 int enviar_handshake_cpu(int socket, int id_cpu){
     // Enviamos el id del CPU como mensaje
-    enviar_mensaje(id_cpu, socket);
+    const char* id_como_texto = int_a_string(id_cpu);
+    enviar_mensaje(id_como_texto, socket);
     return 0;
 }
 
 int recibir_handshake_cpu(int socket, int* id_cpu){
     // Recibimos el id del CPU como mensaje
-    *id_cpu = recibir_mensaje(socket);
-    if (*id_cpu == NULL) {
+    char* id_como_texto = recibir_mensaje(socket);
+    if (id_como_texto == NULL) {
         return -1;
     }
+    *id_cpu = atoi(id_como_texto);
+    free(id_como_texto);
     return 0;
 }

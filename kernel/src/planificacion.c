@@ -38,7 +38,7 @@ t_list* lista_io = NULL;
 t_blocked_io* crear_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io){
     t_blocked_io* blocked_io = malloc(sizeof(t_blocked_io));
     blocked_io->pid = pid;
-    blocked_io->nombre_io = nombre_io;
+    blocked_io->nombre_io = strdup(nombre_io); // Usamos strdup para hacer una copia profunda
     blocked_io->tiempo_io = tiempo_io;
     return blocked_io;
 }
@@ -50,10 +50,32 @@ bool comparar_pid(void* elemento, void* pid) {
 }
 
 
-int actualizar_estado_pcb(u_int32_t pid, estado_pcb estado) {
-    t_pcb* pcb = list_find_con_param(lista_executing, comparar_pid, &pid);
+int actualizar_estado_pcb(t_pcb* pcb, estado_pcb estado) {
+    //TODO Logica de Metricas de estado
     pcb->estado = estado;
     return 0;
+}
+
+t_blocked_io* buscar_proceso_en_blocked_io(int socket_io) {
+    t_io* io = buscar_io_por_socket_unsafe(socket_io);
+    if(io == NULL) {
+        log_error(logger_kernel, "[IO] No se encontró el IO con socket %d", socket_io);
+        return NULL;
+    }
+
+    pthread_mutex_lock(&mutex_lista_blocked_io);
+
+    for(int i = 0; i < list_size(lista_blocked_io); i++) {
+        t_blocked_io* pcb_blocked = list_get(lista_blocked_io, i);
+        if(strcmp(pcb_blocked->nombre_io, io->nombre_io) == 0) {
+            pthread_mutex_unlock(&mutex_lista_blocked_io);
+            return pcb_blocked;
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_lista_blocked_io);
+    
+    return NULL;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,6 +85,8 @@ int actualizar_estado_pcb(u_int32_t pid, estado_pcb estado) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 pthread_mutex_t mutex_io = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cpu = PTHREAD_MUTEX_INITIALIZER;
+
 pthread_mutex_t mutex_cola_new = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
@@ -214,6 +238,48 @@ t_pcb* peek_cola_ready() {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+
+bool comparar_socket_io(void* elemento, void* socket_a_comparar) {
+    int socket = (int)(intptr_t)socket_a_comparar;
+    t_io* io = (t_io*)elemento;
+    //Itero la lista de instancias de este IO, comparo el socket que recibi con el socket de cada instancia
+
+    for(int i = 0; i < list_size(io->instancias_io); i++) {
+        t_instancia_io* instancia_io = list_get(io->instancias_io, i);
+        if(instancia_io->socket_io == socket) {
+            return true;
+        }
+    }
+    return false;
+}
+
+t_io* buscar_io_por_socket_unsafe(int socket_io){
+    return list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
+}
+
+t_io* buscar_io_por_socket(int socket_io){
+    pthread_mutex_lock(&mutex_io);
+    t_io* io = list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
+    pthread_mutex_unlock(&mutex_io);
+    return io;
+}
+
+
+
+int mover_pcb_a_exit(t_pcb* pcb) {
+    
+    actualizar_estado_pcb(pcb, EXIT);
+
+
+    //TODO> Mensajes a memoria
+
+    list_add(lista_exit, pcb);
+
+    log_info(logger_kernel, "## (%d) - Finaliza el proceso", pcb->pid);
+
+    return 0;
+}
+
 t_pcb* obtener_pcb_de_cola_new() {
     pthread_mutex_lock(&mutex_cola_new);
     t_pcb* pcb = queue_pop(cola_new);
@@ -277,29 +343,36 @@ int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar) {
             break;
         }
     }
+    // Nos aseguramos de solo remover el nodo, sin liberar el dato.
+    // La liberación se hará de forma controlada en la función que llamó a esta.
+    if (indice_a_eliminar != -1) {
     list_remove(lista_blocked_io, indice_a_eliminar);
+    }
     pthread_mutex_unlock(&mutex_lista_blocked_io);
     return 0;
 }
 
 int mover_pcb_a_exit_desde_executing(u_int32_t pid) {
-    t_pcb* pcb_encontrado = NULL;
+    t_pcb* pcb_a_mover = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
 
     for(int i = 0; i < list_size(lista_executing); i++) {
         t_pcb* pcb_temp = list_get(lista_executing, i);
         if(pcb_temp->pid == pid) {
-            pcb_encontrado = pcb_temp;
-            //Actualizo el estado del proceso
-            pcb_encontrado->estado = EXIT;
-            //Antes de removerlo, lo muevo a exit
-            list_add(lista_exit, pcb_encontrado);
-            list_remove(lista_executing, i);
+            pcb_a_mover = list_remove(lista_executing, i);
             break;
         }
     }
     
     pthread_mutex_unlock(&mutex_lista_executing);
+
+    if(pcb_a_mover != NULL) {
+        mover_pcb_a_exit(pcb_a_mover);
+    } else {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        return -1;
+    }
+    
     
     return 0;
 }
@@ -313,7 +386,7 @@ int mover_pcb_a_blocked_desde_executing(u_int32_t pid) {
         if(pcb_temp->pid == pid) {
             pcb_encontrado = pcb_temp;
             //Actualizo el estado del proceso
-            pcb_encontrado->estado = BLOCKED;
+            actualizar_estado_pcb(pcb_encontrado, BLOCKED);
             //Antes de removerlo, lo muevo a blocked
             pthread_mutex_lock(&mutex_lista_blocked);
             list_add(lista_blocked, pcb_encontrado);
@@ -348,6 +421,85 @@ int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
         }
     }
     pthread_mutex_unlock(&mutex_lista_blocked);
+}
+
+int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid) {
+    
+    //Primero busco el pcb en la lista de blocked_io y lo remuevo
+
+    t_blocked_io* pcb_blocked_removido = NULL;
+    pthread_mutex_lock(&mutex_lista_blocked_io);
+    for(int i = 0; i < list_size(lista_blocked_io); i++) {
+        t_blocked_io* pcb_blocked_temp = list_get(lista_blocked_io, i);
+        if(pcb_blocked_temp->pid == pid) {
+            //si lo encuentro, lo remuevo de la lista
+            pcb_blocked_removido = list_remove(lista_blocked_io, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked_io);
+
+    if(pcb_blocked_removido == NULL) {
+        // Esto sería un estado inconsistente. El proceso debería estar aquí.
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_blocked_io", pid);
+        return -1; // Error
+    }
+    //Una vez que lo saque de la lista, libero la memoria
+    free(pcb_blocked_removido->nombre_io);
+    free(pcb_blocked_removido);
+
+    //Segundo lo tengo que remover de la lista general de blocked
+    
+        //Antes de removerlo, lo muevo a exit
+    t_pcb* pcb_a_mover = NULL;
+    pthread_mutex_lock(&mutex_lista_blocked);
+    for(int i = 0; i < list_size(lista_blocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_blocked, i);
+        if(pcb_temp->pid == pid) {
+            //Lo remuevo de la lista de blocked
+            pcb_a_mover = list_remove(lista_blocked, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked);
+
+    if(pcb_a_mover == NULL) {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_blocked", pid);
+        return -1; // Error
+    }
+    
+    log_info(logger_kernel, "[IO] Moviendo PID %d a exit", pid);
+    mover_pcb_a_exit(pcb_a_mover);
+
+    return 0;
+    
+}
+
+
+int mover_pcb_a_exit_desde_blocked(u_int32_t pid){
+    t_pcb* pcb_a_mover = NULL;
+    
+    // Paso 1: Buscar y remover el PCB de la lista de bloqueados de forma atómica.
+    pthread_mutex_lock(&mutex_lista_blocked);
+    for(int i = 0; i < list_size(lista_blocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_blocked, i);
+        if(pcb_temp->pid == pid) {
+            pcb_a_mover = list_remove(lista_blocked, i);
+            break; 
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked);
+
+    // Paso 2: Si encontramos el PCB, lo procesamos fuera de la sección crítica.
+    if(pcb_a_mover != NULL) {
+        log_info(logger_kernel, "[PLANIFICADOR] Moviendo PID %d de BLOCKED a EXIT.", pid);
+        mover_pcb_a_exit(pcb_a_mover);
+    } else {
+        log_error(logger_kernel, "[PLANIFICADOR] Inconsistencia: Se intentó mover a EXIT el PID %d desde BLOCKED, pero no fue encontrado.", pid);
+        return -1;
+    }
+
+    return 0;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -415,16 +567,12 @@ bool comprobar_grado_multiprogramacion_maximo() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 t_io* buscar_io_por_nombre(char* nombre_buscado) {
-    pthread_mutex_lock(&mutex_io);
-
     for(int i = 0; i < list_size(lista_io); i++) {
         t_io* io = list_get(lista_io, i);
         if(strcmp(io->nombre_io, nombre_buscado) == 0) {
-            pthread_mutex_unlock(&mutex_io);
             return io;
         }
     }
-    pthread_mutex_unlock(&mutex_io);
     return NULL;
 }
 
@@ -489,7 +637,7 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
     //Si no existe, proceso va a EXIT
     if(io == NULL) {
         log_info(logger_kernel, "No existe el IO %s", nombre_io);
-        actualizar_estado_pcb(pid, EXIT); //Implementar
+        mover_pcb_a_exit_desde_executing(pid);
         log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "EXIT");
         pthread_mutex_unlock(&mutex_io);
         return -1;

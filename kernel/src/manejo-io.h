@@ -24,6 +24,9 @@ void* iniciar_receptor_io();
  */
 bool comparar_nombre_io(void* elemento, void* nombre_a_comparar);
 
+
+
+
 /**
  * @brief Guarda el IO en la lista de IO
  * 
@@ -59,6 +62,17 @@ void mostrar_lista_io();
  * 
  */
 void aumentar_instancias_disponibles(char* nombre_io);
+
+/**
+ * @brief Recibe un nombre de IO, lo busca en la lista, y disminuye el numero de instancias que dispone
+ * 
+ * @param nombre_io Nombre del IO a disminuir
+ */
+void disminuir_instancias_disponibles(char* nombre_io);
+
+
+
+
 
 /**
  * @brief Atiende una IO. Consiste en un loop infinito que comprueba que la conexion siga abierta, si la conexion falla, elimina la instancia de la lista
