@@ -2,6 +2,16 @@
 #include "memoria-procesos.h"
 #include "memoria-admin.h"
 #include "memoria-marcos.h"
+#include "memoria-tablas.h"
+#include <stdint.h>   // intptr_t
+#include <time.h>     // time, strftime
+#include <limits.h>
+
+
+// El PATH_MAX es una constante del sistema que define el tamaño máximo de una ruta de archivo, y en algunos entornos no viene definida por defecto.
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 
  // Variable global definida en instrucciones.h
@@ -289,62 +299,63 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
   *
   * @param pid PID del proceso a suspender.
   */
- void suspender_proceso(int pid) {
+// Función recursiva para suspender páginas 
+static void suspender_paginas_recursivo(t_tabla_nivel *current_tabla, int pid) {
+    for (int i = 0; i < memoria_configs.entradasportabla; i++) {
+        t_entrada_pagina *entrada = current_tabla->entradas[i];
+        if (!entrada) continue;
+
+        if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
+            if (entrada->presente) {
+                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                suspender_paginas_recursivo(next_tabla, pid);
+            }
+            continue;
+        }
+
+        /* último nivel – página de datos */
+        if (!entrada->presente) continue;
+
+        void *marco_ptr = (char *)administrador_memoria->memoria_principal +
+                          (entrada->marco * memoria_configs.tampagina);
+
+        if (entrada->posicion_swap == -1) {
+            entrada->posicion_swap = obtener_posicion_libre_swap();
+            if (entrada->posicion_swap == -1) {
+                log_error(logger_memoria,
+                          "No hay espacio en SWAP para suspender PID %d. Página %d no se swapea.",
+                          pid, i);
+                continue;
+            }
+        }
+
+        escribir_pagina_swap(entrada->posicion_swap, marco_ptr);
+        entrada->modificado = false;
+        aplicar_retardo_swap();
+        actualizar_metricas(pid, BAJADA_SWAP);
+
+        log_debug(logger_memoria, "PID %d: Página %d swapeada a posición %d.", pid, i,
+                  entrada->posicion_swap);
+
+        entrada->presente = false;
+        liberar_marco(marco_ptr);
+        entrada->marco = -1;
+    }
+}
+
+void suspender_proceso(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
-    t_tabla_nivel* tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
     if (!tabla) {
-        log_warning(logger_memoria, "Intento de suspender PID %d, pero no se encontró su tabla de páginas.", pid);
+        log_warning(logger_memoria,
+                    "Intento de suspender PID %d, pero no se encontró su tabla de páginas.",
+                    pid);
         return;
     }
 
-    // Función auxiliar recursiva corregida
-    void _suspender_paginas_recursivo(t_tabla_nivel* current_tabla, int current_pid) {
-        for (int i = 0; i < memoria_configs.entradasportabla; i++) {
-            t_entrada_pagina* entrada = current_tabla->entradas[i];
-            if (entrada == NULL) continue;
-
-            if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-                if (entrada->presente) {
-                    t_tabla_nivel* next_tabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-                    if (next_tabla) {
-                        _suspender_paginas_recursivo(next_tabla, current_pid);
-                    }
-                }
-            } else {
-                if (entrada->presente) {
-                    void* marco = (char*)administrador_memoria->memoria_principal +
-                                  (entrada->marco * memoria_configs.tampagina);
-
-                    if (entrada->posicion_swap == -1) {
-                        entrada->posicion_swap = obtener_posicion_libre_swap();
-                        if (entrada->posicion_swap == -1) {
-                            log_error(logger_memoria, 
-                                "No hay espacio en SWAP para suspender PID %d. Suspensión incompleta.",
-                                current_pid);
-                            continue;
-                        }
-                    }
-
-                    escribir_pagina_swap(entrada->posicion_swap, marco);
-                    entrada->modificado = false;
-                    aplicar_retardo_swap();
-                    actualizar_metricas(current_pid, BAJADA_SWAP);
-
-                    log_debug(logger_memoria, "PID %d: Página en marco %d swapeada a posición %d.", current_pid, entrada->marco, entrada->posicion_swap);
-
-                    entrada->presente = false;
-                    liberar_marco(marco);
-                    entrada->marco = -1;
-                    
-                    log_debug(logger_memoria, "PID %d: Marco %p liberado.", current_pid, marco);
-                }
-            }
-        }
-    }
-    
-    _suspender_paginas_recursivo(tabla, pid);
+    suspender_paginas_recursivo(tabla, pid);
     log_info(logger_memoria, "## PID: %d - Proceso Suspendido", pid);
 }
 
@@ -357,54 +368,56 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
   *
   * @param pid PID del proceso a des-suspender.
   */
- void desuspender_proceso(int pid) {
+// Función recursiva para desuspender páginas
+static void desuspender_paginas_recursivo(t_tabla_nivel *current_tabla, int pid) {
+    for (int i = 0; i < memoria_configs.entradasportabla; i++) {
+        t_entrada_pagina *entrada = current_tabla->entradas[i];
+        if (!entrada) continue;
+
+        if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
+            if (entrada->presente) {
+                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                desuspender_paginas_recursivo(next_tabla, pid);
+            }
+            continue;
+        }
+
+        /* último nivel – página de datos */
+        if (entrada->presente || entrada->posicion_swap == -1) continue;
+
+        void *marco = obtener_marco_libre();
+        if (!marco) {
+            log_error(logger_memoria,
+                      "No hay marcos libres para desuspender PID %d. Proceso incompleto.", pid);
+            return; // abortar – se requerirá re‑intento futuro
+        }
+
+        leer_pagina_swap(entrada->posicion_swap, marco);
+        aplicar_retardo_swap();
+        liberar_posicion_swap(entrada->posicion_swap);
+        entrada->posicion_swap = -1;
+        entrada->presente = true;
+        entrada->marco = ((char *)marco - (char *)administrador_memoria->memoria_principal) /
+                         memoria_configs.tampagina;
+        actualizar_metricas(pid, SUBIDA_MEMORIA);
+        log_debug(logger_memoria, "PID %d: Página %d cargada en marco %d.", pid, i,
+                  entrada->marco);
+    }
+}
+
+void desuspender_proceso(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
-    t_tabla_nivel* tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
     if (!tabla) {
-        log_warning(logger_memoria, "Intento de desuspender PID %d, pero no se encontró su tabla de páginas.", pid);
+        log_warning(logger_memoria,
+                    "Intento de desuspender PID %d, pero no se encontró su tabla de páginas.",
+                    pid);
         return;
     }
 
-    // Función auxiliar recursiva para desuspender páginas en tablas multinivel
-    void _desuspender_paginas_recursivo(t_tabla_nivel* current_tabla, int current_pid) {
-        for (int i = 0; i < memoria_configs.entradasportabla; i++) {
-            t_entrada_pagina* entrada = current_tabla->entradas[i];
-            if (entrada == NULL) continue;
-
-            if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-                // Si es una entrada de tabla de nivel intermedio, ir al siguiente nivel
-                if (entrada->presente) { // Si la tabla de nivel inferior "existe"
-                    t_tabla_nivel* next_tabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-                    if (next_tabla) {
-                        _desuspender_paginas_recursivo(next_tabla, current_pid);
-                    }
-                }
-            } else {
-                // Último nivel: es una página de datos
-                if (!entrada->presente && entrada->posicion_swap != -1) {
-                    // La página no está en memoria principal pero sí en SWAP
-                    void* marco = obtener_marco_libre();
-                    if (!marco) {
-                        log_error(logger_memoria, "No hay marcos libres para desuspender PID %d. No se puede desuspender completamente.", current_pid);
-                        return; // No se puede desuspender completamente
-                    }
-
-                    leer_pagina_swap(entrada->posicion_swap, marco);
-                    aplicar_retardo_swap();
-                    liberar_posicion_swap(entrada->posicion_swap); // Liberar espacio en SWAP
-                    entrada->posicion_swap = -1; // Marcar como no en SWAP
-
-                    entrada->presente = true;
-                    entrada->marco = ((char*)marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina;
-                    actualizar_metricas(current_pid, SUBIDA_MEMORIA);
-                    log_debug(logger_memoria, "PID %d: Página cargada de SWAP a marco %d.", current_pid, entrada->marco);
-                }
-            }
-        }
-    }
-    _desuspender_paginas_recursivo(tabla, pid);
+    desuspender_paginas_recursivo(tabla, pid);
     log_info(logger_memoria, "## PID: %d - Proceso Desuspendido", pid);
 }
 
@@ -421,55 +434,25 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
-    // 1. Liberar recursos de memoria principal y SWAP
-    // La función destruir_tabla_paginas ya se encarga de liberar marcos y posiciones SWAP
-    // Se usa dictionary_remove_and_destroy para que el diccionario libere la clave y el valor
-    t_tabla_nivel* tabla_removida = dictionary_remove(administrador_memoria->tablas_paginas, pid_str);
-    if (tabla_removida) {
-        destruir_tabla_paginas(tabla_removida);
-        log_debug(logger_memoria, "PID %d: Tablas de páginas y recursos asociados liberados.", pid);
-    } else {
-        log_warning(logger_memoria, "PID %d: No se encontró la tabla de páginas para finalizar el proceso.", pid);
+    t_tabla_nivel *tabla = dictionary_remove(administrador_memoria->tablas_paginas, pid_str);
+    if (tabla) {
+        destruir_tabla_paginas(tabla);
+        log_debug(logger_memoria, "PID %d: Tablas de páginas liberadas.", pid);
     }
 
-    // 2. Mostrar métricas y liberarlas
-    t_metricas_por_proceso* metricas = dictionary_remove(administrador_memoria->metricas_por_proceso, pid_str);
+    t_metricas_por_proceso *metricas =
+        dictionary_remove(administrador_memoria->metricas_por_proceso, pid_str);
     if (metricas) {
         log_info(logger_memoria,
-               "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d; Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
-               pid,
-               metricas->accesos_tablas_paginas,
-               metricas->instrucciones_solicitadas,
-               metricas->bajadas_swap,
-               metricas->subidas_memoria,
-               metricas->lecturas_memoria,
-               metricas->escrituras_memoria);
-        free(metricas); // Liberar la estructura de métricas
-        log_debug(logger_memoria, "PID %d: Métricas liberadas.", pid);
-    } else {
-        log_warning(logger_memoria, "PID %d: No se encontraron métricas para mostrar al finalizar el proceso.", pid);
+                 "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d; Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
+                 pid, metricas->accesos_tablas_paginas, metricas->instrucciones_solicitadas,
+                 metricas->bajadas_swap, metricas->subidas_memoria, metricas->lecturas_memoria,
+                 metricas->escrituras_memoria);
+        free(metricas);
     }
 
-    // 3. Eliminar el proceso de la lista de procesos en memoria (instrucciones)
-    // Se asume que `procesos_en_memoria` es un diccionario global que almacena `t_proceso*`.
-    // La función `destruir_proceso` (definida en instrucciones.c) se encarga de liberar
-    // la estructura `t_proceso` y sus instrucciones.
-    // Aquí se llama directamente a `destruir_proceso` para liberar el `t_proceso*`
-    // que se obtiene del diccionario `procesos_en_memoria`.
-    t_proceso* proceso_a_destruir = dictionary_remove(procesos_en_memoria, pid_str);
-    if (proceso_a_destruir) {
-        // Liberar las instrucciones y la estructura del proceso
-        for (int i = 0; i < proceso_a_destruir->cantidad_instrucciones; i++) {
-            free(proceso_a_destruir->instrucciones[i]);
-        }
-        free(proceso_a_destruir->instrucciones);
-        free(proceso_a_destruir);
-        log_debug(logger_memoria, "PID %d: Estructura de proceso (instrucciones) liberada.", pid);
-    } else {
-        log_warning(logger_memoria, "PID %d: No se encontró la estructura de proceso (instrucciones) para liberar.", pid);
-    }
-
-    log_info(logger_memoria, "## PID: %d - Proceso Finalizado y recursos liberados.", pid);
+    t_proceso *proc = dictionary_remove(procesos_en_memoria, pid_str);
+    if (proc) destruir_proceso(proc);
 }
 
  /**
@@ -481,59 +464,56 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
   *
   * @param pid PID del proceso para el cual se realizará el dump.
   */
- void realizar_memory_dump(int pid) {
-    char timestamp[20];
-    time_t now = time(NULL);
-    struct tm *t = localtime(&now);
-    strftime(timestamp, sizeof(timestamp), "%Y%m%d%H%M%S", t); // Formato YYYYMMDDHHMMSS
 
-    char path_dump[512];
-    snprintf(path_dump, sizeof(path_dump), "%s/%d-%s.dmp",
-             memoria_configs.dumppath, pid, timestamp);
+  static void dump_paginas_recursivo(t_tabla_nivel *current_tabla, int pid, FILE *f) {
+    for (int i = 0; i < memoria_configs.entradasportabla; i++) {
+        t_entrada_pagina *entrada = current_tabla->entradas[i];
+        if (!entrada) continue;
 
-    FILE* dump_file = fopen(path_dump, "wb");
-    if (!dump_file) {
-        log_error(logger_memoria, "Error al crear archivo de dump '%s' para PID %d. Verifique la ruta y permisos.", path_dump, pid);
+        if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
+            if (entrada->presente) {
+                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                dump_paginas_recursivo(next_tabla, pid, f);
+            }
+            continue;
+        }
+
+        if (!entrada->presente) continue; // sólo paginas en memoria
+
+        void *data = (char *)administrador_memoria->memoria_principal +
+                     (entrada->marco * memoria_configs.tampagina);
+        fwrite(data, 1, memoria_configs.tampagina, f);
+    }
+}
+
+
+void realizar_memory_dump(int pid) {
+    char pid_str[16];
+    sprintf(pid_str, "%d", pid);
+
+    t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    if (!tabla) {
+        log_warning(logger_memoria, "PID %d – dump fallido: sin tabla de páginas", pid);
         return;
     }
 
-    char pid_str[16];
-    sprintf(pid_str, "%d", pid);
-    t_tabla_nivel* tabla_nivel_0 = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    /* construir nombre de archivo <PID>-<timestamp>.dmp en DUMP_PATH */
+    char timestamp[32];
+    time_t now = time(NULL);
+    strftime(timestamp, sizeof timestamp, "%Y%m%d-%H%M%S", localtime(&now));
 
-    if (tabla_nivel_0) {
-        log_info(logger_memoria, "Iniciando Memory Dump para PID %d en '%s'.", pid, path_dump);
+    char filepath[PATH_MAX];
+    snprintf(filepath, sizeof filepath, "%s/%d-%s.dmp", memoria_configs.dumppath, pid,
+             timestamp);
 
-        // Función auxiliar recursiva para recorrer y dumpear páginas
-        void _dumpear_paginas_recursivo(t_tabla_nivel* current_tabla) {
-            for (int i = 0; i < memoria_configs.entradasportabla; i++) {
-                t_entrada_pagina* entrada = current_tabla->entradas[i];
-                if (entrada == NULL) continue;
-
-                if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-                    // Si es una entrada de tabla de nivel intermedio, ir al siguiente nivel
-                    if (entrada->presente) {
-                        t_tabla_nivel* next_tabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-                        if (next_tabla) {
-                            _dumpear_paginas_recursivo(next_tabla);
-                        }
-                    }
-                } else {
-                    // Último nivel: es una página de datos
-                    if (entrada->presente && entrada->marco != -1) {
-                        void* marco = (char*)administrador_memoria->memoria_principal +
-                                      (entrada->marco * memoria_configs.tampagina);
-                        fwrite(marco, memoria_configs.tampagina, 1, dump_file);
-                        log_debug(logger_memoria, "PID %d: Página en marco %d dumpeada.", pid, entrada->marco);
-                    }
-                }
-            }
-        }
-        _dumpear_paginas_recursivo(tabla_nivel_0);
-    } else {
-        log_warning(logger_memoria, "No se encontró la tabla de páginas para PID %d. No se realizará el Memory Dump.", pid);
+    FILE *f = fopen(filepath, "wb");
+    if (!f) {
+        log_error(logger_memoria, "No se pudo crear el dump en %s", filepath);
+        return;
     }
 
-    fclose(dump_file);
-    log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pid);
+    dump_paginas_recursivo(tabla, pid, f);
+    fclose(f);
+
+    log_info(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
 }

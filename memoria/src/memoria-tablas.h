@@ -64,4 +64,7 @@ int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada, int desplazamiento)
  */
 int traducir_direccion(int pid, int direccion_logica, t_entrada_pagina** entrada_out);
 
+void destruir_tabla_paginas(void *tabla_void);
+
+
 #endif /* MEMORIA_TABLAS_H */

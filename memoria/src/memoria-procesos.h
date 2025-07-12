@@ -109,12 +109,6 @@ void mostrar_proceso(char* key, void* value);
  */
 const char* obtener_instruccion(int pid, int pc);
 
-// Prototipos de funciones de atención de peticiones (definidas en memoria_conexiones.c)
-// Se declaran aquí para que instrucciones.c pueda usarlas si es necesario,
-// aunque su implementación está en memoria_conexiones.c
-//void* recibir_peticiones_kernel(void* socket_memoria);
-//void* recibir_peticiones_cpu(void* socket_cliente);
-
 /**
  * @brief Cabecera para la gestión de procesos.
  *
@@ -179,9 +173,7 @@ void realizar_memory_dump(int pid);
 
 void aplicar_retardo_swap();
 
-//nuevo:
 t_tabla_nivel* crear_tabla_nivel(int nivel);
 void liberar_posicion_swap(int posicion);
-
 
 #endif /* MEMORIA_PROCESOS_H */
