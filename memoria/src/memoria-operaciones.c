@@ -1,5 +1,15 @@
 #include "memoria.h"
 #include "memoria-operaciones.h"
+#include "memoria-admin.h"
+#include "memoria-procesos.h"
+#include "memoria-tablas.h"
+
+#include <unistd.h>  // usleep
+#include <string.h>
+#include <stdlib.h>
+
+static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numero_marco_fisico);
+
 
  /**
   * @brief Aplica un retardo basado en `RETARDO_MEMORIA`.
@@ -25,7 +35,8 @@
   * @return Puntero a un nuevo buffer con los datos leídos, o NULL si hay un error.
   */
  void* leer_memoria(int pid, int direccion_logica, int tam) {
-    int direccion_fisica = traducir_direccion(pid, direccion_logica);
+    int direccion_fisica = traducir_direccion(pid, direccion_logica, NULL);
+
     if (direccion_fisica < 0) {
         log_error(logger_memoria, "PID %d: Fallo al leer memoria. Error al traducir dirección lógica %d.", pid, direccion_logica);
         return NULL;
@@ -37,16 +48,15 @@
         return NULL;
     }
 
-    void* contenido = malloc(tam);
-    if (contenido == NULL) {
-        log_error(logger_memoria, "PID %d: Error al asignar memoria para el contenido de lectura.", pid);
-        return NULL;
-    }
-    memcpy(contenido, (char*)administrador_memoria->memoria_principal + direccion_fisica, tam);
+    void *buffer = malloc(tam);
+    if (!buffer) return NULL;
+    memcpy(buffer, (char *)administrador_memoria->memoria_principal + direccion_fisica, tam);
     actualizar_metricas(pid, LECTURA_MEMORIA_MET); // Métrica de lectura de memoria
+
     log_info(logger_memoria, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam);
+
     aplicar_retardo_memoria(); // Aplicar retardo por acceso a memoria
-    return contenido;
+    return buffer;
 }
 
  /**
@@ -202,6 +212,27 @@
   * @param contenido Puntero al buffer con los nuevos datos de la página.
   * @return true si la actualización fue exitosa, false en caso contrario.
   */
+
+  static void marcar_modificado_recursivo(t_tabla_nivel *current_tabla, int pid, int numero_marco_fisico) {
+    for (int i = 0; i < memoria_configs.entradasportabla; i++) {
+        t_entrada_pagina *entrada = current_tabla->entradas[i];
+        if (!entrada) continue;
+        if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
+            if (entrada->presente) {
+                t_tabla_nivel *next = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                marcar_modificado_recursivo(next, pid, numero_marco_fisico);
+            }
+        } else {
+            if (entrada->presente && entrada->marco == numero_marco_fisico) {
+                entrada->modificado = true;
+                log_debug(logger_memoria, "PID %d: Página marco %d marcada modificada", pid, numero_marco_fisico);
+                return;
+            }
+        }
+    }
+}
+
+
  bool actualizar_pagina_completa(int pid, int direccion_fisica, void* contenido) {
     if (direccion_fisica % memoria_configs.tampagina != 0) {
         log_error(logger_memoria, "PID %d: Dirección física %d no es el inicio de una página. No se puede actualizar página completa.", pid, direccion_fisica);
@@ -216,34 +247,13 @@
 
     // Marcar la página como modificada
     int numero_marco_fisico = direccion_fisica / memoria_configs.tampagina;
-    char pid_str[16];
-    sprintf(pid_str, "%d", pid);
-    t_tabla_nivel* tabla_nivel_0 = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    char pid_key[16];
+    sprintf(pid_key, "%d", pid);
 
+    t_tabla_nivel *tabla_nivel_0 = dictionary_get(administrador_memoria->tablas_paginas, pid_key);
+    
     if (tabla_nivel_0) {
-        void _marcar_modificado_recursivo(t_tabla_nivel* current_tabla) {
-            for (int i = 0; i < memoria_configs.entradasportabla; i++) {
-                t_entrada_pagina* entrada = current_tabla->entradas[i];
-
-                if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-                    if (entrada->presente) {
-                        t_tabla_nivel* next_tabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-                        if (next_tabla) {
-                            _marcar_modificado_recursivo(next_tabla);
-                        }
-                    }
-                } else {
-                    if (entrada->presente && entrada->marco == numero_marco_fisico) {
-                        entrada->modificado = true;
-                        log_debug(logger_memoria, "PID %d: Página en marco %d marcada como modificada después de actualización completa.", pid, numero_marco_fisico);
-                        return;
-                    }
-                }
-            }
-        }
-        _marcar_modificado_recursivo(tabla_nivel_0);
-    } else {
-        log_warning(logger_memoria, "PID %d: No se encontró la tabla de páginas para marcar la página como modificada después de la actualización completa.", pid);
+        marcar_modificado_recursivo(tabla_nivel_0, pid, numero_marco_fisico);
     }
 
     log_info(logger_memoria, "## PID: %d - Actualización de página completa - Dir. Física: %d", pid, direccion_fisica);

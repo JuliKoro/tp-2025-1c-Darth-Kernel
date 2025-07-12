@@ -1,6 +1,7 @@
 #include "memoria.h"
 #include "memoria-marcos.h"
 #include "memoria-swap.h"
+#include "memoria-procesos.h"
 
  /**
   * @brief Inicializa la lista de marcos libres.
