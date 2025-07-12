@@ -34,6 +34,8 @@
         "execute.h": "c",
         "stdio.h": "c",
         "instruccion.h": "c",
-        "manejo-cpu.h": "c"
+        "manejo-cpu.h": "c",
+        "cpu-log.h": "c",
+        "cpu.h": "c"
     }
 }

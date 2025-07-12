@@ -1,7 +1,7 @@
 #include "execute.h"
 
 // Implementación de la función execute
-int execute(instruccion_decodificada* instruccion, int socket_memoria, int socket_kernel_dispatch) {
+int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch) {
     // Log de inicio de ejecución
     char* parametros = parametros_str(instruccion);
     log_info(logger_cpu, "## PID: %d - Ejecutando: %s - %s", instruccion->pid, instruccion_str(instruccion->tipo), parametros);
@@ -10,43 +10,46 @@ int execute(instruccion_decodificada* instruccion, int socket_memoria, int socke
         case NOOP:
             // NOOP solo consume tiempo, no hace nada
             sleep(1); // Simula un ciclo de instrucción de 1 segundo
-            pc++; // Incremento el PC en 1 (actualiza el PC global)
+            proceso->pc++; // Incremento el PC en 1 (actualiza el PC global)
+            break;
         case WRITE:
             // Lógica para escribir en memoria
             // escribir_en_memoria(socket_memoria, instruccion->direccion, instruccion->datos);
+            proceso->pc++;
             break;
 
         case READ:
             // Lógica para leer de memoria
             // leer_de_memoria(socket_memoria, instruccion->direccion, instruccion->tamanio);
+            proceso->pc++;
             break;
 
         case GOTO:
             // Actualizar el PC global a la dirección de destino
-            pc = instruccion->pc_destino;
+            proceso->pc = instruccion->pc_destino;
             break;
 
         case IO: // SYSCALL (Dispositivo, Tiempo)
             // manejar operaciones de entrada/salida
+            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
-            
             break;
 
         case INIT_PROC: // SYSCALL (Archivo de instrucciones, Tamaño)
             // inicializar un proceso
+            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
-
             break;
 
         case DUMP_MEMORY: // SYSCALL
             // volcar la memoria
+            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
-
             break;
 
         case EXIT_INSTR: // SYSCALL
+            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
-            
             break;
 
         case INSTRUCCION_DESCONOCIDA:

@@ -5,7 +5,7 @@
 #include <utils/sockets.h>
 
 #include "cpu-configs.h"
-
+#include "cpu-log.h"
 /**
 * @brief Establece la conexión entre el módulo CPU y el módulo Kernel.
 * @param puerto_kernel dispatch o interrupt

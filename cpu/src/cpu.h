@@ -11,6 +11,7 @@
 #include <utils/sockets.h>
 #include <utils/hello.h>
 #include <utils/configs.h>
+#include "registros.h"
 
 // Prototipos de las funciones de los hilos
 

@@ -2,7 +2,6 @@
 
 int iniciar_servidor_generico(int puerto, char* nombre_modulo, int tipo_modulo) {
 
-    id_modulo_t modulo_recibido;
 
     iniciar_logger_global(&logger_sockets, "kernel-conexiones.log", "[KERNEL-SERVIDOR]");
 

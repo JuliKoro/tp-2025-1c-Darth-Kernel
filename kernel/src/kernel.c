@@ -39,42 +39,11 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
     pthread_detach(thread_planificador_largo_plazo);
 
-
+    
 
 
    
-    // 3. Creamos dos PCBs de prueba.
-        t_pcb* pcb_prueba_1 = malloc(sizeof(t_pcb));
-        pcb_prueba_1->pid = 998;
-        pcb_prueba_1->tamanio_proceso = 512;
-        pcb_prueba_1->pc = 0;
-        pcb_prueba_1->estado = RUNNING;
 
-        t_pcb* pcb_prueba_2 = malloc(sizeof(t_pcb));
-        pcb_prueba_2->pid = 999;
-        pcb_prueba_2->tamanio_proceso = 512;
-        pcb_prueba_2->pc = 0;
-        pcb_prueba_2->estado = RUNNING;
-
-        // 4. Agregamos ambos a la lista de ejecución.
-        pthread_mutex_lock(&mutex_lista_executing);
-        list_add(lista_executing, pcb_prueba_1);
-        list_add(lista_executing, pcb_prueba_2);
-        pthread_mutex_unlock(&mutex_lista_executing);
-        log_info(logger_kernel, "[PRUEBA] PCBs de prueba (PID 998 y 999) creados y en estado RUNNING.");
-
-        // 5. El primer proceso (998) pide la IO. Debería obtenerla inmediatamente.
-        log_info(logger_kernel, "[PRUEBA] Enviando syscall IO para PID 998 (debería ser atendido)...");
-        io("impresora", 3, 998); // Usará la impresora por 3 segundos.
-        log_info(logger_kernel, "[PRUEBA] La llamada a io() para PID 998 ha sido realizada.");
-        
-        // 6. El segundo proceso (999) la pide inmediatamente después. Debería ser encolado.
-        log_info(logger_kernel, "[PRUEBA] Enviando syscall IO para PID 999 (debería ser encolado)...");
-        io("impresora", 2, 999); // Este proceso la quiere por 2 segundos.
-        log_info(logger_kernel, "[PRUEBA] La llamada a io() para PID 999 ha sido realizada.");
-        log_info(logger_kernel, "[PRUEBA] Observa los logs. El PID 999 debería ser atendido automáticamente cuando el 998 termine.");
-    
-    // --- FIN CODIGO DE PRUEBA DE IO - ESCENARIO 3 --- //
 
     
 

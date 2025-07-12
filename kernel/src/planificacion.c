@@ -27,6 +27,7 @@ t_list* lista_susp_ready = NULL;
 t_list* lista_susp_blocked = NULL;
 t_list* lista_blocked_io = NULL;
 
+t_list* lista_cpu = NULL;   
 t_list* lista_io = NULL;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -136,6 +137,8 @@ void inicializar_colas_y_sem() {
     lista_susp_ready = list_create();
     lista_susp_blocked = list_create();
     lista_blocked_io = list_create();
+    lista_cpu = list_create();
+    lista_io = list_create();
     sem_init(&sem_procesos_en_new, 0, 0);
 }
 
@@ -421,6 +424,7 @@ int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
         }
     }
     pthread_mutex_unlock(&mutex_lista_blocked);
+    return 0;
 }
 
 int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid) {
@@ -548,6 +552,27 @@ bool comprobar_grado_multiprogramacion_maximo() {
     bool valor = grado_multiprogramacion < GRADO_MULTIPROGRAMACION_MAXIMO;
     pthread_mutex_unlock(&mutex_grado_multiprogramacion);
     return valor;
+}
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones manejo de t_cpu_en_kernel
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+
+t_cpu_en_kernel* buscar_cpu_por_id(int id_cpu){
+    pthread_mutex_lock(&mutex_cpu);
+    for(int i = 0; i < list_size(lista_cpu); i++) {
+        t_cpu_en_kernel* cpu = list_get(lista_cpu, i);
+        if(cpu->id_cpu == id_cpu) {
+            pthread_mutex_unlock(&mutex_cpu);
+            return cpu;
+        }
+    }
+    pthread_mutex_unlock(&mutex_cpu);
+    return NULL;
 }
 
 

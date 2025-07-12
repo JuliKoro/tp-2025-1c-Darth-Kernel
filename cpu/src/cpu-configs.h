@@ -62,7 +62,7 @@ extern cpuconfigs cpu_configs;
  * de configuración y la almacena en la estructura global
  * `cpu_configs`.
  */
-void inicializar_configs();   
+int inicializar_configs();   
 
 /**
  * @brief Destruye el struct cpuconfigs

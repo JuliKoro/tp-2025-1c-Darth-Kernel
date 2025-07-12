@@ -1,33 +1,11 @@
 #include "cpu-conexiones.h"
 
 int cpu_conectar_a_kernel(int puerto_kernel, int id_cpu){
-    // Modificar para que funcione junto a Kernel
 
-    t_log* logger_sockets = iniciar_logger_cpu(id_cpu);
     int socket_kernel = crear_conexion (cpu_configs.ipkernel, int_a_string(puerto_kernel));
-
-    log_info(logger_sockets, "FD de conexion con el KERNEL %d", socket_kernel);
-    log_info(logger_sockets, "[HANDSHAKE] Enviando handhsake a KERNEL...");
-
-    if(enviar_handshake_cpu(socket_kernel, id_cpu) == -1){
-        log_error(logger_sockets, "[HANDSHAKE] Fallo al enviar handshake a KERNEL. Cierro conexion.");
-        close(socket_kernel);
-        return -1;
-    }
-
-    log_info(logger_sockets, "[HANDSHAKE] Handshake exitoso! Envio mensaje a KERNEL");
-    enviar_mensaje("Hola kernel como andas :3 soy el CPU", socket_kernel);
-    log_info(logger_sockets, "Esperando respuesta del KERNEL...");
-
-    char* respuesta = recibir_mensaje(socket_kernel);
-
-    log_info(logger_sockets, "Me llego esto:  %s", respuesta);
     
-    free(respuesta);
-    log_destroy(logger_sockets);
-    close(socket_kernel);
-
-    return 0; // tiene que devolver el fd del socket
+    
+    return socket_kernel; 
 }
 
 int cpu_conectar_a_memoria(int id_cpu){

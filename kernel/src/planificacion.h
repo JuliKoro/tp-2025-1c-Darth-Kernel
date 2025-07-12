@@ -68,7 +68,8 @@ typedef enum {
     FIFO,
     PMCP,
     SJF_SIN_DESALOJO,
-    SFJ_CON_DESALOJO
+    SFJ_CON_DESALOJO,
+
 } algoritmos_de_planificacion;
 
 /**
@@ -96,6 +97,7 @@ typedef struct {
     int socket_cpu_dispatch;
     int socket_cpu_interrupt;
     int id_cpu;
+    bool esta_ocupada;
 } t_cpu_en_kernel;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -137,6 +139,7 @@ t_blocked_io* buscar_proceso_en_blocked_io(int socket_io);
 
 
 
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Semaforos
@@ -154,6 +157,7 @@ extern pthread_mutex_t mutex_lista_susp_blocked;
 extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_lista_blocked_io;
+extern pthread_mutex_t mutex_cpu;
 extern sem_t sem_procesos_en_new;
 
 
@@ -480,6 +484,24 @@ void disminuir_grado_multiprogramacion();
  * 
  */
 bool comprobar_grado_multiprogramacion_maximo();
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones manejo de t_cpu_en_kernel
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/**
+ * @brief Busca una CPU por su id
+ * 
+ * @param id_cpu: El id de la CPU a buscar
+ * @return La CPU encontrada o NULL si no existe
+ */
+t_cpu_en_kernel* buscar_cpu_por_id(int id_cpu);
+
+
 
 
 

@@ -6,7 +6,7 @@ t_log* iniciar_logger_cpu(int id_cpu){
     t_log* logger_cpu = iniciar_logger(log_filename, "[CPU]"); // crea logger cpu_<id>.log
     if (logger_cpu == NULL) {
         fprintf(stderr, "Error al crear el logger.\n");
-        return EXIT_FAILURE;
+        return NULL;
     }
     return logger_cpu;
  }

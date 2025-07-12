@@ -15,7 +15,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
-        execute(instruccion_decodificada, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
+        execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
 
         
 

@@ -5,6 +5,8 @@
 
 #include "cpu-configs.h"
 #include "instruccion.h"
+#include <utils/configs.h>
+#include <utils/logger.h>
 
 /**
  * @var logger_cpu

@@ -10,6 +10,9 @@ pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización es
 
 t_proceso_cpu* proceso = NULL;
 
+
+int id_cpu; //La hice global para que se pueda usar en los hilos de dispatch e interrupt.
+
 int main(int argc, char* argv[]) {
    
    // INICIO CPU
@@ -20,7 +23,7 @@ int main(int argc, char* argv[]) {
    }
 
    // guardo el id del argumento
-   int id_cpu = atoi(argv[1]);
+   id_cpu = atoi(argv[1]);
    if (id_cpu <= 0) {
       fprintf(stderr, "El ID del CPU debe ser un número positivo.\n");
       return EXIT_FAILURE;
@@ -69,6 +72,26 @@ int main(int argc, char* argv[]) {
 }
 
 void* hilo_dispatch(void* arg){
+
+   //Hago el handshake con el kernel
+   if(enviar_handshake_cpu(socket_kernel_dispatch, id_cpu) == -1){
+      log_error(logger_cpu, "Error al enviar handshake a Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
+
+   log_info(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
+
+   //Recibo la confirmacion de kernel que el socket de dispatch fue creado y asignado a la cpu
+   char* mensaje = recibir_mensaje(socket_kernel_dispatch);
+   if(mensaje == NULL){
+      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
+
+   log_info(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   free(mensaje);
+
+
    while (1) {
       // ASIGNACION DE PROCESO
       t_paquete* paquete = recibir_paquete(socket_kernel_dispatch);
@@ -81,7 +104,7 @@ void* hilo_dispatch(void* arg){
          
          pthread_mutex_lock(&mutex_proceso); // lock(mutex_proceso)
          if (proceso != NULL) {
-            liberar_proceso(proceso); // Liberar el proceso anterior si existe
+            //liberar_proceso(proceso); // Liberar el proceso anterior si existe
          }
          proceso = deserializar_proceso_cpu(paquete->buffer);
          log_info(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
@@ -92,6 +115,26 @@ void* hilo_dispatch(void* arg){
 }
 
 void* hilo_interrupt(void* arg){
+
+   //Hago el handshake con el kernel
+   if(enviar_handshake_cpu(socket_kernel_interrupt, id_cpu) == -1){
+      log_error(logger_cpu, "Error al enviar handshake a Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
+
+   log_info(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
+
+   //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
+   char* mensaje = recibir_mensaje(socket_kernel_interrupt);
+   if(mensaje == NULL){
+      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
+
+   log_info(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   free(mensaje);
+
+
    while (1) {
       // Lógica para recibir interrupciones
       t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
