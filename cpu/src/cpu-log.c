@@ -53,19 +53,19 @@ char* parametros_str(instruccion_decodificada* instruccion){
             snprintf(parametros, 256, "%s", instruccion->archivo_proceso);
             break;
         case DUMP_MEMORY:
-            snprintf(parametros, 256, "");
+            snprintf(parametros, 256, " ");
             break;
         case NOOP:
-            snprintf(parametros, 256, "");
+            snprintf(parametros, 256, " ");
             break;
         case EXIT_INSTR:
-            snprintf(parametros, 256, "");
+            snprintf(parametros, 256, " ");
             break;
         case INSTRUCCION_DESCONOCIDA:
-            snprintf(parametros, 256, "");
+            snprintf(parametros, 256, " ");
             break;
         default:
-            snprintf(parametros, 256, "");
+            snprintf(parametros, 256, " ");
             break;
     }
     return parametros;

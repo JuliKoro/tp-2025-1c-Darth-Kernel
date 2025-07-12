@@ -10,6 +10,7 @@ pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización es
 
 t_proceso_cpu* proceso = NULL;
 
+uint32_t pc; // Definición de la variable global para el PC
 
 int id_cpu; //La hice global para que se pueda usar en los hilos de dispatch e interrupt.
 
