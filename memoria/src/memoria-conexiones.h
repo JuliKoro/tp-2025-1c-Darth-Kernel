@@ -28,5 +28,10 @@
  void atender_peticion_kernel(void* socket_cliente);
  
  #endif /* MEMORIA_CONEXIONES_H_ */
+
+ /*
+ void* recibir_peticiones_cpu(void* socket_memoria);
+void* atender_peticion_cpu(void* socket_cliente);
+ */
  
  

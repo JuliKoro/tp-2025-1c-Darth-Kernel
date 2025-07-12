@@ -61,4 +61,191 @@ void atender_peticion_kernel(void* socket_cliente){
     }
 }
 
+/*void* recibir_peticiones_cpu(void* socket_memoria) {
+    int socket_fd = *(int*)socket_memoria;
 
+    while (1) {
+        int cliente_fd = esperar_cliente(socket_fd);
+
+        pthread_t hilo_cpu;
+        int* socket_cliente = malloc(sizeof(int));
+        *socket_cliente = cliente_fd;
+
+        pthread_create(&hilo_cpu, NULL, atender_peticion_cpu, (void*)socket_cliente);
+        pthread_detach(hilo_cpu);
+    }
+
+    return NULL;
+}
+void* atender_peticion_cpu(void* socket_cliente) {
+    int socket_fd = *(int*)socket_cliente;
+    free(socket_cliente);
+
+    id_modulo_t modulo;
+    if (recibir_handshake(socket_fd, &modulo) == -1) {
+        log_error(logger_memoria, "[HANDSHAKE] Error en conexión con CPU");
+        close(socket_fd);
+        return NULL;
+    }
+
+    log_info(logger_memoria, "[HANDSHAKE] CPU conectada correctamente - FD: %d", socket_fd);
+
+    while (1) {
+        op_code codigo_operacion;
+
+        if (recv(socket_fd, &codigo_operacion, sizeof(op_code), 0) <= 0) {
+            log_info(logger_memoria, "[CPU] Se cerró la conexión (FD: %d)", socket_fd);
+            close(socket_fd);
+            break;
+        }
+
+        log_debug(logger_memoria, "[CPU] Operación recibida: %d", codigo_operacion);
+
+                IMPLEMENTAR FUNCIONES -- CHEQUEAR ANTES
+
+        switch (codigo_operacion) {
+            case SOLICITUD_INSTRUCCION:
+                manejar_solicitud_instruccion(socket_fd);
+                break;
+            case LECTURA_MEMORIA:
+                manejar_lectura_memoria(socket_fd);
+                break;
+            case ESCRITURA_MEMORIA:
+                manejar_escritura_memoria(socket_fd);
+                break;
+            case LECTURA_PAGINA:
+                manejar_lectura_pagina(socket_fd);
+                break;
+            case ACTUALIZACION_PAGINA:
+                manejar_actualizacion_pagina(socket_fd);
+                break;
+            case SUSPENDER_PROCESO:
+                manejar_suspension(socket_fd);
+                break;
+            case DESUSPENDER_PROCESO:
+                manejar_desuspension(socket_fd);
+                break;
+            case FINALIZAR_PROCESO:
+                manejar_finalizacion(socket_fd);
+                break;
+            case MEMORY_DUMP:
+                manejar_memory_dump(socket_fd);
+                break;
+            default:
+                log_warning(logger_memoria, "[CPU] Operación desconocida (FD: %d)", socket_fd);
+                break;
+        }
+    }
+
+    return NULL;
+}
+
+*/
+
+/*
+SEGUN CHAT GPT LA IMPLEM DE FUNCIONES
+
+#include "memoria.h"
+#include "memoria-log.h"
+#include "memoria-admin.h"
+#include "memoria-procesos.h"
+#include "utils/serializacion.h"
+
+void manejar_solicitud_instruccion(int socket_fd) {
+    int pid;
+    int pc;
+    recv(socket_fd, &pid, sizeof(int), 0);
+    recv(socket_fd, &pc, sizeof(int), 0);
+
+    char* instruccion = obtener_instruccion(pid, pc);
+    enviar_string(socket_fd, instruccion);
+
+    log_info(logger_memoria, "## PID: %d - Obtener instruccion: %d - Instruccion: %s", pid, pc, instruccion);
+    free(instruccion);
+}
+
+void manejar_lectura_memoria(int socket_fd) {
+    int direccion_logica;
+    int pid;
+    recv(socket_fd, &pid, sizeof(int), 0);
+    recv(socket_fd, &direccion_logica, sizeof(int), 0);
+
+    char* valor = leer_memoria(pid, direccion_logica);
+    enviar_string(socket_fd, valor);
+
+    log_info(logger_memoria, "## PID: %d - Lectura - Dir. Lógica: %d - Valor: %s", pid, direccion_logica, valor);
+    free(valor);
+}
+
+void manejar_escritura_memoria(int socket_fd) {
+    int direccion_logica;
+    int pid;
+    char* valor;
+
+    recv(socket_fd, &pid, sizeof(int), 0);
+    recv(socket_fd, &direccion_logica, sizeof(int), 0);
+    valor = recibir_string(socket_fd);
+
+    escribir_memoria(pid, direccion_logica, valor);
+
+    log_info(logger_memoria, "## PID: %d - Escritura - Dir. Lógica: %d - Valor: %s", pid, direccion_logica, valor);
+    free(valor);
+}
+
+void manejar_lectura_pagina(int socket_fd) {
+    int direccion_fisica;
+    recv(socket_fd, &direccion_fisica, sizeof(int), 0);
+
+    void* pagina = leer_pagina_entera(direccion_fisica);
+    send(socket_fd, pagina, memoria_configs.tampagina, 0);
+
+    log_info(logger_memoria, "## Lectura de página completa en Dir. Física: %d", direccion_fisica);
+    free(pagina);
+}
+
+void manejar_actualizacion_pagina(int socket_fd) {
+    int direccion_fisica;
+    recv(socket_fd, &direccion_fisica, sizeof(int), 0);
+
+    void* nueva_pagina = malloc(memoria_configs.tampagina);
+    recv(socket_fd, nueva_pagina, memoria_configs.tampagina, 0);
+
+    actualizar_pagina_entera(direccion_fisica, nueva_pagina);
+
+    log_info(logger_memoria, "## Página actualizada en Dir. Física: %d", direccion_fisica);
+    free(nueva_pagina);
+}
+
+void manejar_suspension(int socket_fd) {
+    int pid;
+    recv(socket_fd, &pid, sizeof(int), 0);
+
+    suspender_proceso(pid);
+    log_info(logger_memoria, "## PID: %d - Proceso suspendido", pid);
+}
+
+void manejar_desuspension(int socket_fd) {
+    int pid;
+    recv(socket_fd, &pid, sizeof(int), 0);
+
+    desuspender_proceso(pid);
+    log_info(logger_memoria, "## PID: %d - Proceso desuspendido", pid);
+}
+
+void manejar_finalizacion(int socket_fd) {
+    int pid;
+    recv(socket_fd, &pid, sizeof(int), 0);
+
+    finalizar_proceso(pid);
+    log_info(logger_memoria, "## PID: %d - Proceso finalizado", pid);
+}
+
+void manejar_memory_dump(int socket_fd) {
+    int pid;
+    recv(socket_fd, &pid, sizeof(int), 0);
+
+    solicitar_memory_dump(pid);
+    log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pid);
+}
+
+*/
