@@ -75,4 +75,13 @@ void* manejo_dispatch(void* socket_cpu_dispatch);
 void* manejo_interrupt(void* socket_cpu_interrupt);
 
 
+/**
+ * @brief Elimina la CPU de la lista de CPUs.
+ * 
+ * @param socket Socket de la CPU, puede ser de dispatch o de interrupt.
+ * @return void* 
+ */
+void* eliminar_cpu_por_socket(int socket);
+
+
 #endif

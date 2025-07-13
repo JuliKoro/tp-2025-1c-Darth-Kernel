@@ -16,11 +16,15 @@ int main(int argc, char* argv[]) {
 
     //Primero levanto las configs, despues el logger
     lista_io = list_create();
-    inicializar_colas_y_sem();
+    inicializar_listas_y_sem();
     inicializar_configs();
     inicializar_logger_kernel();
 
-    
+    //Inicia el receptor de CPUs
+    pthread_t thread_receptor_cpu;
+    pthread_create(&thread_receptor_cpu, NULL, iniciar_receptores_cpu, NULL);
+    pthread_detach(thread_receptor_cpu);
+    log_info(logger_kernel, "Receptores de CPU iniciados");
     
     //Inicia el receptor de IO, esto recibe todos los IO y los agrega en la lista de IOs. Mantiene las cImplementarnexiones abiertas para que puedan recibir solicitudes.
     pthread_t thread_receptor_io;
@@ -39,9 +43,25 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
     pthread_detach(thread_planificador_largo_plazo);
 
+  
+  
+      /**************************** MODO DE PRUEBA DE IO ****************************/
+    printf("\n\n\t*** MODO DE PRUEBA DE IO - Escenario 5: Falla de IO Estando Libre ***\n\n");
     
+    log_info(logger_kernel, "[PRUEBA-IO] El Kernel está en modo de espera.");
+    log_info(logger_kernel, "[PRUEBA-IO] Por favor, en la otra terminal, inicia el módulo IO 'impresora'.");
+    sleep(5);
 
+    log_info(logger_kernel, "[PRUEBA-IO] Ahora, por favor, CIERRA el módulo IO 'impresora' (Ctrl+C).");
+    sleep(5);
 
+    log_info(logger_kernel, "[PRUEBA-IO] Verificando que ningún proceso haya sido afectado...");
+    // En un sistema real, aquí podríamos verificar que la lista de EXIT está vacía.
+    // Por ahora, confiaremos en los logs.
+
+    /**************************** FIN MODO DE PRUEBA ****************************/
+    
+    log_info(logger_kernel, "Finalizando prueba. El Kernel se cerrará en breve.");
    
 
 

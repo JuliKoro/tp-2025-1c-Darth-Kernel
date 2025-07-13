@@ -177,18 +177,46 @@ int enviar_paquete(int socket, t_paquete* paquete){
 
 t_paquete* recibir_paquete(int socket){
     t_paquete* paquete = malloc(sizeof(t_paquete));
+    if(paquete == NULL){
+        return NULL;
+    }
     paquete->buffer = malloc(sizeof(t_buffer));
+    if(paquete->buffer == NULL){
+        free(paquete);
+        return NULL;
+    }
 
     //Recibir codigo de operacion
-    recv(socket, &(paquete->codigo_operacion), sizeof(t_codigo_operacion), 0);
+    if (recv(socket, &(paquete->codigo_operacion), sizeof(t_codigo_operacion), MSG_WAITALL) <= 0) {
+        free(paquete->buffer);
+        free(paquete);
+        return NULL;
+    }
     
     //Recibir tamaño del buffer
-    recv(socket, &(paquete->buffer->size), sizeof(uint32_t), 0);
-    paquete->buffer->stream = malloc(paquete->buffer->size);
+     if (recv(socket, &(paquete->buffer->size), sizeof(uint32_t), MSG_WAITALL) <= 0) {
+        free(paquete->buffer);
+        free(paquete);
+        return NULL;
+    }
+    
+    if (paquete->buffer->size > 0) {
+        paquete->buffer->stream = malloc(paquete->buffer->size);
+        if (paquete->buffer->stream == NULL) {
+             free(paquete->buffer);
+             free(paquete);
+             return NULL;
+        }
+        if (recv(socket, paquete->buffer->stream, paquete->buffer->size, MSG_WAITALL) <= 0) {
+            free(paquete->buffer->stream);
+            free(paquete->buffer);
+            free(paquete);
+            return NULL;
+        }
+    } else {
+        paquete->buffer->stream = NULL;
+    }
     paquete->buffer->offset = 0;
-
-    //Recibir buffer
-    recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);
 
     return paquete; //Recordar liberar en donde se llame
 }

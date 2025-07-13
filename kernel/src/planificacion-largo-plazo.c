@@ -18,14 +18,14 @@ void* iniciar_planificador_largo_plazo() {
 
                 //2. Verifico si hay procesos en cola new
                 //TODO: Verificar que no haya procesos en la cola de susp ready
-                t_pcb* pcb = peek_cola_new();
+                t_pcb* pcb = peek_lista_new();
                 if(pcb == NULL) {
-                    log_error(logger_kernel, "Error al peekear la cola new");
+                    log_error(logger_kernel, "Error al peekear la lista new");
                     continue;
                 }
                 if(solicitar_creacion_proceso(pcb)) { 
-                    pcb = obtener_pcb_de_cola_new();
-                    agregar_pcb_a_cola_ready(pcb);
+                    pcb = obtener_pcb_de_lista_new();
+                    agregar_pcb_a_lista_ready(pcb);
                     log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY", pcb->pid);
                 }
             }

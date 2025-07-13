@@ -11,6 +11,7 @@
 #include "planificacion-largo-plazo.h"
 #include "planificacion-corto-plazo.h"
 #include "manejo-io.h"
+#include "manejo-cpu.h"
 
 #include <pthread.h>
 

@@ -16,10 +16,9 @@ u_int32_t grado_multiprogramacion = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-t_queue* cola_new = NULL;
-t_queue* cola_ready = NULL;
 
-t_list* lista_ready_pmcp = NULL;
+t_list* lista_new = NULL;
+t_list* lista_ready = NULL;
 t_list* lista_exit = NULL;
 t_list* lista_blocked = NULL;
 t_list* lista_executing = NULL;
@@ -29,6 +28,27 @@ t_list* lista_blocked_io = NULL;
 
 t_list* lista_cpu = NULL;   
 t_list* lista_io = NULL;
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                            Semaforos
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+pthread_mutex_t mutex_io = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cpu = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t mutex_lista_new = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_blocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_exit = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_executing = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_susp_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_blocked_io = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
+sem_t sem_procesos_en_new;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -81,24 +101,30 @@ t_blocked_io* buscar_proceso_en_blocked_io(int socket_io) {
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                            Semaforos
+                                            Funciones para PIDs
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-pthread_mutex_t mutex_io = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cpu = PTHREAD_MUTEX_INITIALIZER;
+bool _encontrar_pcb_por_pid(void* elemento, void* pid_a_comparar) {
+    t_pcb* pcb = (t_pcb*)elemento;
+    return pcb->pid == *(u_int32_t*)pid_a_comparar;
+}
 
-pthread_mutex_t mutex_cola_new = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_blocked = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_exit = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_executing = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_susp_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_blocked_io = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
-sem_t sem_procesos_en_new;
+
+u_int32_t obtener_pid_siguiente() {
+    pthread_mutex_lock(&mutex_pid_counter);
+    pid_counter++;
+    pthread_mutex_unlock(&mutex_pid_counter);
+    return pid_counter;
+}
+
+u_int32_t obtener_pid_actual() {
+    pthread_mutex_lock(&mutex_pid_counter);
+    u_int32_t pid_actual = pid_counter;
+    pthread_mutex_unlock(&mutex_pid_counter);
+    return pid_actual;
+}
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                             Funciones de planificacion
@@ -116,6 +142,8 @@ algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo) 
     } else if(strcmp(algoritmo, "SFJ_CON_DESALOJO") == 0)   {
         return SFJ_CON_DESALOJO;
     }
+    log_error(logger_kernel, "Algoritmo de planificacion '%s' no reconocido. Usando FIFO por defecto.", algoritmo);
+    return FIFO;
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
@@ -123,14 +151,14 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
     pthread_mutex_lock(&mutex_pid_counter);
     pid_counter++;
     pthread_mutex_unlock(&mutex_pid_counter);
-    agregar_pcb_a_cola_new(pcb);
+    agregar_pcb_a_lista_new(pcb);
     //Loggear ## (<PID>) Se crea el proceso - Estado: NEW
     log_info(logger_kernel, "## (%d) Se crea el proceso inicial - Estado: NEW", pcb->pid);
 }
 
-void inicializar_colas_y_sem() {
-    cola_new = queue_create();
-    cola_ready = queue_create();
+void inicializar_listas_y_sem() {
+    lista_new = list_create();
+    lista_ready = list_create();
     lista_exit = list_create();
     lista_blocked  = list_create();
     lista_executing = list_create();
@@ -170,70 +198,54 @@ int recibir_mensaje_cpu(int socket_cpu) {
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                            Funciones para PIDs
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-
-u_int32_t obtener_pid_siguiente() {
-    pthread_mutex_lock(&mutex_pid_counter);
-    pid_counter++;
-    pthread_mutex_unlock(&mutex_pid_counter);
-    return pid_counter;
-}
-
-u_int32_t obtener_pid_actual() {
-    pthread_mutex_lock(&mutex_pid_counter);
-    u_int32_t pid_actual = pid_counter;
-    pthread_mutex_unlock(&mutex_pid_counter);
-    return pid_actual;
-}
-
-
-
-/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
                                         Funciones para manejo de las colas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void agregar_pcb_a_cola_new(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_cola_new);
-    queue_push(cola_new, pcb);
-    pthread_mutex_unlock(&mutex_cola_new);
+void agregar_pcb_a_lista_new(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_lista_new);
+    list_add(lista_new, pcb);
+    pthread_mutex_unlock(&mutex_lista_new);
     log_info(logger_kernel, "## (%d) Se crea el proceso - Estado: NEW", pcb->pid);
     sem_post(&sem_procesos_en_new); //Aviso al planificador largo plazo que hay un proceso en new
 }
 
 
-void agregar_pcb_a_cola_ready(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_cola_ready);
-    queue_push(cola_ready, pcb);
-    pthread_mutex_unlock(&mutex_cola_ready);
+void agregar_pcb_a_lista_ready(t_pcb* pcb) {
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
+    if(algoritmo == FIFO) {
+        pthread_mutex_lock(&mutex_lista_ready);
+        list_add(lista_ready, pcb);
+        pthread_mutex_unlock(&mutex_lista_ready);
+    } else if(algoritmo == SJF_SIN_DESALOJO) {
+        //TODO: Implementar SJF_SIN_DESALOJO
+    } else if(algoritmo == SFJ_CON_DESALOJO) {
+        //TODO: Implementar SFJ_CON_DESALOJO
+    } else if(algoritmo == PMCP) {
+        //TODO: Implementar PMCP
+    }
 }
 
-
-
-
-/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                                Funciones para peekear
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-t_pcb* peek_cola_new() {
-    pthread_mutex_lock(&mutex_cola_new);
-    t_pcb* pcb = queue_peek(cola_new);
-    pthread_mutex_unlock(&mutex_cola_new);
+t_pcb* peek_lista_new() {
+    pthread_mutex_lock(&mutex_lista_new);
+    t_pcb* pcb = list_get(lista_new, 0);
+    pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
 }   
 
-t_pcb* peek_cola_ready() {
-    pthread_mutex_lock(&mutex_cola_ready);
-    t_pcb* pcb = queue_peek(cola_ready);
-    pthread_mutex_unlock(&mutex_cola_ready);
+t_pcb* peek_lista_ready() {
+    pthread_mutex_lock(&mutex_lista_ready);
+    t_pcb* pcb = list_get(lista_ready, 0);
+    pthread_mutex_unlock(&mutex_lista_ready);
     return pcb;
 }   
+
+t_pcb* obtener_pcb_de_lista_new() {
+    pthread_mutex_lock(&mutex_lista_new);
+    t_pcb* pcb = list_remove(lista_new, 0);
+    pthread_mutex_unlock(&mutex_lista_new);
+    return pcb;
+}
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -281,20 +293,6 @@ int mover_pcb_a_exit(t_pcb* pcb) {
     log_info(logger_kernel, "## (%d) - Finaliza el proceso", pcb->pid);
 
     return 0;
-}
-
-t_pcb* obtener_pcb_de_cola_new() {
-    pthread_mutex_lock(&mutex_cola_new);
-    t_pcb* pcb = queue_pop(cola_new);
-    pthread_mutex_unlock(&mutex_cola_new);
-    return pcb;
-}
-
-t_pcb* obtener_pcb_de_cola_ready() {
-    pthread_mutex_lock(&mutex_cola_ready);
-    t_pcb* pcb = queue_pop(cola_ready);
-    pthread_mutex_unlock(&mutex_cola_ready);
-    return pcb;
 }
 
 
@@ -415,9 +413,7 @@ int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
             //Actualizo el estado del proceso
             pcb_encontrado->estado = READY;
             //Antes de removerlo, lo muevo a ready
-            pthread_mutex_lock(&mutex_cola_ready);
-            queue_push(cola_ready, pcb_encontrado);
-            pthread_mutex_unlock(&mutex_cola_ready);
+            agregar_pcb_a_lista_ready(pcb_encontrado);
             //Despues de actualizar el estado y cambiarlo a lista ready, lo saco de lista blocked
             list_remove(lista_blocked, i);
             break;
@@ -506,6 +502,28 @@ int mover_pcb_a_exit_desde_blocked(u_int32_t pid){
     return 0;
 }
 
+int mover_pcb_a_ready_desde_executing(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb_temp = list_get(lista_executing, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = list_remove(lista_executing, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_executing);
+
+    if(pcb_encontrado == NULL) {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        return -1;
+    }
+
+    agregar_pcb_a_lista_ready(pcb_encontrado);
+
+    return 0;
+}
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones para planificacion largo plazo
@@ -562,20 +580,60 @@ bool comprobar_grado_multiprogramacion_maximo() {
 
 
 
-t_cpu_en_kernel* buscar_cpu_por_id(int id_cpu){
-    pthread_mutex_lock(&mutex_cpu);
+t_cpu_en_kernel* buscar_cpu_por_id_unsafe(int id_cpu){
     for(int i = 0; i < list_size(lista_cpu); i++) {
         t_cpu_en_kernel* cpu = list_get(lista_cpu, i);
         if(cpu->id_cpu == id_cpu) {
+            return cpu;
+        }
+    }
+    return NULL;
+}
+
+t_cpu_en_kernel* obtener_cpu_libre(){
+    pthread_mutex_lock(&mutex_cpu);
+
+    for(int i = 0; i < list_size(lista_cpu); i++) {
+        t_cpu_en_kernel* cpu = list_get(lista_cpu, i);
+        if(cpu->esta_ocupada == false) {
             pthread_mutex_unlock(&mutex_cpu);
             return cpu;
         }
     }
     pthread_mutex_unlock(&mutex_cpu);
     return NULL;
+};
+
+int buscar_cpu_por_socket_unsafe(int socket) {
+    for(int i = 0; i < list_size(lista_cpu); i++) {
+        t_cpu_en_kernel* cpu = list_get(lista_cpu, i);
+        if(cpu->socket_cpu_dispatch == socket || cpu->socket_cpu_interrupt == socket) {
+            return i;
+        }
+    }
+    return -1;
 }
 
+int asignar_pcb_a_cpu(t_pcb* pcb){
+    t_cpu_en_kernel* cpu = obtener_cpu_libre();
+    if(cpu == NULL) {
+        return -1;
+    }
+    cpu->esta_ocupada = true;
+    cpu->pid_actual = pcb->pid;
 
+    //Creo la estructura que contiene el pid y el pc del proceso
+    t_proceso_cpu* pcb_a_enviar = malloc(sizeof(t_proceso_cpu));
+    pcb_a_enviar->pid = pcb->pid;
+    pcb_a_enviar->pc = pcb->pc;
+    //Lo serializo, lo empaqueto y lo envio
+    t_buffer* buffer = serializar_proceso_cpu(pcb_a_enviar);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_INSTRUCCION_CPU, buffer);
+    enviar_paquete(cpu->socket_cpu_dispatch, paquete);
+
+
+    return 0;
+}
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -648,7 +706,7 @@ int manejar_syscall(t_syscall* syscall) {
 
 int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
     t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso);
-    agregar_pcb_a_cola_new(pcb);
+    agregar_pcb_a_lista_new(pcb);
     return 0;
 } 
 

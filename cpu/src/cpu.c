@@ -35,16 +35,16 @@ int main(int argc, char* argv[]) {
    inicializar_configs();
 
    // INICIO LOGGERS
-   t_log* logger_cpu = iniciar_logger_cpu(id_cpu); // crea logger cpu_<id>.log
+   logger_cpu = iniciar_logger_cpu(id_cpu); // crea logger cpu_<id>.log
    log_info(logger_cpu, "Iniciando CPU con ID: %d", id_cpu);
 
    // SOCKETS
    // Conexiones al Kernel (dispatch & interrupt)
-   int socket_kernel_dispatch = cpu_conectar_a_kernel(cpu_configs.puertokerneldispatch, id_cpu);
-   int socket_kernel_interrupt = cpu_conectar_a_kernel(cpu_configs.puertokernelinterrupt, id_cpu);
+   socket_kernel_dispatch = cpu_conectar_a_kernel(cpu_configs.puertokerneldispatch, id_cpu);
+   socket_kernel_interrupt = cpu_conectar_a_kernel(cpu_configs.puertokernelinterrupt, id_cpu);
 
    // Conexion con Memoria
-   int socket_memoria = cpu_conectar_a_memoria(id_cpu);
+   //socket_memoria = cpu_conectar_a_memoria(id_cpu);
 
    // HILOS
    pthread_t thread_dispatch, thread_interrupt, thread_ciclo_instruccion;
@@ -56,17 +56,17 @@ int main(int argc, char* argv[]) {
    pthread_create(&thread_interrupt, NULL, hilo_interrupt, NULL);
     
    // Crear hilo para ejecutar el ciclo de instrucción
-   pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
+   //pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
 
    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
    pthread_join(thread_dispatch, NULL);
    pthread_join(thread_interrupt, NULL);
-   pthread_join(thread_ciclo_instruccion, NULL);
+   //pthread_join(thread_ciclo_instruccion, NULL);
 
    log_info(logger_cpu, "Finalizando ejecución del CPU %d", id_cpu);
 
    close(socket_memoria);
-   log_destroy(logger_sockets);
+   //log_destroy(logger_sockets);
    destruir_configs();
 
    return 0;

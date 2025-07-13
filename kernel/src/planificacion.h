@@ -98,6 +98,7 @@ typedef struct {
     int socket_cpu_interrupt;
     int id_cpu;
     bool esta_ocupada;
+    int pid_actual;
 } t_cpu_en_kernel;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,9 +148,9 @@ t_blocked_io* buscar_proceso_en_blocked_io(int socket_io);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 extern pthread_mutex_t mutex_io;
-extern pthread_mutex_t mutex_cola_new;
+extern pthread_mutex_t mutex_lista_new;
 extern pthread_mutex_t mutex_lista_blocked;
-extern pthread_mutex_t mutex_cola_ready;
+extern pthread_mutex_t mutex_lista_ready;
 extern pthread_mutex_t mutex_lista_exit;
 extern pthread_mutex_t mutex_lista_executing;
 extern pthread_mutex_t mutex_lista_susp_ready;
@@ -167,10 +168,9 @@ extern sem_t sem_procesos_en_new;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-extern t_queue* cola_new;
-extern t_queue* cola_ready;
+extern t_list* lista_new;
+extern t_list* lista_ready;
 
-extern t_list* lista_ready_pmcp; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_exit; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_blocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_executing; //Esto es una lista porque tengo que poder ordenarla y modificarla
@@ -236,12 +236,12 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
 
 
 /**
- * @brief Inicializa las colas globales
+ * @brief Inicializa las listas globales y los semáforos
  * 
- * Esta función no recibe parámetros. Crea las colas new, ready, exit, blocked y executing
+ * Esta función no recibe parámetros. Crea las listas new, ready, exit, blocked y executing
  * 
  */
-void inicializar_colas_y_sem();
+void inicializar_listas_y_sem();
 
 /**
  * @brief Recibe un mensaje de la CPU, un paquete. Interpreta el codigo de operacion del paquete y llama a la funcion que corresponda.
@@ -267,39 +267,39 @@ int recibir_mensaje_cpu (int socket_cpu);
  * Esta función recibe un pcb y lo agrega a la cola new
  * 
  */
-void agregar_pcb_a_cola_new(t_pcb* pcb);
+void agregar_pcb_a_lista_new(t_pcb* pcb);
 
 /**
  * @brief Agrega un pcb a la lista ready
  * 
  * Esta función recibe un pcb y lo agrega a la lista ready
+ * NOTA: Para algoritmos como SJF o PMCP, esta función debería modificarse para insertar el PCB de forma ordenada.
  * 
  */
-void agregar_pcb_a_cola_ready(t_pcb* pcb);
-
-
-
-/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                                Funciones para peekear
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+void agregar_pcb_a_lista_ready(t_pcb* pcb);
 
 /**
- * @brief Obtiene un pcb de la cola new
+ * @brief Peek de la lista new
  * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola new
- * 
- */
-t_pcb* peek_cola_new();
+ * @return El pcb en la posicion 0 de la lista new
+ */ 
+t_pcb* peek_lista_new();
 
 /**
- * @brief Obtiene un pcb de la cola ready
+ * @brief Peek de la lista ready
  * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola ready
+ * @return El pcb en la posicion 0 de la lista ready
+ */
+t_pcb* peek_lista_ready();
+
+
+/**
+ * @brief Obtiene un pcb de la lista new
+ * 
+ * Esta función no recibe parámetros. Obtiene un pcb de la lista new
  * 
  */
-t_pcb* peek_cola_ready();
+t_pcb* obtener_pcb_de_lista_new();
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -337,18 +337,10 @@ int mover_pcb_a_exit (t_pcb* pcb);
 /**
  * @brief Obtiene un pcb de la cola new
  * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola new
+ * Esta función no recibe parámetros. Obtiene un pcb de la lista new
  * 
  */
-t_pcb* obtener_pcb_de_cola_new();
-
-/**
- * @brief Obtiene un pcb de la cola ready
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la cola ready
- * 
- */
-t_pcb* obtener_pcb_de_cola_ready();
+t_pcb* obtener_pcb_de_lista_new();
 
 
 
@@ -386,6 +378,15 @@ int mover_pcb_a_exit_desde_executing(u_int32_t pid);
  * 
  */
 int mover_pcb_a_blocked_desde_executing(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista ready.
+ * Se usa cuando una CPU se desconecta inesperadamente.
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_pcb_a_ready_desde_executing(u_int32_t pid);
 
 /**
  * @brief Mueve un pcb de la lista blocked a la lista ready
@@ -499,9 +500,32 @@ bool comprobar_grado_multiprogramacion_maximo();
  * @param id_cpu: El id de la CPU a buscar
  * @return La CPU encontrada o NULL si no existe
  */
-t_cpu_en_kernel* buscar_cpu_por_id(int id_cpu);
+t_cpu_en_kernel* buscar_cpu_por_id_unsafe(int id_cpu);
 
 
+
+/**
+ * @brief Obtiene una CPU libre
+ * 
+ * @return La CPU encontrada o NULL si no existe
+ */
+t_cpu_en_kernel* obtener_cpu_libre();
+
+/**
+ * @brief Busca una CPU por su socket
+ * 
+ * @param socket Socket de la CPU
+ * @return El indice de la CPU encontrada o -1 si no existe
+ */
+int buscar_cpu_por_socket_unsafe(int socket);
+
+/**
+ * @brief Asigna un pcb a una cpu
+ * 
+ * @param pcb: El pcb a asignar
+ * @return 0 si el pcb se asigna correctamente
+ */
+int asignar_pcb_a_cpu(t_pcb* pcb);
 
 
 

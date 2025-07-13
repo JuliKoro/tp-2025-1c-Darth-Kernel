@@ -38,8 +38,9 @@ void* receptor_dispatch(void* socket_cpu_dispatch){
         int conexion_dispatch = esperar_cliente(socket_dispatch);
         int id_cpu = 0;
         recibir_handshake_cpu(conexion_dispatch, &id_cpu);
+        log_info(logger_kernel, "Se estableció conexión con CPU ID: %d en el canal Dispatch", id_cpu);
         enviar_mensaje("Handshake recibido", conexion_dispatch);
-        guardar_cpu_dispatch((void*)(intptr_t)socket_cpu_dispatch, id_cpu);
+        guardar_cpu_dispatch((void*)(intptr_t)conexion_dispatch, id_cpu);
     }
     return NULL;
 };
@@ -52,27 +53,31 @@ void* receptor_interrupt(void* socket_cpu_interrupt){
         int conexion_interrupt = esperar_cliente(socket_interrupt);
         int id_cpu = 0;
         recibir_handshake_cpu(conexion_interrupt, &id_cpu);
+        log_info(logger_kernel, "Se estableció conexión con CPU ID: %d en el canal Interrupt", id_cpu);
         enviar_mensaje("Handshake recibido", conexion_interrupt);
-        guardar_cpu_interrupt((void*)(intptr_t)socket_cpu_interrupt, id_cpu);
+        guardar_cpu_interrupt((void*)(intptr_t)conexion_interrupt, id_cpu);
     }
     return NULL;
 };
 
 void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
     //Primero busco si existe un CPU con este id en la lista, si no existe, creo uno y lo agrego. 
-
-    t_cpu_en_kernel* cpu_en_kernel = buscar_cpu_por_id(id_cpu);
+    pthread_mutex_lock(&mutex_cpu);
+    t_cpu_en_kernel* cpu_en_kernel = buscar_cpu_por_id_unsafe(id_cpu);
     //Si no existe, creo uno, lo agrego a la lista y actualizo el socket de dispatch
     if(cpu_en_kernel == NULL) {
-        t_cpu_en_kernel* cpu_en_kernel = malloc(sizeof(t_cpu_en_kernel));
-        cpu_en_kernel->id_cpu = id_cpu;
-        cpu_en_kernel->socket_cpu_dispatch = (intptr_t)socket_cpu_dispatch;
-        cpu_en_kernel->esta_ocupada = false;
-        list_add(lista_cpu, cpu_en_kernel);
+        t_cpu_en_kernel* cpu_nueva = malloc(sizeof(t_cpu_en_kernel));
+        cpu_nueva->id_cpu = id_cpu;
+        cpu_nueva->socket_cpu_dispatch = (intptr_t)socket_cpu_dispatch;
+        cpu_nueva->esta_ocupada = false;
+        cpu_nueva->pid_actual = -1;
+        list_add(lista_cpu, cpu_nueva);
+        pthread_mutex_unlock(&mutex_cpu);
     }
     else {
         //Si existe, actualizo el socket de dispatch
         cpu_en_kernel->socket_cpu_dispatch = (intptr_t)socket_cpu_dispatch;
+        pthread_mutex_unlock(&mutex_cpu);
     }
 
     //Creo el hilo que estara operando infinitamente sobre ese socket de dispatch. 
@@ -85,16 +90,20 @@ void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
 
 void* guardar_cpu_interrupt(void* socket_cpu_interrupt, int id_cpu) {
 
-    t_cpu_en_kernel* cpu_en_kernel = buscar_cpu_por_id(id_cpu);
+    pthread_mutex_lock(&mutex_cpu);
+    t_cpu_en_kernel* cpu_en_kernel = buscar_cpu_por_id_unsafe(id_cpu);
     if(cpu_en_kernel == NULL) {
-        t_cpu_en_kernel* cpu_en_kernel = malloc(sizeof(t_cpu_en_kernel));
-        cpu_en_kernel->id_cpu = id_cpu;
-        cpu_en_kernel->socket_cpu_interrupt = (intptr_t)socket_cpu_interrupt;
-        cpu_en_kernel->esta_ocupada = false;
-        list_add(lista_cpu, cpu_en_kernel);
+        t_cpu_en_kernel* cpu_nueva = malloc(sizeof(t_cpu_en_kernel));
+        cpu_nueva->id_cpu = id_cpu;
+        cpu_nueva->socket_cpu_interrupt = (intptr_t)socket_cpu_interrupt;
+        cpu_nueva->esta_ocupada = false;
+        cpu_nueva->pid_actual = -1;
+        list_add(lista_cpu, cpu_nueva);
+        pthread_mutex_unlock(&mutex_cpu);
     }
     else {
         cpu_en_kernel->socket_cpu_interrupt = (intptr_t)socket_cpu_interrupt;
+        pthread_mutex_unlock(&mutex_cpu);
     }
 
     //Creo el hilo que estara operando infinitamente sobre ese socket de interrupt. 
@@ -108,19 +117,63 @@ void* guardar_cpu_interrupt(void* socket_cpu_interrupt, int id_cpu) {
 
 void* manejo_dispatch(void* socket_cpu_dispatch){
     int socket_dispatch = (intptr_t)socket_cpu_dispatch;
-    
+    t_paquete* paquete = NULL;
     
     while(1){
         //Me quedo recibiendo respuestas.
+        
+        
+        //Detecto desconexiones
+        paquete = recibir_paquete(socket_dispatch);
+
+        if(paquete == NULL) {
+            log_info(logger_kernel, "CPU desconectada, eliminando de la lista");
+            eliminar_cpu_por_socket(socket_dispatch);
+            break;
+        }
+
+
     }
     return NULL;
 };
 
 void* manejo_interrupt(void* socket_cpu_interrupt){
     int socket_interrupt = (intptr_t)socket_cpu_interrupt;
-    
+    t_paquete* paquete = NULL;
     while(1){
         //Me quedo recibiendo respuestas.
+        paquete = recibir_paquete(socket_interrupt);
+
+        if(paquete == NULL) {
+            //Ya fue eliminado en el hilo de manejo_dispatch
+            break;
+        }
     }
     return NULL;
 };
+
+
+void* eliminar_cpu_por_socket(int socket) {
+    pthread_mutex_lock(&mutex_cpu);
+    int indice = buscar_cpu_por_socket_unsafe(socket);
+    if(indice != -1) {
+        t_cpu_en_kernel* cpu_en_kernel = list_remove(lista_cpu, indice);
+        pthread_mutex_unlock(&mutex_cpu);
+        log_info(logger_kernel, "CPU %d eliminada de la lista", cpu_en_kernel->id_cpu); 
+
+        //Antes de eliminar la cpu por completo, me fijo si estaba ejecutando algun proceso
+        //Si lo estaba, lo muevo a la cola de ready
+        if(cpu_en_kernel->esta_ocupada) {
+            mover_pcb_a_ready_desde_executing(cpu_en_kernel->pid_actual);
+        }
+
+
+        close(cpu_en_kernel->socket_cpu_dispatch);
+        close(cpu_en_kernel->socket_cpu_interrupt);
+        free(cpu_en_kernel);
+    } else {
+        pthread_mutex_unlock(&mutex_cpu);
+    }
+    
+    return NULL;
+}

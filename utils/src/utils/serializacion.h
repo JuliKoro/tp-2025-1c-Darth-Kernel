@@ -34,13 +34,15 @@
  * @param PAQUETE_INSTRUCCION_CPU: Código de operación para instrucción del CPU
  * @param PAQUETE_PCB: Código de operación para PCB
  * @param PAQUETE_SYSCALL: Código de operación para syscall
+ * @param PAQUETE_INSTRUCCION_CPU: Código de operación para instrucción del CPU
  */
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
     PAQUETE_INSTRUCCION_CPU=2,
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
-    PAQUETE_INTERRUPCION=5
+    PAQUETE_INTERRUPCION=5,
+    PAQUETE_PROCESO_CPU=6
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -269,7 +271,7 @@ void* stream_para_enviar(t_paquete* paquete);
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /**
- * @brief Recibe un paquete, arma un stream con los contenidos del paquete y lo envia a un socket
+ * @brief Recibe un paquete, arma un stream con los contenidos del paquete y lo envia a un socket. Esta funcion ya libera el paquete despues de enviarlo.
  * 
  * @param socket Descriptor del socket
  * @param paquete Puntero al paquete a enviar

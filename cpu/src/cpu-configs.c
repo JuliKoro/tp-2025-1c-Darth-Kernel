@@ -26,7 +26,9 @@ int inicializar_configs(){
     configcargado.retardocache = cargar_variable_int(cpu_tconfig, "RETARDO_CACHE");
     configcargado.loglevel = cargar_variable_string(cpu_tconfig, "LOG_LEVEL");
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo
+    fprintf(stderr, "[DEBUG en cpu-configs.c] Antes: cpu_configs.ipkernel apunta a %p\n", (void*)cpu_configs.ipkernel);
     cpu_configs = configcargado;
+    fprintf(stderr, "[DEBUG en cpu-configs.c] Despues: cpu_configs.ipkernel apunta a %p (con valor '%s')\n", (void*)cpu_configs.ipkernel, cpu_configs.ipkernel);
     fprintf(stderr, "Archivo de configuración de CPU cargado con exito.\n");
 
     return EXIT_SUCCESS;
@@ -34,12 +36,6 @@ int inicializar_configs(){
 
 void destruir_configs() {
     //Libero memoria
-    free(cpu_configs.ipkernel);
-    free(cpu_configs.ipmemoria);
-    free(cpu_configs.loglevel);
-    free(cpu_configs.reemplazocache);
-    free(cpu_configs.reemplazotlb);
-
 
     //Destruyo el config
     config_destroy(cpu_tconfig);

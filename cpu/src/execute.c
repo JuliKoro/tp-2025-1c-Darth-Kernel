@@ -112,8 +112,6 @@ void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_
     //Libero la memoria de la syscall y el buffer
     free(syscall->syscall);
     free(syscall);
-    free(buffer);
-    free(paquete);
 }
 
 void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
@@ -133,8 +131,6 @@ void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_
     //Libero la memoria de la syscall y el buffer despues de enviarlo
     free(syscall->syscall);
     free(syscall);
-    free(buffer);
-    free(paquete);
 }
 
 void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
@@ -152,8 +148,6 @@ void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socke
     //Libero la memoria de la syscall y el buffer despues de enviarlo
     free(syscall->syscall);
     free(syscall);
-    free(buffer);
-    free(paquete);
 }
 
 void enviar_syscall_exit(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
@@ -171,6 +165,4 @@ void enviar_syscall_exit(instruccion_decodificada* instruccion, int socket_kerne
     //Libero la memoria de la syscall y el buffer despues de enviarlo
     free(syscall->syscall);
     free(syscall);
-    free(buffer);
-    free(paquete);
 }
