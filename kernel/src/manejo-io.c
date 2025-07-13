@@ -132,14 +132,14 @@ void atender_siguiente_proceso_en_cola_io(t_instancia_io* instancia_liberada){
             log_error(logger_kernel, "[PLANIFICADOR IO] Error al enviar la solicitud de IO para el PID (%d).", pcb_en_espera->pid);
             instancia_liberada->pid_actual = -1;
             aumentar_instancias_disponibles_unsafe(io_del_proceso->nombre_io);
-            mover_pcb_a_exit_desde_blocked_io(pcb_en_espera->pid);
+            mover_blockedio_a_exit(pcb_en_espera->pid);
         } else {
             log_info(logger_kernel, "[PLANIFICADOR IO] Solicitud de IO para PID (%d) enviada correctamente.", pcb_en_espera->pid);
              // Guardamos el PID antes de liberar la memoria para usarlo en el log.
             u_int32_t pid_atendido = pcb_en_espera->pid;
 
          //    Limpiamos la estructura de la solicitud que ya no está en espera.
-            sacar_pcb_de_blocked_io(pcb_en_espera);
+            sacar_de_blockedio(pcb_en_espera);
             free(pcb_en_espera->nombre_io);
             free(pcb_en_espera);
         
@@ -167,7 +167,7 @@ void* atender_io(void* instancia_io){
             //Si habia un proceso usando la instancia que se desconecto, lo muevo a EXIT
             if(instancia_io_a_manejar->pid_actual != -1){
                 log_info(logger_kernel, "[IO] PID %d estaba usando la instancia desconectada. Pasa a EXIT", instancia_io_a_manejar->pid_actual);
-                mover_pcb_a_exit_desde_blocked(instancia_io_a_manejar->pid_actual);
+                mover_blocked_a_exit(instancia_io_a_manejar->pid_actual);
             }
 
             //Elimino la instancia de la lista
@@ -189,11 +189,37 @@ void* atender_io(void* instancia_io){
 
             t_io* io = buscar_io_por_socket_unsafe(socket_io); 
             aumentar_instancias_disponibles_unsafe(io->nombre_io);
+            
+            //Chequeo si el proceso esta en blocked, o susp blocked para ver si moverlo a ready o susp ready.
+            estado_pcb estado_pcb;
+            //primero veo si esta en blocked
+            pthread_mutex_lock(&mutex_lista_blocked);
+            for(int i = 0; i < list_size(lista_blocked); i++) {
+                t_pcb* pcb_temp = list_get(lista_blocked, i);
+                if(pcb_temp->pid == pid_que_termino) {
+                    estado_pcb = pcb_temp->estado;
+                }
+            }
+            pthread_mutex_unlock(&mutex_lista_blocked);
+
+            //Luego veo si esta en susp blocked
+            pthread_mutex_lock(&mutex_lista_suspblocked);
+            for(int i = 0; i < list_size(lista_suspblocked); i++) {
+                t_pcb* pcb_temp = list_get(lista_suspblocked, i);
+                if(pcb_temp->pid == pid_que_termino) {
+                    estado_pcb = pcb_temp->estado;
+                }
+            }
+            pthread_mutex_unlock(&mutex_lista_suspblocked);
 
 
-            //Tengo que sacarlo de blocked_io tambien
-            mover_pcb_a_ready_desde_blocked(pid_que_termino);
-            log_info(logger_kernel, "[IO] PID (%d) finalizo IO y pasa a READY", pid_que_termino);
+            if(estado_pcb == BLOCKED){
+                mover_blocked_a_ready(pid_que_termino);
+            } else {
+                mover_blocked_a_suspblocked(pid_que_termino);
+            }
+
+            log_info(logger_kernel, "[IO] PID (%d) finalizo IO y pasa a %s", pid_que_termino, estado_pcb == BLOCKED ? "READY" : "SUSP_READY");
 
 
             atender_siguiente_proceso_en_cola_io(instancia_io_a_manejar);

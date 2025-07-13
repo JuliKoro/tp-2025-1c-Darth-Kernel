@@ -164,7 +164,7 @@ void* eliminar_cpu_por_socket(int socket) {
         //Antes de eliminar la cpu por completo, me fijo si estaba ejecutando algun proceso
         //Si lo estaba, lo muevo a la cola de ready
         if(cpu_en_kernel->esta_ocupada) {
-            mover_pcb_a_ready_desde_executing(cpu_en_kernel->pid_actual);
+            mover_executing_a_ready(cpu_en_kernel->pid_actual);
         }
 
 

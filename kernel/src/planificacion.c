@@ -22,8 +22,8 @@ t_list* lista_ready = NULL;
 t_list* lista_exit = NULL;
 t_list* lista_blocked = NULL;
 t_list* lista_executing = NULL;
-t_list* lista_susp_ready = NULL;
-t_list* lista_susp_blocked = NULL;
+t_list* lista_suspready = NULL;
+t_list* lista_suspblocked = NULL;
 t_list* lista_blocked_io = NULL;
 
 t_list* lista_cpu = NULL;   
@@ -48,6 +48,10 @@ pthread_mutex_t mutex_lista_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_blocked_io = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_suspblocked = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_lista_suspready = PTHREAD_MUTEX_INITIALIZER;
+
+
 sem_t sem_procesos_en_new;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,8 +76,35 @@ bool comparar_pid(void* elemento, void* pid) {
 
 
 int actualizar_estado_pcb(t_pcb* pcb, estado_pcb estado) {
-    //TODO Logica de Metricas de estado
+
+    //Actualizo el tiempo en milisegundos del estado actual
+    estado_pcb estado_actual= pcb->estado;
+    struct timeval hora_actual;
+    gettimeofday(&hora_actual, NULL);
+    struct timeval tiempo_transcurrido;
+
+    pthread_mutex_lock(&pcb->mutex_cambio_estado);
+
+    //Calculo diferencia entre la hora actual y la ultima hora de actualizacion
+    timersub(&hora_actual, &pcb->ult_update, &tiempo_transcurrido);
+    //Convierto la diferencia a milisegundos
+    double tiempo_en_ms = (tiempo_transcurrido.tv_sec * 1000.0) + (tiempo_transcurrido.tv_usec / 1000.0);
+    //Sumo el tiempo en milisegundos al tiempo acumulado del estado actual
+    pcb->metricas_tiempo[estado_actual].tiempo_acumulado += tiempo_en_ms;
+    //Actualizo la hora de actualizacion
+    pcb->ult_update = hora_actual;
+   
+    //Actualizo el contador de estado
+    pcb->metricas_estado[estado].contador++;
+    
+    //Actualizo el estado actual del proceso
     pcb->estado = estado;
+
+    pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+
+    //Loggeo el cambio de estado
+    log_cambio_estado(pcb, estado_actual, estado);
+
     return 0;
 }
 
@@ -151,9 +182,9 @@ void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_pr
     pthread_mutex_lock(&mutex_pid_counter);
     pid_counter++;
     pthread_mutex_unlock(&mutex_pid_counter);
-    agregar_pcb_a_lista_new(pcb);
+    agregar_a_new(pcb);
     //Loggear ## (<PID>) Se crea el proceso - Estado: NEW
-    log_info(logger_kernel, "## (%d) Se crea el proceso inicial - Estado: NEW", pcb->pid);
+    log_creacion_proceso(pcb);
 }
 
 void inicializar_listas_y_sem() {
@@ -162,8 +193,8 @@ void inicializar_listas_y_sem() {
     lista_exit = list_create();
     lista_blocked  = list_create();
     lista_executing = list_create();
-    lista_susp_ready = list_create();
-    lista_susp_blocked = list_create();
+    lista_suspready = list_create();
+    lista_suspblocked = list_create();
     lista_blocked_io = list_create();
     lista_cpu = list_create();
     lista_io = list_create();
@@ -198,25 +229,26 @@ int recibir_mensaje_cpu(int socket_cpu) {
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                        Funciones para manejo de las colas
+                                        Funciones para mover entre estados
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void agregar_pcb_a_lista_new(t_pcb* pcb) {
+void agregar_a_new(t_pcb* pcb) {
     pthread_mutex_lock(&mutex_lista_new);
     list_add(lista_new, pcb);
     pthread_mutex_unlock(&mutex_lista_new);
-    log_info(logger_kernel, "## (%d) Se crea el proceso - Estado: NEW", pcb->pid);
+    log_creacion_proceso(pcb);
     sem_post(&sem_procesos_en_new); //Aviso al planificador largo plazo que hay un proceso en new
 }
 
 
-void agregar_pcb_a_lista_ready(t_pcb* pcb) {
+void mover_a_ready(t_pcb* pcb) {
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
     if(algoritmo == FIFO) {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_ready, pcb);
         pthread_mutex_unlock(&mutex_lista_ready);
+        actualizar_estado_pcb(pcb, READY);
     } else if(algoritmo == SJF_SIN_DESALOJO) {
         //TODO: Implementar SJF_SIN_DESALOJO
     } else if(algoritmo == SFJ_CON_DESALOJO) {
@@ -226,78 +258,40 @@ void agregar_pcb_a_lista_ready(t_pcb* pcb) {
     }
 }
 
-t_pcb* peek_lista_new() {
-    pthread_mutex_lock(&mutex_lista_new);
-    t_pcb* pcb = list_get(lista_new, 0);
-    pthread_mutex_unlock(&mutex_lista_new);
-    return pcb;
-}   
-
-t_pcb* peek_lista_ready() {
-    pthread_mutex_lock(&mutex_lista_ready);
-    t_pcb* pcb = list_get(lista_ready, 0);
-    pthread_mutex_unlock(&mutex_lista_ready);
-    return pcb;
-}   
-
-t_pcb* obtener_pcb_de_lista_new() {
-    pthread_mutex_lock(&mutex_lista_new);
-    t_pcb* pcb = list_remove(lista_new, 0);
-    pthread_mutex_unlock(&mutex_lista_new);
-    return pcb;
-}
-
-/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                                Funciones para obtener pcb de las listas y colas
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-
-bool comparar_socket_io(void* elemento, void* socket_a_comparar) {
-    int socket = (int)(intptr_t)socket_a_comparar;
-    t_io* io = (t_io*)elemento;
-    //Itero la lista de instancias de este IO, comparo el socket que recibi con el socket de cada instancia
-
-    for(int i = 0; i < list_size(io->instancias_io); i++) {
-        t_instancia_io* instancia_io = list_get(io->instancias_io, i);
-        if(instancia_io->socket_io == socket) {
-            return true;
-        }
-    }
-    return false;
-}
-
-t_io* buscar_io_por_socket_unsafe(int socket_io){
-    return list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
-}
-
-t_io* buscar_io_por_socket(int socket_io){
-    pthread_mutex_lock(&mutex_io);
-    t_io* io = list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
-    pthread_mutex_unlock(&mutex_io);
-    return io;
-}
-
-
-
-int mover_pcb_a_exit(t_pcb* pcb) {
+int mover_a_exit(t_pcb* pcb) {
     
     actualizar_estado_pcb(pcb, EXIT);
 
 
-    //TODO> Mensajes a memoria
+    //TODO> Mensajes a memoria, esto lo va a verificar el planificador largo plazo en cada iteracion
 
-    list_add(lista_exit, pcb);
+    list_add(lista_exit, pcb); //ESto deberia ser eliminar el PCB, no hay cola exit.
 
-    log_info(logger_kernel, "## (%d) - Finaliza el proceso", pcb->pid);
+    log_fin_proceso(pcb);
+
+    return 0;
+}
+
+int mover_a_suspready(t_pcb* pcb) {
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
+    if(algoritmo == FIFO) {
+        pthread_mutex_lock(&mutex_lista_suspready);
+        list_add(lista_suspready, pcb);
+        pthread_mutex_unlock(&mutex_lista_suspready);
+        actualizar_estado_pcb(pcb, SUSP_READY);
+    } else if(algoritmo == SJF_SIN_DESALOJO) {
+        //TODO: Implementar SJF_SIN_DESALOJO
+    } else if(algoritmo == SFJ_CON_DESALOJO) {
+        //TODO: Implementar SFJ_CON_DESALOJO
+    } else if(algoritmo == PMCP) {
+        //TODO: Implementar PMCP
+    }
 
     return 0;
 }
 
 
-
-int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io) {
+int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io) {
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
     
@@ -308,15 +302,19 @@ int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t t
             pcb_encontrado = pcb_temp;
             //Tambien lo muevo a la lista de blocked general
             //Actualizo el estado del proceso
-            pcb_encontrado->estado = BLOCKED;
             pthread_mutex_lock(&mutex_lista_blocked);
             list_add(lista_blocked, pcb_encontrado);
             pthread_mutex_unlock(&mutex_lista_blocked);
+            actualizar_estado_pcb(pcb_encontrado, BLOCKED);
+
+            //Llamo a la planificacion mediano plazo
+            pthread_t thread_planificacion_mediano_plazo;
+            pthread_create(&thread_planificacion_mediano_plazo, NULL, llamar_planificacion_mediano_plazo, (void*)pcb_encontrado);
+            pthread_detach(thread_planificacion_mediano_plazo);
 
             //Antes de removerlo, lo muevo a blocked_io
 
             pthread_mutex_lock(&mutex_lista_blocked_io);
-            //Tengo que armar un struct de blocked_io
             t_blocked_io* blocked_io = crear_blocked_io(pcb_encontrado->pid, nombre_io, tiempo_io);
             list_add(lista_blocked_io, blocked_io);
             pthread_mutex_unlock(&mutex_lista_blocked_io);
@@ -332,28 +330,7 @@ int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t t
     return 0;
 }
 
-int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar) {
-    pthread_mutex_lock(&mutex_lista_blocked_io);
-    int indice_a_eliminar = -1;
-    for(int i = 0; i < list_size(lista_blocked_io); i++) {
-        t_blocked_io* blocked_io_temp = list_get(lista_blocked_io, i);
-        if(blocked_io_temp->pid == io_a_sacar->pid && 
-           strcmp(blocked_io_temp->nombre_io, io_a_sacar->nombre_io) == 0 &&
-           blocked_io_temp->tiempo_io == io_a_sacar->tiempo_io) {
-            indice_a_eliminar = i;
-            break;
-        }
-    }
-    // Nos aseguramos de solo remover el nodo, sin liberar el dato.
-    // La liberación se hará de forma controlada en la función que llamó a esta.
-    if (indice_a_eliminar != -1) {
-    list_remove(lista_blocked_io, indice_a_eliminar);
-    }
-    pthread_mutex_unlock(&mutex_lista_blocked_io);
-    return 0;
-}
-
-int mover_pcb_a_exit_desde_executing(u_int32_t pid) {
+int mover_executing_a_exit(u_int32_t pid) {
     t_pcb* pcb_a_mover = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
 
@@ -368,7 +345,7 @@ int mover_pcb_a_exit_desde_executing(u_int32_t pid) {
     pthread_mutex_unlock(&mutex_lista_executing);
 
     if(pcb_a_mover != NULL) {
-        mover_pcb_a_exit(pcb_a_mover);
+        mover_a_exit(pcb_a_mover);
     } else {
         log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
         return -1;
@@ -378,7 +355,7 @@ int mover_pcb_a_exit_desde_executing(u_int32_t pid) {
     return 0;
 }
 
-int mover_pcb_a_blocked_desde_executing(u_int32_t pid) {
+int mover_executing_a_blocked(u_int32_t pid) {
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
 
@@ -386,12 +363,18 @@ int mover_pcb_a_blocked_desde_executing(u_int32_t pid) {
         t_pcb* pcb_temp = list_get(lista_executing, i);
         if(pcb_temp->pid == pid) {
             pcb_encontrado = pcb_temp;
-            //Actualizo el estado del proceso
-            actualizar_estado_pcb(pcb_encontrado, BLOCKED);
             //Antes de removerlo, lo muevo a blocked
             pthread_mutex_lock(&mutex_lista_blocked);
             list_add(lista_blocked, pcb_encontrado);
             pthread_mutex_unlock(&mutex_lista_blocked);
+            //Actualizo el estado del proceso
+            actualizar_estado_pcb(pcb_encontrado, BLOCKED);
+
+
+            //Llamo a la planificacion mediano plazo
+            pthread_t thread_planificacion_mediano_plazo;
+            pthread_create(&thread_planificacion_mediano_plazo, NULL, llamar_planificacion_mediano_plazo, (void*)pcb_encontrado);
+            pthread_detach(thread_planificacion_mediano_plazo);
 
             list_remove(lista_executing, i);
             break;
@@ -403,19 +386,36 @@ int mover_pcb_a_blocked_desde_executing(u_int32_t pid) {
     return 0;
 }
 
-int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
+int mover_executing_a_ready(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb_temp = list_get(lista_executing, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = list_remove(lista_executing, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_executing);
+
+    if(pcb_encontrado == NULL) {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        return -1;
+    }
+
+    mover_a_ready(pcb_encontrado);
+
+    return 0;
+}
+
+int mover_blocked_a_ready(u_int32_t pid) {
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_blocked);
     for(int i = 0; i < list_size(lista_blocked); i++) {
-        t_pcb* pcb_temp = list_get(lista_blocked, i);
-        if(pcb_temp->pid == pid) {
-            pcb_encontrado = pcb_temp;
-            //Actualizo el estado del proceso
-            pcb_encontrado->estado = READY;
-            //Antes de removerlo, lo muevo a ready
-            agregar_pcb_a_lista_ready(pcb_encontrado);
-            //Despues de actualizar el estado y cambiarlo a lista ready, lo saco de lista blocked
-            list_remove(lista_blocked, i);
+        t_pcb* pcb_encontrado = list_get(lista_blocked, i);
+        if(pcb_encontrado->pid == pid) {
+            pcb_encontrado = list_remove(lista_blocked, i);
+            mover_a_ready(pcb_encontrado);
             break;
         }
     }
@@ -423,7 +423,7 @@ int mover_pcb_a_ready_desde_blocked(u_int32_t pid) {
     return 0;
 }
 
-int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid) {
+int mover_blockedio_a_exit(u_int32_t pid) {
     
     //Primero busco el pcb en la lista de blocked_io y lo remuevo
 
@@ -469,14 +469,14 @@ int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid) {
     }
     
     log_info(logger_kernel, "[IO] Moviendo PID %d a exit", pid);
-    mover_pcb_a_exit(pcb_a_mover);
+    mover_a_exit(pcb_a_mover);
 
     return 0;
     
 }
 
 
-int mover_pcb_a_exit_desde_blocked(u_int32_t pid){
+int mover_blocked_a_exit(u_int32_t pid){
     t_pcb* pcb_a_mover = NULL;
     
     // Paso 1: Buscar y remover el PCB de la lista de bloqueados de forma atómica.
@@ -493,7 +493,7 @@ int mover_pcb_a_exit_desde_blocked(u_int32_t pid){
     // Paso 2: Si encontramos el PCB, lo procesamos fuera de la sección crítica.
     if(pcb_a_mover != NULL) {
         log_info(logger_kernel, "[PLANIFICADOR] Moviendo PID %d de BLOCKED a EXIT.", pid);
-        mover_pcb_a_exit(pcb_a_mover);
+        mover_a_exit(pcb_a_mover);
     } else {
         log_error(logger_kernel, "[PLANIFICADOR] Inconsistencia: Se intentó mover a EXIT el PID %d desde BLOCKED, pero no fue encontrado.", pid);
         return -1;
@@ -502,26 +502,175 @@ int mover_pcb_a_exit_desde_blocked(u_int32_t pid){
     return 0;
 }
 
-int mover_pcb_a_ready_desde_executing(u_int32_t pid) {
+int mover_blocked_a_suspblocked(u_int32_t pid) {
     t_pcb* pcb_encontrado = NULL;
-    pthread_mutex_lock(&mutex_lista_executing);
-    for(int i = 0; i < list_size(lista_executing); i++) {
-        t_pcb* pcb_temp = list_get(lista_executing, i);
+    pthread_mutex_lock(&mutex_lista_blocked);
+    for(int i = 0; i < list_size(lista_blocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_blocked, i);
         if(pcb_temp->pid == pid) {
-            pcb_encontrado = list_remove(lista_executing, i);
+            pcb_encontrado = list_remove(lista_blocked, i);
             break;
         }
     }
-    pthread_mutex_unlock(&mutex_lista_executing);
+    pthread_mutex_unlock(&mutex_lista_blocked);
 
     if(pcb_encontrado == NULL) {
-        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_blocked", pid);
         return -1;
+    } else {
+        pthread_mutex_lock(&mutex_lista_suspblocked);
+        list_add(lista_suspblocked, pcb_encontrado);
+        pthread_mutex_unlock(&mutex_lista_suspblocked);
+        actualizar_estado_pcb(pcb_encontrado, SUSP_BLOCKED);
+    }
+    return 0;
+};
+
+int mover_suspblocked_a_suspready(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_suspblocked);
+    for(int i = 0; i < list_size(lista_suspblocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_suspblocked, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = list_remove(lista_suspblocked, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_suspblocked);
+
+    if(pcb_encontrado == NULL) {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_suspblocked", pid);
+        return -1;
+    } else {
+        mover_a_suspready(pcb_encontrado);
+    }
+    return 0;
+};
+
+int mover_suspready_a_ready(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_suspready);
+    for(int i = 0; i < list_size(lista_suspready); i++) {
+        t_pcb* pcb_temp = list_get(lista_suspready, i);
+        if(pcb_temp->pid == pid) {
+            pcb_encontrado = list_remove(lista_suspready, i);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_suspready);
+
+    if(pcb_encontrado == NULL) {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_suspready", pid);
+        return -1;
+    } else {
+        mover_a_ready(pcb_encontrado);
+    }
+    return 0;
+};
+
+int mover_ready_a_executing(u_int32_t pid) {
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
+    t_pcb* pcb = NULL;
+    for(int i = 0; i < list_size(lista_ready); i++) {
+        t_pcb* pcb_temp = list_get(lista_ready, i);
+        if(pcb_temp->pid == pid) {
+            pcb = list_remove(lista_ready, i);
+            break;
+        }
     }
 
-    agregar_pcb_a_lista_ready(pcb_encontrado);
+    if(algoritmo == FIFO) {
+        pthread_mutex_lock(&mutex_lista_executing);
+        list_add(lista_executing   , pcb);
+        pthread_mutex_unlock(&mutex_lista_executing);
+        actualizar_estado_pcb(pcb, RUNNING);
+
+    } else if(algoritmo == SJF_SIN_DESALOJO) {
+        //TODO: Implementar SJF_SIN_DESALOJO
+    } else if(algoritmo == SFJ_CON_DESALOJO) {
+        //TODO: Implementar SFJ_CON_DESALOJO
+    }
 
     return 0;
+}
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares para listas y colas
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_pcb* peek_lista_new() {
+    pthread_mutex_lock(&mutex_lista_new);
+    t_pcb* pcb = list_get(lista_new, 0);
+    pthread_mutex_unlock(&mutex_lista_new);
+    return pcb;
+}   
+
+t_pcb* peek_lista_ready() {
+    pthread_mutex_lock(&mutex_lista_ready);
+    t_pcb* pcb = list_get(lista_ready, 0);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    return pcb;
+}   
+
+t_pcb* obtener_pcb_de_lista_new() {
+    pthread_mutex_lock(&mutex_lista_new);
+    t_pcb* pcb = list_remove(lista_new, 0);
+    pthread_mutex_unlock(&mutex_lista_new);
+    return pcb;
+}
+
+int sacar_de_blockedio(t_blocked_io* io_a_sacar) {
+    pthread_mutex_lock(&mutex_lista_blocked_io);
+    int indice_a_eliminar = -1;
+    for(int i = 0; i < list_size(lista_blocked_io); i++) {
+        t_blocked_io* blocked_io_temp = list_get(lista_blocked_io, i);
+        if(blocked_io_temp->pid == io_a_sacar->pid && 
+           strcmp(blocked_io_temp->nombre_io, io_a_sacar->nombre_io) == 0 &&
+           blocked_io_temp->tiempo_io == io_a_sacar->tiempo_io) {
+            indice_a_eliminar = i;
+            break;
+        }
+    }
+    // Nos aseguramos de solo remover el nodo, sin liberar el dato.
+    // La liberación se hará de forma controlada en la función que llamó a esta.
+    if (indice_a_eliminar != -1) {
+    list_remove(lista_blocked_io, indice_a_eliminar);
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked_io);
+    return 0;
+}
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares de busqueda
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+bool comparar_socket_io(void* elemento, void* socket_a_comparar) {
+    int socket = (int)(intptr_t)socket_a_comparar;
+    t_io* io = (t_io*)elemento;
+    //Itero la lista de instancias de este IO, comparo el socket que recibi con el socket de cada instancia
+
+    for(int i = 0; i < list_size(io->instancias_io); i++) {
+        t_instancia_io* instancia_io = list_get(io->instancias_io, i);
+        if(instancia_io->socket_io == socket) {
+            return true;
+        }
+    }
+    return false;
+}
+
+t_io* buscar_io_por_socket_unsafe(int socket_io){
+    return list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
+}
+
+t_io* buscar_io_por_socket(int socket_io){
+    pthread_mutex_lock(&mutex_io);
+    t_io* io = list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
+    pthread_mutex_unlock(&mutex_io);
+    return io;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -571,6 +720,27 @@ bool comprobar_grado_multiprogramacion_maximo() {
     pthread_mutex_unlock(&mutex_grado_multiprogramacion);
     return valor;
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones para planificacion mediano plazo
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+void* llamar_planificacion_mediano_plazo(void* pcb){
+    t_pcb* pcb_a_mover = (t_pcb*)pcb;
+
+   int tiempo_suspension = kernel_configs.tiemposuspension;
+   //Espero el tiempo de suspension
+    usleep(tiempo_suspension * 1000);
+    pthread_mutex_lock(&pcb_a_mover->mutex_cambio_estado);
+   if(pcb_a_mover->estado == BLOCKED) {
+    mover_blocked_a_suspblocked(pcb_a_mover->pid);
+   }
+   pthread_mutex_unlock(&pcb_a_mover->mutex_cambio_estado);
+   return NULL;
+}
+
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -706,7 +876,7 @@ int manejar_syscall(t_syscall* syscall) {
 
 int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
     t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso);
-    agregar_pcb_a_lista_new(pcb);
+    agregar_a_new(pcb);
     return 0;
 } 
 
@@ -720,17 +890,15 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
     //Si no existe, proceso va a EXIT
     if(io == NULL) {
         log_info(logger_kernel, "No existe el IO %s", nombre_io);
-        mover_pcb_a_exit_desde_executing(pid);
-        log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "EXIT");
+        mover_executing_a_exit(pid);
         pthread_mutex_unlock(&mutex_io);
         return -1;
     }
 
-    //Si existe pero no hay instancias, proceso va a BLOCKED IO (tambien va a blocked general, esto se hace en mover_pcb_executing_a_blocked_io)
+    //Si existe pero no hay instancias, proceso va a BLOCKED IO (tambien va a blocked general, esto se hace en mover_executing_a_blockedio)
     if(io->instancias_disponibles == 0) {
-        mover_pcb_executing_a_blocked_io(pid, nombre_io, tiempo_io);
-        log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "BLOCKED (por no haber instancias disponibles IO)");
-        log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io);
+        mover_executing_a_blockedio(pid, nombre_io, tiempo_io);
+        log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io); //Log obligatorio, no puedo usar funcion de logeo porque no conozco el pcb
         pthread_mutex_unlock(&mutex_io);
         return -1;
     
@@ -749,8 +917,7 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
     instancia_disponible->pid_actual = pid;
     io->instancias_disponibles--;
     
-    log_info(logger_kernel, "## PID (%d) Pasa del estado %s al estado %s", pid, "EXECUTING", "BLOCKED (esperando finalizacion de IO)");
-    log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io);
+    log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io); //Log obligatorio, no puedo usar funcion de logeo porque no conozco el pcb
 
     log_info(logger_kernel, "[IO-SOLICITUD] Enviando solicitud a %s (PID: %d, tiempo: %d)", nombre_io, pid, tiempo_io);
     // Creo la solicitud
@@ -761,9 +928,9 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
     t_buffer* buffer = serializar_solicitud_io(&solicitud);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_SOLICITUD_IO, buffer);
     
-    enviar_paquete(instancia_disponible->socket_io, paquete);
+    enviar_paquete(instancia_disponible->socket_io, paquete); 
 
-    mover_pcb_a_blocked_desde_executing(pid);
+    mover_executing_a_blocked(pid);
 
     }
    

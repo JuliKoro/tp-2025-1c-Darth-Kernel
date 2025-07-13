@@ -9,17 +9,9 @@ void iniciar_planificador_corto_plazo() {
     switch (algoritmo) {
         case FIFO:
             while(true) {
-            //1. Envio proceso desde cola NEW a cola READY
-            t_pcb* pcb = obtener_pcb_de_lista_new();
-            if(pcb == NULL) {
-                log_error(logger_kernel, "Error al obtener pcb de lista new");
-                continue;
-                }
-                agregar_pcb_a_lista_ready(pcb);
-
                 //2. Envio proceso desde cola READY a cola EXECUTING
                 //TODO: erifico si hay CPUs disponibles
-                pcb = peek_lista_ready();
+                t_pcb* pcb = peek_lista_ready();
                 if(pcb == NULL) {
                     log_error(logger_kernel, "Error al obtener pcb de lista ready");
                     continue;

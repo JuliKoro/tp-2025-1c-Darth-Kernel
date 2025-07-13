@@ -25,8 +25,7 @@ void* iniciar_planificador_largo_plazo() {
                 }
                 if(solicitar_creacion_proceso(pcb)) { 
                     pcb = obtener_pcb_de_lista_new();
-                    agregar_pcb_a_lista_ready(pcb);
-                    log_info(logger_kernel, "## (%d) Pasa del estado NEW al estado READY", pcb->pid);
+                    mover_a_ready(pcb);
                 }
             }
         break;
@@ -37,4 +36,6 @@ void* iniciar_planificador_largo_plazo() {
             printf("No tenido en cuenta o incorrecto\n");
         break;
    }
+
+   return NULL;
 }

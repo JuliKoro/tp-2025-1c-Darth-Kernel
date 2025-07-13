@@ -159,6 +159,10 @@ extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_lista_blocked_io;
 extern pthread_mutex_t mutex_cpu;
+extern pthread_mutex_t mutex_lista_suspblocked;
+extern pthread_mutex_t mutex_lista_suspready;
+
+
 extern sem_t sem_procesos_en_new;
 
 
@@ -174,8 +178,8 @@ extern t_list* lista_ready;
 extern t_list* lista_exit; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_blocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_executing; //Esto es una lista porque tengo que poder ordenarla y modificarla
-extern t_list* lista_susp_ready; //Esto es una lista porque tengo que poder ordenarla y modificarla
-extern t_list* lista_susp_blocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_suspready; //Esto es una lista porque tengo que poder ordenarla y modificarla
+extern t_list* lista_suspblocked; //Esto es una lista porque tengo que poder ordenarla y modificarla
 extern t_list* lista_blocked_io; //Esta cola debe contener structs de t_blocked_io
 
 extern t_list* lista_io;
@@ -255,9 +259,10 @@ int recibir_mensaje_cpu (int socket_cpu);
 
 
 
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para agregar a las colas
+                                Funciones para mover entre estados
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -267,7 +272,7 @@ int recibir_mensaje_cpu (int socket_cpu);
  * Esta función recibe un pcb y lo agrega a la cola new
  * 
  */
-void agregar_pcb_a_lista_new(t_pcb* pcb);
+void agregar_a_new(t_pcb* pcb);
 
 /**
  * @brief Agrega un pcb a la lista ready
@@ -276,7 +281,123 @@ void agregar_pcb_a_lista_new(t_pcb* pcb);
  * NOTA: Para algoritmos como SJF o PMCP, esta función debería modificarse para insertar el PCB de forma ordenada.
  * 
  */
-void agregar_pcb_a_lista_ready(t_pcb* pcb);
+void mover_a_ready(t_pcb* pcb);
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista exit. Ejecuta los procedimientos que se necesitan cada vez que se mueve un pcb a exit, desde cualquier lado.
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_a_exit (t_pcb* pcb);
+
+/**
+ * @brief Mueve un pcb de la lista ready a la lista susp_ready, segun el algoritmo de planificacion de largo plazo./
+ * 
+ * @param pcb: El pcb a mover
+ * 
+ */
+int mover_a_suspready(t_pcb* pcb);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista blocked_io
+ * 
+ * @return 0 si el pcb se mueve correctamente.
+ * 
+ * Esta función recibe un pid y un nombre de io. Mueve un pcb de la lista executing a la lista blocked_io
+ * 
+ */
+int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io);
+
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_executing_a_exit(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista blocked
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_executing_a_blocked(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista executing a la lista ready.
+ * Se usa cuando una CPU se desconecta inesperadamente.
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_executing_a_ready(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista ready
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_blocked_a_ready(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista blocked_io a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_blockedio_a_exit(u_int32_t pid);
+
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_blocked_a_exit(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista blocked a la lista susp_blocked
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_blocked_a_suspblocked(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista susp_blocked a la lista susp_ready
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_suspblocked_a_suspready(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista susp_ready a la lista ready
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_suspready_a_ready(u_int32_t pid);
+
+/**
+ * @brief Mueve un pcb de la lista ready a la lista executing
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_ready_a_executing(u_int32_t pid);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones auxiliares para listas y colas
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
 
 /**
  * @brief Peek de la lista new
@@ -301,10 +422,18 @@ t_pcb* peek_lista_ready();
  */
 t_pcb* obtener_pcb_de_lista_new();
 
+/**
+ * @brief Saca un t_blocked_io de la lista blocked_io
+ * 
+ * @param io_a_sacar: El t_blocked_io a sacar de la lista blocked_io
+ * 
+ */
+int sacar_de_blockedio(t_blocked_io* io_a_sacar);
+
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para obtener pcb de las colas & listas
+                                Funciones auxiliares de busqueda
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
@@ -325,122 +454,6 @@ bool comparar_socket_io(void* elemento, void* socket_a_comparar);
 t_io* buscar_io_por_socket(int socket_io);
 
 t_io* buscar_io_por_socket_unsafe(int socket_io);
-
-/**
- * @brief Mueve un pcb de la lista blocked a la lista exit. Ejecuta los procedimientos que se necesitan cada vez que se mueve un pcb a exit, desde cualquier lado.
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_exit (t_pcb* pcb);
-
-/**
- * @brief Obtiene un pcb de la cola new
- * 
- * Esta función no recibe parámetros. Obtiene un pcb de la lista new
- * 
- */
-t_pcb* obtener_pcb_de_lista_new();
-
-
-
-/**
- * @brief Mueve un pcb de la lista executing a la lista blocked_io
- * 
- * @return 0 si el pcb se mueve correctamente.
- * 
- * Esta función recibe un pid y un nombre de io. Mueve un pcb de la lista executing a la lista blocked_io
- * 
- */
-int mover_pcb_executing_a_blocked_io(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io);
-
-
-/**
- * @brief Saca un t_blocked_io de la lista blocked_io
- * 
- * @param io_a_sacar: El t_blocked_io a sacar de la lista blocked_io
- * 
- */
-int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar);
-
-/**
- * @brief Mueve un pcb de la lista executing a la lista exit
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_exit_desde_executing(u_int32_t pid);
-
-/**
- * @brief Mueve un pcb de la lista executing a la lista blocked
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_blocked_desde_executing(u_int32_t pid);
-
-/**
- * @brief Mueve un pcb de la lista executing a la lista ready.
- * Se usa cuando una CPU se desconecta inesperadamente.
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_ready_desde_executing(u_int32_t pid);
-
-/**
- * @brief Mueve un pcb de la lista blocked a la lista ready
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
-
-/**
- * @brief Mueve un pcb de la lista blocked_io a la lista exit
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_exit_desde_blocked_io(u_int32_t pid);
-
-
-/**
- * @brief Saca un pcb de la lista blocked_io
- * 
- * @param io_a_sacar: El pcb a sacar de la lista blocked_io
- * 
- */
-int sacar_pcb_de_blocked_io(t_blocked_io* io_a_sacar);
-
-/**
- * @brief Mueve un pcb de la lista executing a la lista exit
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_exit_desde_executing(u_int32_t pid);
-
-
-
-/**
- * @brief Mueve un pcb de la lista blocked a la lista ready
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_ready_desde_blocked(u_int32_t pid);
-
-
-
-/**
- * @brief Mueve un pcb de la lista blocked a la lista exit
- * 
- * @param pid: El pid del pcb a mover
- * 
- */
-int mover_pcb_a_exit_desde_blocked(u_int32_t pid);
-
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -485,6 +498,24 @@ void disminuir_grado_multiprogramacion();
  * 
  */
 bool comprobar_grado_multiprogramacion_maximo();
+
+
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones para planificacion mediano plazo
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+
+/**
+ * @brief Llama al planificador de mediano plazo. El mismo inicia un timer para determinar si debe mover un pcb a susp blocked.
+ * 
+ * Esta función recibe un pcb y llama a la planificacion mediano plazo
+ * 
+ */
+void* llamar_planificacion_mediano_plazo(void* pcb);
+
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
