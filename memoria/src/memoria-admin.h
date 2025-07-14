@@ -3,6 +3,8 @@
 
 #include "memoria.h"
 
+/* ----- API pública del administrador de memoria ----- */
+
 /**
  * @brief Cabecera para la gestión del administrador de memoria.
  *
@@ -27,12 +29,15 @@ void inicializar_administrador_memoria();
  */
 void destruir_administrador_memoria();
 
-int obtener_posicion_libre_swap();
 
-//
-void escribir_pagina_swap(int posicion, void* pagina);
+/* Gestión de marcos */
+void  liberar_marco(void *marco);
+t_marco_info buscar_marco_en_tablas(void *marco_victima);
 
-//
-void leer_pagina_swap(int posicion, void* destino);
+/* Gestión de SWAP */
+int   obtener_posicion_libre_swap(void);
+void  liberar_posicion_swap(int posicion);
+void  escribir_pagina_swap(int posicion, void *pagina);
+void  leer_pagina_swap(int posicion,  void *destino);
 
 #endif /* MEMORIA_ADMIN_H */
