@@ -27,6 +27,7 @@ extern t_config* cpu_tconfig;
  * @param reemplazocache: Algoritmo de reemplazo de la caché
  * @param retardocache: Retardo de acceso a la caché
  * @param loglevel: Nivel de log para el módulo
+ * @param tampagina: Tamaño de pagina
  * 
  * Esta estructura almacena la configuración necesaria para el
  * funcionamiento del CPU, incluyendo direcciones IP, puertos y
@@ -44,6 +45,7 @@ typedef struct cpuconfigs {
      char* reemplazocache;      // Algoritmo de reemplazo de la caché
      int retardocache;          // Retardo de acceso a la caché
      char* loglevel;            // Nivel de log para el módulo
+     int tampagina;             // Tamaño de página
 } cpuconfigs;
 
 /**

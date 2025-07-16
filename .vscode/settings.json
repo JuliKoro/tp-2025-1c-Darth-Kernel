@@ -37,6 +37,12 @@
         "manejo-cpu.h": "c",
         "cpu-log.h": "c",
         "cpu.h": "c",
-        "semaforos.h": "c"
+        "semaforos.h": "c",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "type_traits": "cpp",
+        "cmath": "cpp",
+        "limits": "cpp",
+        "new": "cpp"
     }
 }
