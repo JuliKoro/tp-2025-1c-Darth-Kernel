@@ -122,9 +122,13 @@
  void destruir_proceso(void* proceso_void) {
     t_proceso* proceso = (t_proceso*)proceso_void;
     if (proceso == NULL) return;
+    
 
     char pid_str[16];
     sprintf(pid_str, "%d", proceso->pid);
+
+    t_metricas_por_proceso* metricas =
+    dictionary_get(administrador_memoria->metricas_por_proceso, pid_str);
 
     // Mostrar métricas antes de que sean liberadas por `finalizar_proceso`
     // NOTA: La lógica de liberación de tablas de páginas y métricas se ha movido
@@ -137,6 +141,23 @@
     // Por lo tanto, el bloque de métricas aquí es redundante si `finalizar_proceso`
     // ya se encarga de ello. Se mantiene el log de debug para claridad.
 
+        // Log obligatorio del enunciado, si se encontraron las métricas
+        if (metricas != NULL) {
+            log_info(logger_memoria,
+                "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d;"
+                " Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
+                proceso->pid,
+                metricas->accesos_tablas_paginas,
+                metricas->instrucciones_solicitadas,
+                metricas->bajadas_swap,
+                metricas->subidas_memoria,
+                metricas->lecturas_memoria,
+                metricas->escrituras_memoria);
+        } else {
+            log_warning(logger_memoria, "No se encontraron métricas para el PID %d al destruir proceso", proceso->pid);
+        }
+
+    // Liberar instrucciones del proceso
     log_debug(logger_memoria, "Liberando instrucciones para PID %d.", proceso->pid);
     if (proceso->instrucciones) {
         for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
@@ -146,8 +167,11 @@
         }
         free(proceso->instrucciones);
     }
+    // Liberar la estructura principal
     free(proceso);
     log_debug(logger_memoria, "Estructura t_proceso para PID %d liberada.", proceso->pid);
+
+
 }
 
 /**

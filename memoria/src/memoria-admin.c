@@ -245,7 +245,10 @@ void liberar_posicion_swap(int posicion) {
  * @param pagina Puntero a los datos de la página a escribir.
  */
 void escribir_pagina_swap(int posicion, void* pagina) {
-    long bytes_swap = (long)bitmap_swap->size * 8L * memoria_configs.tampagina;
+    //long bytes_swap = (long)bitmap_swap->size * 8L * memoria_configs.tampagina;
+    // Calcular el total de páginas en SWAP: cada byte del bitmap representa 8 páginas
+    int total_paginas_swap = bitmap_swap->size * 8;
+
     /*
     ¿Por qué multiplicar por 8?
     bitmap_swap->size devuelve la cantidad de bytes que ocupa el bitmap.
@@ -259,9 +262,9 @@ void escribir_pagina_swap(int posicion, void* pagina) {
         log_error(logger_memoria, "Archivo SWAP no abierto. No se puede escribir.");
         return;
     }
-    //if (posicion < 0 || posicion * memoria_configs.tampagina >= (long)bitmap_swap->size * memoria_configs.tampagina) {
-    if (posicion < 0 || (long)posicion * memoria_configs.tampagina >= bytes_swap) {
-        log_error(logger_memoria, "Posición SWAP %d fuera de los límites del archivo SWAP.", posicion);
+   // Verificar límites usando el total de páginas, no bytes del bitmap
+    if (posicion < 0 || posicion >= total_paginas_swap) {
+        log_error(logger_memoria, "Posición SWAP %d fuera de límites. Máx permitido: %d", posicion, total_paginas_swap - 1);
         return;
     }
 
@@ -281,12 +284,21 @@ void escribir_pagina_swap(int posicion, void* pagina) {
  * @param destino Puntero al buffer donde se copiarán los datos leídos.
  */
 void leer_pagina_swap(int posicion, void* destino) {
+    // Calcular el total de páginas en SWAP
+    int total_paginas_swap = bitmap_swap->size * 8;
+    /*
+    bitmap_swap->size es el tamaño del bitmap en bytes.
+    Cada byte contiene 8 bits (cada bit representa 1 página en SWAP).
+    total_paginas_swap refleja la capacidad real del archivo SWAP.
+    */
+    
     if (administrador_memoria->swap_file == NULL) {
         log_error(logger_memoria, "Archivo SWAP no abierto. No se puede leer.");
         return;
     }
-    if (posicion < 0 || posicion * memoria_configs.tampagina >= (long)bitmap_swap->size * memoria_configs.tampagina) {
-        log_error(logger_memoria, "Posición SWAP %d fuera de los límites del archivo SWAP.", posicion);
+    // Verificar límites usando el total de páginas
+    if (posicion < 0 || posicion >= total_paginas_swap) {    // Error: posición inválida
+        log_error(logger_memoria, "Posición SWAP %d fuera de límites. Máx permitido: %d", posicion, total_paginas_swap - 1);
         return;
     }
 
