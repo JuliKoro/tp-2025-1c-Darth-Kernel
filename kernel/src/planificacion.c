@@ -52,7 +52,7 @@ pthread_mutex_t mutex_lista_suspblocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_suspready = PTHREAD_MUTEX_INITIALIZER;
 
 
-sem_t sem_procesos_en_new;
+sem_t sem_largo_plazo;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -198,10 +198,11 @@ void inicializar_listas_y_sem() {
     lista_blocked_io = list_create();
     lista_cpu = list_create();
     lista_io = list_create();
-    sem_init(&sem_procesos_en_new, 0, 0);
+    sem_init(&sem_largo_plazo, 0, 0);
 }
 
 int recibir_mensaje_cpu(int socket_cpu) {
+    //TODO> evaluar todos los posibles paquetes que puedo recibir
     t_paquete* paquete = recibir_paquete(socket_cpu);
     if(paquete == NULL) {
         log_error(logger_kernel, "Error al recibir mensaje (paquete) de CPU");
@@ -234,11 +235,20 @@ int recibir_mensaje_cpu(int socket_cpu) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void agregar_a_new(t_pcb* pcb) {
-    pthread_mutex_lock(&mutex_lista_new);
-    list_add(lista_new, pcb);
-    pthread_mutex_unlock(&mutex_lista_new);
-    log_creacion_proceso(pcb);
-    sem_post(&sem_procesos_en_new); //Aviso al planificador largo plazo que hay un proceso en new
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
+    if(algoritmo == FIFO) {
+        pthread_mutex_lock(&mutex_lista_new);
+        list_add(lista_new, pcb);
+        pthread_mutex_unlock(&mutex_lista_new);
+        log_creacion_proceso(pcb);
+        sem_post(&sem_largo_plazo); //Aviso al planificador largo plazo que hay un proceso en new
+    } else if(algoritmo == PMCP) {
+        pthread_mutex_lock(&mutex_lista_new);
+        list_add_sorted(lista_new, pcb, es_mas_chico);
+        pthread_mutex_unlock(&mutex_lista_new);
+        log_creacion_proceso(pcb);
+        sem_post(&sem_largo_plazo); //Aviso al planificador largo plazo que hay un proceso en new
+    }
 }
 
 
@@ -249,25 +259,25 @@ void mover_a_ready(t_pcb* pcb) {
         list_add(lista_ready, pcb);
         pthread_mutex_unlock(&mutex_lista_ready);
         actualizar_estado_pcb(pcb, READY);
-    } else if(algoritmo == SJF_SIN_DESALOJO) {
-        //TODO: Implementar SJF_SIN_DESALOJO
-    } else if(algoritmo == SFJ_CON_DESALOJO) {
-        //TODO: Implementar SFJ_CON_DESALOJO
     } else if(algoritmo == PMCP) {
-        //TODO: Implementar PMCP
+        pthread_mutex_lock(&mutex_lista_ready);
+        list_add_sorted(lista_ready, pcb, es_mas_chico);
+        pthread_mutex_unlock(&mutex_lista_ready);
+        actualizar_estado_pcb(pcb, READY);
     }
 }
 
 int mover_a_exit(t_pcb* pcb) {
     
     actualizar_estado_pcb(pcb, EXIT);
-
+    log_fin_proceso(pcb);
 
     //TODO> Mensajes a memoria, esto lo va a verificar el planificador largo plazo en cada iteracion
 
-    list_add(lista_exit, pcb); //ESto deberia ser eliminar el PCB, no hay cola exit.
-
-    log_fin_proceso(pcb);
+    //list_add(lista_exit, pcb); //Solo iran a la lista de exit los que terminen por alguna interrupcion 
+    //Aca solo actualizo el estado. Luego el hilo planificador de largo plazo va revisar la lista de ready lo que esten en estado exit
+    //Va a sacarlos de la lista de ready y liberar la memoria del PCB.;
+    
 
     return 0;
 }
@@ -279,12 +289,13 @@ int mover_a_suspready(t_pcb* pcb) {
         list_add(lista_suspready, pcb);
         pthread_mutex_unlock(&mutex_lista_suspready);
         actualizar_estado_pcb(pcb, SUSP_READY);
-    } else if(algoritmo == SJF_SIN_DESALOJO) {
-        //TODO: Implementar SJF_SIN_DESALOJO
-    } else if(algoritmo == SFJ_CON_DESALOJO) {
-        //TODO: Implementar SFJ_CON_DESALOJO
+        sem_post(&sem_largo_plazo);
     } else if(algoritmo == PMCP) {
-        //TODO: Implementar PMCP
+        pthread_mutex_lock(&mutex_lista_suspready);
+        list_add_sorted(lista_suspready, pcb, es_mas_chico);
+        pthread_mutex_unlock(&mutex_lista_suspready);
+        actualizar_estado_pcb(pcb, SUSP_READY);
+        sem_post(&sem_largo_plazo);
     }
 
     return 0;
@@ -412,7 +423,7 @@ int mover_blocked_a_ready(u_int32_t pid) {
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_blocked);
     for(int i = 0; i < list_size(lista_blocked); i++) {
-        t_pcb* pcb_encontrado = list_get(lista_blocked, i);
+        pcb_encontrado = list_get(lista_blocked, i);
         if(pcb_encontrado->pid == pid) {
             pcb_encontrado = list_remove(lista_blocked, i);
             mover_a_ready(pcb_encontrado);
@@ -581,7 +592,7 @@ int mover_ready_a_executing(u_int32_t pid) {
 
     if(algoritmo == FIFO) {
         pthread_mutex_lock(&mutex_lista_executing);
-        list_add(lista_executing   , pcb);
+        list_add(lista_executing, pcb);
         pthread_mutex_unlock(&mutex_lista_executing);
         actualizar_estado_pcb(pcb, RUNNING);
 
@@ -602,13 +613,32 @@ int mover_ready_a_executing(u_int32_t pid) {
 t_pcb* peek_lista_new() {
     pthread_mutex_lock(&mutex_lista_new);
     t_pcb* pcb = list_get(lista_new, 0);
+    if(pcb == NULL) {
+        pthread_mutex_unlock(&mutex_lista_new);
+        return NULL;
+    }
     pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
 }   
 
+t_pcb* peek_lista_suspready() {
+    pthread_mutex_lock(&mutex_lista_suspready);
+    t_pcb* pcb = list_get(lista_suspready, 0);
+    if(pcb == NULL) {
+        pthread_mutex_unlock(&mutex_lista_suspready);
+        return NULL;
+    }
+    pthread_mutex_unlock(&mutex_lista_suspready);
+    return pcb;
+}
+
 t_pcb* peek_lista_ready() {
     pthread_mutex_lock(&mutex_lista_ready);
     t_pcb* pcb = list_get(lista_ready, 0);
+    if(pcb == NULL) {
+        pthread_mutex_unlock(&mutex_lista_ready);
+        return NULL;
+    }
     pthread_mutex_unlock(&mutex_lista_ready);
     return pcb;
 }   
@@ -619,6 +649,18 @@ t_pcb* obtener_pcb_de_lista_new() {
     pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
 }
+
+t_pcb* obtener_pcb_de_lista_suspready() {
+    pthread_mutex_lock(&mutex_lista_suspready);
+    t_pcb* pcb = list_remove(lista_suspready, 0);
+    if(pcb == NULL) {
+        pthread_mutex_unlock(&mutex_lista_suspready);
+        return NULL;
+    }
+    pthread_mutex_unlock(&mutex_lista_suspready);
+    return pcb;
+}
+
 
 int sacar_de_blockedio(t_blocked_io* io_a_sacar) {
     pthread_mutex_lock(&mutex_lista_blocked_io);
@@ -661,6 +703,12 @@ bool comparar_socket_io(void* elemento, void* socket_a_comparar) {
     }
     return false;
 }
+ 
+ bool es_mas_chico(void* elemento, void* otro_elemento) {
+    t_pcb* pcb = (t_pcb*)elemento;
+    t_pcb* otro_pcb = (t_pcb*)otro_elemento;
+    return pcb->tamanio_proceso < otro_pcb->tamanio_proceso;
+ }
 
 t_io* buscar_io_por_socket_unsafe(int socket_io){
     return list_find_con_param(lista_io, comparar_socket_io, (void*)(intptr_t)socket_io);
@@ -694,6 +742,18 @@ void mover_procesos_terminados() {
         elementos_procesados++;
     }
 }
+
+void eliminar_procesos_en_exit(){
+    pthread_mutex_lock(&mutex_lista_exit);
+    for(int i = 0; i < list_size(lista_exit); i++) {
+        t_pcb* pcb = list_get(lista_exit, i);
+        if(pcb->estado == EXIT) {
+            //TODO Aca debo asvisar a memoria, me da el ok y recien ahi borro el PCB
+            list_remove(lista_exit, i);
+        }
+    }
+}
+
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -806,11 +866,11 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
 }
 
 
-/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                                        SYSCALLS
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+                                    /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                                    
+                                                                            SYSCALLS
+                                    
+                                    /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////

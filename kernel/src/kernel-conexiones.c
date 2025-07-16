@@ -54,6 +54,7 @@ bool solicitar_creacion_proceso(t_pcb* pcb) {
         log_error(logger_kernel, "Error al solicitar creacion de un proceso a memoria, conexion con memoria fallida");
         return false;
     }
+    
     t_paquete* paquete = empaquetar_buffer(PAQUETE_PCB, serializar_pcb(pcb));
     enviar_paquete(socket_memoria, paquete);
     //liberar_paquete(paquete); doble liberacion, testeando

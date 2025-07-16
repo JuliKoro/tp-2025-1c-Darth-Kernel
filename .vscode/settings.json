@@ -36,6 +36,7 @@
         "instruccion.h": "c",
         "manejo-cpu.h": "c",
         "cpu-log.h": "c",
-        "cpu.h": "c"
+        "cpu.h": "c",
+        "semaforos.h": "c"
     }
 }

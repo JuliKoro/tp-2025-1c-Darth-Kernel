@@ -63,8 +63,11 @@ int manejar_kernel(int socket_kernel, t_log* io_logger, char* nombre_io) { // se
     log_info(io_logger, "Mensaje recibido del kernel: %s", mensaje);
 
     free(mensaje);
+
+
     while(1) {
         t_paquete* paquete = recibir_paquete(socket_kernel);
+
         if(paquete == NULL) {
             log_error(io_logger, "Error al recibir paquete de Kernel. Cerrando conexion");
             return -1;

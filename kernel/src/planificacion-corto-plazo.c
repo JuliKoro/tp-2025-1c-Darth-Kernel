@@ -13,11 +13,11 @@ void iniciar_planificador_corto_plazo() {
                 //TODO: erifico si hay CPUs disponibles
                 t_pcb* pcb = peek_lista_ready();
                 if(pcb == NULL) {
-                    log_error(logger_kernel, "Error al obtener pcb de lista ready");
+                    log_error(logger_kernel, "No hay nada en ready aun");
                     continue;
                 }
-                //agregar_pcb_a_cola_executing(pcb);
-                
+                mover_ready_a_executing(pcb->pid);
+
                 //TODO: Manejar cola de executing, mandar procesos a CPU
                 //3. Envio proceso desde cola EXECUTING a cola BLOCKED
                 //TODO: Verifico si hay IO disponibles

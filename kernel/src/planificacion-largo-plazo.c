@@ -2,40 +2,40 @@
 
 
 void* iniciar_planificador_largo_plazo() {
-    
-    //Obtengo el enum correspondiente al algoritmo de planificacion
-    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
-    
-    switch (algoritmo) {
-        case FIFO:
-            while(true) {
-                
-                sem_wait(&sem_procesos_en_new); //Si no hay procesos en new, se bloquea el hilo
+    inicializar_semaforos_globales();
+        while(true) {
 
+        sem_wait(&sem_largo_plazo); //Si no hay procesos en new, se bloquea el hilo
+
+            while(true) {
                 //1. Verifico si hay procesos en cola running que hayan terminado, si terminaron se mueven a la cola exit
                 //Puede no haberlos
-                mover_procesos_terminados(); 
+                mover_procesos_terminados();
+                eliminar_procesos_en_exit();
 
-                //2. Verifico si hay procesos en cola new
-                //TODO: Verificar que no haya procesos en la cola de susp ready
-                t_pcb* pcb = peek_lista_new();
-                if(pcb == NULL) {
-                    log_error(logger_kernel, "Error al peekear la lista new");
+                //2. Me fijo si hay procesos en suspready
+                t_pcb* pcb = obtener_pcb_de_lista_suspready();
+                if(pcb != NULL /* &&  sacar de swap*/) {
+                    mover_a_ready(pcb);
                     continue;
                 }
-                if(solicitar_creacion_proceso(pcb)) { 
-                    pcb = obtener_pcb_de_lista_new();
-                    mover_a_ready(pcb);
+                //3. Me fijo si hay procesos en new
+                t_pcb* pcb_new = peek_lista_new();
+                if(pcb_new == NULL) {
+                    break;
                 }
-            }
-        break;
-        case PMCP:
-            printf("PMCP No implementado aun\n");
-            break;
-        default:
-            printf("No tenido en cuenta o incorrecto\n");
-        break;
-   }
-
-   return NULL;
+                if (solicitar_creacion_proceso(pcb_new)) {
+                    pcb_new = obtener_pcb_de_lista_new();
+                    mover_a_ready(pcb_new);
+                    sem_post(&sem_largo_plazo);
+                    continue;
+                } else {
+                    log_warning(logger_kernel, "Memoria llena. PID %d no puede ser admitido.", pcb_new->pid);
+                    log_info(logger_kernel, "Planificador en espera de liberacion de memoria");
+                    sem_wait(&sem_memoria_disponible);
+                    continue;
+                }
+        }
+    return NULL;
+    }
 }

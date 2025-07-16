@@ -138,7 +138,7 @@ void atender_siguiente_proceso_en_cola_io(t_instancia_io* instancia_liberada){
              // Guardamos el PID antes de liberar la memoria para usarlo en el log.
             u_int32_t pid_atendido = pcb_en_espera->pid;
 
-         //    Limpiamos la estructura de la solicitud que ya no está en espera.
+            //Limpiamos la estructura de la solicitud que ya no está en espera.
             sacar_de_blockedio(pcb_en_espera);
             free(pcb_en_espera->nombre_io);
             free(pcb_en_espera);

@@ -13,7 +13,7 @@
 #include "kernel-conexiones.h"
 #include <semaphore.h>
 #include <utils/listas.h>
-
+#include <utils/semaforos.h>
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                     Gobales
@@ -163,7 +163,7 @@ extern pthread_mutex_t mutex_lista_suspblocked;
 extern pthread_mutex_t mutex_lista_suspready;
 
 
-extern sem_t sem_procesos_en_new;
+extern sem_t sem_largo_plazo;
 
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -415,12 +415,27 @@ t_pcb* peek_lista_ready();
 
 
 /**
+ * @brief Peek de la lista susp_ready
+ * 
+ * @return El pcb en la posicion 0 de la lista susp_ready
+ */
+t_pcb* peek_lista_suspready();
+
+
+/**
  * @brief Obtiene un pcb de la lista new
  * 
  * Esta función no recibe parámetros. Obtiene un pcb de la lista new
  * 
  */
 t_pcb* obtener_pcb_de_lista_new();
+
+/**
+ * @brief Obtiene un pcb de la lista susp_ready
+ * 
+ * @return pcb de la lista susp_ready o NULL si esta vacia.
+ */
+t_pcb* obtener_pcb_de_lista_suspready();
 
 /**
  * @brief Saca un t_blocked_io de la lista blocked_io
@@ -445,6 +460,16 @@ int sacar_de_blockedio(t_blocked_io* io_a_sacar);
  * 
  */
 bool comparar_socket_io(void* elemento, void* socket_a_comparar);
+
+/**
+ * @brief Compara el tamaño de dos PCBs.
+ * 
+ * @param elemento Un t_pcb
+ * @param otro_elemento Otro t_pcb
+ * @return true si el primer pcb es mas chico que el segundo.
+*/
+bool es_mas_chico(void* elemento, void* otro_elemento);
+
 /**
  * @brief Recibe un socket de una instancia de IO, y busca el IO en la lista de IO
  * 
@@ -468,6 +493,12 @@ t_io* buscar_io_por_socket_unsafe(int socket_io);
  * 
  */
 void mover_procesos_terminados();
+
+/**
+ * @brief Itera la lista de exit y pide a memoria que se eliminen los procesos.
+ * 
+ */
+void eliminar_procesos_en_exit();
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
