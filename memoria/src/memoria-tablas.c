@@ -235,8 +235,11 @@
             // Si no es el último nivel, la entrada apunta a la siguiente tabla de nivel
             // El campo 'marco' de la entrada de nivel intermedio contiene la dirección física de la siguiente tabla.
             // Se asume que las tablas de nivel intermedio se cargan en memoria principal como cualquier otra página.
-            void* direccion_fisica_siguiente_tabla = (char*)administrador_memoria->memoria_principal + (entrada_actual->marco * memoria_configs.tampagina);
-            tabla_actual = (t_tabla_nivel*)direccion_fisica_siguiente_tabla;
+            //void* direccion_fisica_siguiente_tabla = (char*)administrador_memoria->memoria_principal + (entrada_actual->marco * memoria_configs.tampagina);
+            //tabla_actual = (t_tabla_nivel*)direccion_fisica_siguiente_tabla;
+            
+            tabla_actual = (t_tabla_nivel*)(intptr_t)entrada_actual->marco;
+           
             log_debug(logger_memoria, "PID %d: Acceso a tabla de nivel %d. Siguiente tabla en marco %d.", pid, nivel, entrada_actual->marco);
         } else {
             // Último nivel: esta entrada contiene el marco de la página de datos

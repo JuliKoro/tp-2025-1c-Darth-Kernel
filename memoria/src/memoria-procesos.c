@@ -168,8 +168,9 @@
         free(proceso->instrucciones);
     }
     // Liberar la estructura principal
-    free(proceso);
     log_debug(logger_memoria, "Estructura t_proceso para PID %d liberada.", proceso->pid);
+    free(proceso);
+
 
 
 }
