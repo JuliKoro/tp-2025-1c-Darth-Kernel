@@ -858,7 +858,7 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
     pcb_a_enviar->pc = pcb->pc;
     //Lo serializo, lo empaqueto y lo envio
     t_buffer* buffer = serializar_proceso_cpu(pcb_a_enviar);
-    t_paquete* paquete = empaquetar_buffer(PAQUETE_INSTRUCCION_CPU, buffer);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_PROCESO_CPU, buffer);
     enviar_paquete(cpu->socket_cpu_dispatch, paquete);
 
 

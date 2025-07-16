@@ -31,18 +31,17 @@
  * @brief Enum que representa los códigos de operación para los paquetes
  * 
  * @param PAQUETE_SOLICITUD_IO: Código de operación para solicitud de IO
- * @param PAQUETE_INSTRUCCION_CPU: Código de operación para instrucción del CPU
+ * @param PAQUETE_PROCESO_CPU: Código de operación para instrucción del CPU
  * @param PAQUETE_PCB: Código de operación para PCB
  * @param PAQUETE_SYSCALL: Código de operación para syscall
- * @param PAQUETE_INSTRUCCION_CPU: Código de operación para instrucción del CPU
+ * @param PAQUETE_PROCESO_CPU: Código de operación para instrucción del CPU
  */
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
-    PAQUETE_INSTRUCCION_CPU=2,
+    PAQUETE_PROCESO_CPU=2,
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
-    PAQUETE_INTERRUPCION=5,
-    PAQUETE_PROCESO_CPU=6
+    PAQUETE_INTERRUPCION=5
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO

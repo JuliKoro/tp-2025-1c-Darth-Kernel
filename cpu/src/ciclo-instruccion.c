@@ -4,12 +4,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
     pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
         
-        // CHECK INTERRUPT
-        /*
-        if (check_interrupt(proceso, socket_kernel_interrupt)) {
-            break; // Salir del ciclo en caso de interrupción
-        }
-        */
+        
         
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
 
@@ -17,7 +12,12 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
 
         execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
 
-        
+        // CHECK INTERRUPT
+        /*
+        if (check_interrupt(proceso, socket_kernel_interrupt)) {
+            break; // Salir del ciclo en caso de interrupción
+        }
+        */
 
         // LIMPIAR INSTRUCCIONES
         destruir_instruccion(instruccion_decodificada);
@@ -39,7 +39,7 @@ char* fetch(t_proceso_cpu* proceso, int socket_memoria){
     
     //Serializo la instruccion y envio
     t_buffer* buffer = serializar_proceso_cpu(proceso);
-    t_paquete* paquete = empaquetar_buffer(PAQUETE_INSTRUCCION_CPU, buffer);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_PROCESO_CPU, buffer);
     enviar_paquete(socket_memoria, paquete);
     
     // Recibe la instruccion de Memoria :)

@@ -100,7 +100,7 @@ void* hilo_dispatch(void* arg){
          log_error(logger_cpu, "Error al recibir paquete de Kernel. Cerrando conexion");
          pthread_exit(NULL); // Termino el hilo si hay un error
       }
-      if (paquete->codigo_operacion == PAQUETE_INSTRUCCION_CPU) {
+      if (paquete->codigo_operacion == PAQUETE_PROCESO_CPU) {
          log_info(logger_cpu, "Recibido paquete de instrucción de Kernel");
          
          pthread_mutex_lock(&mutex_proceso); // lock(mutex_proceso)
