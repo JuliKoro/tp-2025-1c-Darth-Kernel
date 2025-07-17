@@ -188,21 +188,24 @@
  */
 int cargar_proceso(int pid, const char* nombre_archivo) {
     char fullpath[512];
-    // Construye la ruta completa al archivo de pseudocódigo
     snprintf(fullpath, sizeof(fullpath), "%s/%s", memoria_configs.pathinstrucciones, nombre_archivo);
 
     t_proceso* proceso = leer_archivo_de_proceso(fullpath, pid);
 
     if (proceso != NULL) {
-        char* pid_key = string_itoa(pid); // Convierte el PID a string para usarlo como clave
+        // Asegurarse de que el diccionario esté inicializado
+        if (procesos_en_memoria == NULL) {
+            log_warning(logger_memoria, "procesos_en_memoria no estaba inicializado. Se crea uno nuevo.");
+            procesos_en_memoria = dictionary_create();
+        }
+
+        char* pid_key = string_itoa(pid);
         if (pid_key == NULL) {
             log_error(logger_memoria, "Error al asignar memoria para pid_key para PID %d.", pid);
-            destruir_proceso(proceso); // Liberar el proceso si no se puede almacenar
+            destruir_proceso(proceso);
             return -1;
         }
 
-        // Crear tabla de páginas para el nuevo proceso
-        // Se crea la tabla de nivel 0, que recursivamente creará los niveles inferiores.
         t_tabla_nivel* tabla_nivel_0 = crear_tabla_nivel(0);
         if (tabla_nivel_0 == NULL) {
             log_error(logger_memoria, "Error al crear tabla de páginas para PID %d.", pid);
@@ -210,23 +213,21 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
             destruir_proceso(proceso);
             return -1;
         }
-        // Almacenar la tabla de páginas en el diccionario de tablas de páginas del administrador de memoria
+
         dictionary_put(administrador_memoria->tablas_paginas, pid_key, tabla_nivel_0);
         log_debug(logger_memoria, "Tabla de páginas de nivel 0 creada y asociada a PID %d.", pid);
 
-        // Almacenar la estructura de proceso (instrucciones) en el diccionario global
         dictionary_put(procesos_en_memoria, pid_key, proceso);
 
-       // Calcular tamaño real del proceso (páginas * tamaño_página)
-       int tamanio_proceso = proceso->cantidad_instrucciones * memoria_configs.tampagina;
-
-        // Log obligatorio: Creación de Proceso
-        log_info(logger_memoria, "## PID: %d - Proceso Creado - Tamaño: %d", pid, tamanio_proceso); // El tamaño real se determinaría por las páginas asignadas
+        int tamanio_proceso = proceso->cantidad_instrucciones * memoria_configs.tampagina;
+        log_info(logger_memoria, "## PID: %d - Proceso Creado - Tamaño: %d", pid, tamanio_proceso);
         return 0;
     }
+
     log_error(logger_memoria, "No se pudo cargar el proceso PID %d desde archivo %s.", pid, nombre_archivo);
     return -1;
 }
+
 
  /**
   * @brief Obtiene una instrucción específica de un proceso.
