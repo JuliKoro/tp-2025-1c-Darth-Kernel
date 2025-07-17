@@ -277,3 +277,21 @@ t_syscall* deserializar_syscall(t_buffer* buffer){
     syscall->pid = buffer_read_uint32(buffer);
     return syscall;
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                                Funciones de serializacion y deserializacion interrupciones
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_interrupcion(uint32_t pid){
+    t_buffer* buffer = buffer_create(sizeof(uint32_t));
+    buffer_add_uint32(buffer, pid);
+    return buffer;
+}
+
+uint32_t deserializar_interrupcion(t_buffer* buffer){
+    uint32_t pid;
+    pid = buffer_read_uint32(buffer);
+    return pid;
+}

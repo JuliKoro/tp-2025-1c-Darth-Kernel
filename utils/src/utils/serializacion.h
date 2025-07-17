@@ -34,7 +34,7 @@
  * @param PAQUETE_PROCESO_CPU: Código de operación para instrucción del CPU
  * @param PAQUETE_PCB: Código de operación para PCB
  * @param PAQUETE_SYSCALL: Código de operación para syscall
- * @param PAQUETE_PROCESO_CPU: Código de operación para instrucción del CPU
+ * @param PAQUETE_INTERRUPCION: Código de operación para interrupcion de un proceso
  */
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
@@ -342,6 +342,28 @@ t_buffer* serializar_syscall(t_syscall* syscall);
  * @return t_syscall* Puntero a la estructura de syscall
  */
 t_syscall* deserializar_syscall(t_buffer* buffer);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                        Funciones de serializacion y deserializacion interrupciones
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * @brief Serializa una interrupcion
+ * 
+ * @param pid ID del proceso al que se quiere interrumpir
+ * @return t_buffer* Puntero al buffer que contiene la serializacion de la interrupcion
+ */
+t_buffer* serializar_interrupcion(uint32_t pid);
+
+/**
+ * @brief Deserializa un buffer en una interrupcion
+ * 
+ * @param buffer Puntero al buffer que contiene la serializacion de la interrupcion
+ * @return uint32_t ID del proceso al que se quiere interrumpir
+ */
+uint32_t deserializar_interrupcion(t_buffer* buffer);
 
 #endif
 
