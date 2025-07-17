@@ -8,9 +8,15 @@ t_log* logger_cpu;
 // Mutex para proteger el acceso a la variable proceso
 pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización estática
 
-t_proceso_cpu* proceso = NULL;
+sem_t semaforo_proceso; // Semáforo para controlar la recepción de nuevos procesos
+sem_t semaforo_interrupcion; // Semáforo para controlar la recepción de interrupciones
 
-uint32_t pc; // Definición de la variable global para el PC
+t_proceso_cpu* proceso = NULL;
+uint32_t interrupcion;
+
+// REGISTROS
+uint32_t PC; // Declaracion de la variable global para el PC (Porgram Counter)
+bool IF = 0; // Declaracion de la pariable global para el IF (Interrupt Flag)
 
 int id_cpu; //La hice global para que se pueda usar en los hilos de dispatch e interrupt.
 
@@ -58,6 +64,10 @@ int main(int argc, char* argv[]) {
    // Crear hilo para ejecutar el ciclo de instrucción
    //pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
 
+   // Inicializaion de Semaforos
+   sem_init(&semaforo_proceso, 0, 0); // Inicializa el semáforo en 0 (entre hilos)
+   sem_init(&semaforo_interrupcion, 0, 0);
+
    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
    pthread_join(thread_dispatch, NULL);
    pthread_join(thread_interrupt, NULL);
@@ -92,7 +102,6 @@ void* hilo_dispatch(void* arg){
    log_info(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
    free(mensaje);
 
-
    while (1) {
       // ASIGNACION DE PROCESO
       t_paquete* paquete = recibir_paquete(socket_kernel_dispatch);
@@ -104,13 +113,13 @@ void* hilo_dispatch(void* arg){
          log_info(logger_cpu, "Recibido paquete de instrucción de Kernel");
          
          pthread_mutex_lock(&mutex_proceso); // lock(mutex_proceso)
-         if (proceso != NULL) {
-            //liberar_proceso(proceso); // Liberar el proceso anterior si existe
-         }
+         // No hace falta liberar proceso (si es que habia uno anterior) xq está declarada de forma global (memoria asignada estáticamente)
          proceso = deserializar_proceso_cpu(paquete->buffer);
          log_info(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
          pthread_mutex_unlock(&mutex_proceso); // Liberar el mutex
       }
+      // Esperar a que el proceso ejecute su ciclo_instruccion (hasta que termine (syscall) o se interrumpa)
+      sem_wait(&semaforo_proceso);
       liberar_paquete(paquete);
    }
 }
@@ -135,7 +144,6 @@ void* hilo_interrupt(void* arg){
    log_info(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
    free(mensaje);
 
-
    while (1) {
       // Lógica para recibir interrupciones
       t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
@@ -143,9 +151,16 @@ void* hilo_interrupt(void* arg){
          log_error(logger_cpu, "Error al recibir interrupción de Kernel. Cerrando conexion");
          pthread_exit(NULL); // Terminar el hilo si hay un error
       }
-      // Procesar la interrupción
-      log_info(logger_cpu, "Recibida interrupción de Kernel");
-      // Aquí puedes manejar la lógica de la interrupción según sea necesario
+      if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
+         log_info(logger_cpu, "Recibida interrupción de Kernel");
+         interrupcion = deserializar_interrupcion(paquete_interrupt->buffer);
+         // Procesar la interrupción 
+         IF = 1; // Flag: Indica que se recibio una interrupcion
+         
+         sem_wait(&semaforo_interrupcion);
+         
+      }
+      
       liberar_paquete(paquete_interrupt);
    }
 }
@@ -157,8 +172,13 @@ void* hilo_ciclo_instruccion(void* arg){
       pthread_mutex_lock(&mutex_proceso);
       if (proceso != NULL) {
          // Ejecutar el ciclo de instrucción
-         ciclo_instruccion(proceso, socket_memoria, socket_kernel_dispatch, socket_kernel_interrupt);
+         ciclo_instruccion(proceso, interrupcion, socket_memoria, socket_kernel_dispatch, socket_kernel_interrupt);
       }
       pthread_mutex_unlock(&mutex_proceso);
+
+      // Libera el semáforo para permitir que el hilo de despacho reciba un nuevo proceso
+      sem_post(&semaforo_proceso);
+      // Libera el semáforo para permitir que el hilo de interrupt reciba una nueva interrupcion
+      sem_post(&semaforo_interrupcion);
    }
 }

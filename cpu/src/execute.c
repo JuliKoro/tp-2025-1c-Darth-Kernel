@@ -10,50 +10,51 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
         case NOOP:
             // NOOP solo consume tiempo, no hace nada
             sleep(1); // Simula un ciclo de instrucción de 1 segundo
-            proceso->pc++; // Incremento el PC en 1 (actualiza el PC global)
+            PC++; // Incremento el PC en 1 (actualiza el PC global)
             break;
         case WRITE:
             // Lógica para escribir en memoria
             // escribir_en_memoria(socket_memoria, instruccion->direccion, instruccion->datos);
-            proceso->pc++;
+            PC++;
             break;
 
         case READ:
             // Lógica para leer de memoria
             // leer_de_memoria(socket_memoria, instruccion->direccion, instruccion->tamanio);
-            proceso->pc++;
+            PC++;
             break;
 
         case GOTO:
             // Actualizar el PC global a la dirección de destino
-            proceso->pc = instruccion->pc_destino;
+            PC = instruccion->pc_destino;
             break;
 
         case IO: // SYSCALL (Dispositivo, Tiempo)
             // manejar operaciones de entrada/salida
-            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
+            PC++;
             break;
 
         case INIT_PROC: // SYSCALL (Archivo de instrucciones, Tamaño)
             // inicializar un proceso
-            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
+            PC++;
             break;
 
         case DUMP_MEMORY: // SYSCALL
             // volcar la memoria
-            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
+            PC++;
             break;
 
         case EXIT_INSTR: // SYSCALL
-            proceso->pc++;
             enviar_syscall(instruccion, socket_kernel_dispatch);
+            PC++;
             break;
 
         case INSTRUCCION_DESCONOCIDA:
             log_error(logger_cpu, "## PID: %d - Instrucción desconocida recibida.", instruccion->pid);
+            PC++;
             return -1; // Retornar un código de error si la instrucción no es válida
 
         default:

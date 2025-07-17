@@ -2,6 +2,7 @@
 #define  CPU_H_
 
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "cpu-conexiones.h"
 #include "cpu-configs.h"

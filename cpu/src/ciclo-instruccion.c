@@ -1,23 +1,23 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
-    pc = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
+void ciclo_instruccion(t_proceso_cpu* proceso, uint32_t interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
+    PC = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
-        
-        
         
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
-        execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); //ETAPA EXECUTE
+        // ETAPA EXECUTE
+        execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); 
+        proceso->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
 
         // CHECK INTERRUPT
-        /*
-        if (check_interrupt(proceso, socket_kernel_interrupt)) {
+        if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
+            enviar_devolucion_interrupcion(proceso, socket_kernel_interrupt);
+            IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción
         }
-        */
 
         // LIMPIAR INSTRUCCIONES
         destruir_instruccion(instruccion_decodificada);
@@ -28,7 +28,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
 
 // ETAPA FETCH
 char* fetch(t_proceso_cpu* proceso, int socket_memoria){
-    proceso->pc = pc; // Actualiza el PC del struct de proceso para enviar a memoria
+    proceso->pc = PC; // Actualiza el PC del struct de proceso para enviar a memoria
     log_info(logger_cpu, "## PID: %d - FETCH - Program Counter: %d", proceso->pid, proceso->pc);
 
     // Verificar conexión
@@ -122,24 +122,31 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
 }
 
 // CHECK INTERRUPT
-/*
-bool check_interrupt(t_proceso_cpu* proceso, int socket_kernel_interrupt) {
-    t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
-    if (paquete_interrupt != NULL) {
-        // Verifica si la interrupción es para el PID actual
-        if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION && paquete_interrupt->pid == proceso->pid) {
-            // Devuelve el PID y el PC actualizado al Kernel
-            t_paquete* paquete_respuesta = crear_paquete_respuesta(proceso->pid, proceso->pc);
-            enviar_paquete(socket_kernel_interrupt, paquete_respuesta);
-            liberar_paquete(paquete_respuesta);
-            liberar_paquete(paquete_interrupt);
-            return true; // Indica que se manejó una interrupción
+bool check_interrupt(uint32_t interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt) {
+    if (IF == 1) {
+        // Hay una Interrupcion
+        if (interrupcion == proceso->pid) {
+            log_debug(logger_cpu, "Se ha detectado una interrupcion para el proceso %d", proceso->pid);
+            return true;
+        } else {
+            log_error(logger_cpu, "Interrupcion invalida. No corresponde al PID: %d", proceso->pid);
+            return false;  
         }
-        liberar_paquete(paquete_interrupt); // Si no es para este PID, libera el paquete
+    } else {
+        // No hay interrupciones
+        log_debug(logger_cpu, "No se ha detectado ninguna interrupcion para el proceso");
+        return false;
     }
-    return false; // Indica que no hubo interrupción
 }
-*/
+
+void enviar_devolucion_interrupcion(t_proceso_cpu* proceso, int socket_kernel_interrupt){
+    t_buffer* buffer = serializar_proceso_cpu(proceso);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
+    if(enviar_paquete(socket_kernel_interrupt, paquete) == -1){
+        log_error(logger_cpu, "Error: No se pudo enviar la devulucion de la interrupcion a kernel");
+        return;
+    }  
+}
 
 void destruir_instruccion(instruccion_decodificada* instruccion) {
     if(instruccion->datos != NULL) free(instruccion->datos);

@@ -20,23 +20,13 @@
 /**
 * @brief Funcion que realiza el ciclo de intrucciones fetch-decode-execute para una determinada instruccion
 * @param proceso Estructura de una proceso recibido desde Kernel que contiene el PID y el PC
+* @param interrupcion PID del proceso al que se debe interrumpir (en caso de que Kernel haya mandado)
 * @param socket_memoria socket de memoria al que se le pediran las instrucciones
 * @param socket_kernel_dispatch socket de kernel que se le pediran los procesos
 * @param socket_kernel_interrupt socket de kernel donde se haran las interrupciones
 * @return nada
 */
-void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
-
-/**
- * @brief Verifica si hay una interrupción para el proceso actual.
- * 
- * @param proceso Proceso actual que se está ejecutando (PID y PC)
- * @param socket_kernel_interrupt Socket utilizado para recibir paquetes de interrupción del kernel.
- * 
- * @return true Si se manejó una interrupción válida para el PID actual.
- * @return false Si no hubo interrupción o si la interrupción no corresponde al PID actual.
- */
-bool check_interrupt(t_proceso_cpu* proceso, int socket_kernel_interrupt);
+void ciclo_instruccion(t_proceso_cpu* proceso, uint32_t interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
 
 /**
 * @brief Realiza la etapa fetch del ciclo de instruccion de cpu
@@ -57,6 +47,26 @@ char* fetch(t_proceso_cpu* proceso, int socket_memoria);
  * instruccion_decodificada* instr = decodificar_instruccion("WRITE 0x1A 42", 15);
  */
 instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_t pid);
+
+/**
+ * @brief Verifica si hay una interrupción para el proceso actual.
+ * 
+ * @param interrupcion PID del proceso al que se debe interrumpir (lo envia Kernel)
+ * @param socket_kernel_interrupt Socket utilizado para recibir paquetes de interrupción del kernel.
+ * @param proceso Estructura del proceso actual que contiene el PID y el PC
+ * 
+ * @return true Si se recibio una interrupcion desde kernel
+ * @return false Si no hubo interrupción
+ */
+bool check_interrupt(uint32_t interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt);
+
+/**
+ * @brief Envia el PID y PC (actualizado) del proceso a Kernel si es que ocurrio una interrupcion
+ * 
+ * @param proceso Estructura del proceso actual que contiene el PID y el PC
+ * @param socket_kernel_dispatch Socket utilizado para enviar paquetes de interrupción al kernel.
+ */
+void enviar_devolucion_interrupcion(t_proceso_cpu* proceso, int socket_kernel_interrupt);
 
 /**
  * @brief Libera los recursos de una instrucción decodificada
