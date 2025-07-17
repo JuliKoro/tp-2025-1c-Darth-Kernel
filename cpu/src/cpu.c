@@ -152,7 +152,7 @@ void* hilo_interrupt(void* arg){
          pthread_exit(NULL); // Terminar el hilo si hay un error
       }
       if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
-         log_info(logger_cpu, "Recibida interrupción de Kernel");
+         log_info(logger_cpu, "## Llega interrupción al puerto Interrupt");
          interrupcion = deserializar_interrupcion(paquete_interrupt->buffer);
          // Procesar la interrupción 
          IF = 1; // Flag: Indica que se recibio una interrupcion
