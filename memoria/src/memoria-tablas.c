@@ -22,25 +22,12 @@
         log_error(logger_memoria, "Error al asignar memoria para tabla de nivel %d.", nivel);
         exit(EXIT_FAILURE);
     }
+
     tabla->nivel_actual = nivel;
-    tabla->entradas_ocupadas = 0; // Inicialmente ninguna entrada está en uso
-    tabla->entradas = malloc(memoria_configs.entradasportabla * sizeof(t_entrada_pagina*));
+    tabla->entradas_ocupadas = 0;
+    tabla->entradas = calloc(memoria_configs.entradasportabla, sizeof(t_entrada_pagina*));
     if (tabla->entradas == NULL) {
         log_error(logger_memoria, "Error al asignar memoria para entradas de tabla de nivel %d.", nivel);
-        // Liberar lo ya asignado antes de salir
-        // El error estaba aquí: 'i' no estaba en el ámbito de este 'if'
-        // Se debe usar un contador local o un goto para limpiar.
-        // La forma más sencilla es usar un contador local para la limpieza.
-        // O, mejor aún, refactorizar para que la limpieza se haga en un punto único.
-        // Para este caso, asumimos que el 'i' del bucle principal es el que se quiere usar.
-        // El error es un poco extraño, ya que 'i' debería ser visible.
-        // Vamos a usar un bucle for con 'k' para evitar cualquier ambigüedad.
-        for (int k = 0; k < memoria_configs.entradasportabla; k++) { // <-- Corrección aquí
-            if (tabla->entradas[k] != NULL) { // Solo liberar si ya se asignó
-                free(tabla->entradas[k]);
-            }
-        }
-        free(tabla->entradas);
         free(tabla);
         exit(EXIT_FAILURE);
     }
@@ -48,32 +35,31 @@
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         tabla->entradas[i] = malloc(sizeof(t_entrada_pagina));
         if (tabla->entradas[i] == NULL) {
-            log_error(logger_memoria, "Error al asignar memoria para entrada %d de tabla de nivel %d.", i, nivel);
-            // Liberar lo ya asignado antes de salir
-            for (int j = 0; j < i; j++) free(tabla->entradas[j]); // <-- Aquí 'i' es el contador del bucle principal
+            log_error(logger_memoria, "Error al asignar entrada %d en tabla de nivel %d", i, nivel);
+            for (int j = 0; j < i; j++) free(tabla->entradas[j]);
             free(tabla->entradas);
             free(tabla);
             exit(EXIT_FAILURE);
         }
+
         tabla->entradas[i]->presente = false;
         tabla->entradas[i]->modificado = false;
-        tabla->entradas[i]->marco = -1; // -1 indica que no hay marco asignado
-        tabla->entradas[i]->posicion_swap = -1; // -1 indica que no está en SWAP
+        tabla->entradas[i]->marco = -1;
+        tabla->entradas[i]->posicion_swap = -1;
 
         if (nivel < memoria_configs.cantidadniveles - 1) {
-            // Si no es el último nivel, la entrada apunta a otra tabla de nivel
-            // Se crea la tabla de nivel inferior y se almacena su dirección como un entero.
-            // Esto asume que las tablas de nivel intermedio no ocupan marcos de datos,
-            // sino que son estructuras de control en el espacio de Kernel.
-            t_tabla_nivel* siguiente_tabla = crear_tabla_nivel(nivel + 1);
-            tabla->entradas[i]->marco = (intptr_t)siguiente_tabla; // Almacenar la dirección como intptr_t
-            tabla->entradas[i]->presente = true; // La tabla de nivel inferior "existe"
-            log_debug(logger_memoria, "Tabla de nivel %d, entrada %d: Creada tabla de nivel %d en dirección %p.", nivel, i, nivel + 1, siguiente_tabla);
+            t_tabla_nivel* subtabla = crear_tabla_nivel(nivel + 1);
+            tabla->entradas[i]->marco = (intptr_t)subtabla;
+            tabla->entradas[i]->presente = true;
+            log_debug(logger_memoria, "Tabla de nivel %d, entrada %d: Creada tabla de nivel %d en dirección %p.", nivel, i, nivel + 1, subtabla);
         }
     }
+
     log_debug(logger_memoria, "Tabla de nivel %d creada en dirección %p.", nivel, tabla);
     return tabla;
 }
+
+
 
 /**
   * @brief Destruye una tabla de páginas y sus sub-tablas recursivamente.
@@ -87,47 +73,47 @@
   * @param tabla_void Puntero a la tabla de páginas a destruir (se castea a `t_tabla_nivel*`).
   */
  void destruir_tabla_paginas(void* tabla_void) {
-    t_tabla_nivel* tabla = (t_tabla_nivel*)tabla_void;
-    if (tabla == NULL) return;
+    if (!tabla_void) return;
 
+    t_tabla_nivel* tabla = (t_tabla_nivel*)tabla_void;
     log_debug(logger_memoria, "Destruyendo tabla de nivel %d en dirección %p.", tabla->nivel_actual, tabla);
 
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         t_entrada_pagina* entrada = tabla->entradas[i];
-        if (entrada == NULL) continue;
+        if (!entrada) continue;
 
         if (tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-            // Si es una tabla de nivel intermedio, destruir la tabla de nivel inferior
-            // Solo si la entrada estaba "presente" (es decir, la tabla de nivel inferior fue creada)
-            if (entrada->presente) {
-                t_tabla_nivel* siguiente_tabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-                if (siguiente_tabla != NULL) {
-                    destruir_tabla_paginas(siguiente_tabla);
-                    entrada->marco = (intptr_t)NULL; // Marcar como liberado
+            if (entrada->presente && entrada->marco != -1) {
+                t_tabla_nivel* subtabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
+
+                // Validación adicional: evitar destruir punteros locos
+                if (subtabla != NULL && subtabla != tabla) {
+                    destruir_tabla_paginas(subtabla);
+                    entrada->marco = -1;
                 }
             }
         } else {
-            // Último nivel: es una página de datos
             if (entrada->presente && entrada->marco != -1) {
-                // Si la página está en memoria principal, liberar el marco
-                void* marco_a_liberar = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
-                liberar_marco(marco_a_liberar);
-                log_debug(logger_memoria, "Marco %d liberado al destruir tabla de nivel %d, entrada %d.", entrada->marco, tabla->nivel_actual, i);
+                void* marco_ptr = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
+                liberar_marco(marco_ptr);
+                log_debug(logger_memoria, "Marco %d liberado en nivel %d, entrada %d", entrada->marco, tabla->nivel_actual, i);
             }
         }
 
-        // Liberar la posición en SWAP si la página estaba allí
         if (entrada->posicion_swap != -1) {
             liberar_posicion_swap(entrada->posicion_swap);
-            log_debug(logger_memoria, "Posición SWAP %d liberada al destruir tabla de nivel %d, entrada %d.", entrada->posicion_swap, tabla->nivel_actual, i);
+            log_debug(logger_memoria, "Posición SWAP %d liberada en nivel %d, entrada %d", entrada->posicion_swap, tabla->nivel_actual, i);
         }
-        free(entrada); // Liberar la estructura de la entrada
-        tabla->entradas[i] = NULL; // Importante: evitar doble free
 
+        free(entrada);
+        tabla->entradas[i] = NULL;
     }
-    free(tabla->entradas); // Liberar el array de punteros a entradas
-    free(tabla);           // Liberar la estructura de la tabla
+
+    free(tabla->entradas);
+    free(tabla);
 }
+
+
 
 /**
   * @brief Maneja un fallo de página.
@@ -225,14 +211,17 @@
         aplicar_retardo_memoria(); // Retardo por acceso a cada nivel de tabla de páginas
 
         if (!entrada_actual->presente) {
-            // Fallo de página: la página (o la tabla de nivel inferior) no está en memoria principal
             log_info(logger_memoria, "PID %d: Fallo de página en nivel %d, índice %d. La entrada no está presente.", pid, nivel, indice_entrada);
             int direccion_fisica_resultante = manejar_fallo_pagina(pid, entrada_actual, desplazamiento);
             if (direccion_fisica_resultante == -1) {
                 log_error(logger_memoria, "PID %d: No se pudo manejar el fallo de página. Traducción fallida.", pid);
+                return -1;
             }
+            *entrada_out = entrada_actual; // ← SOLUCIÓN: devolver la entrada modificada
             return direccion_fisica_resultante;
         }
+        
+        
 
         if (nivel < memoria_configs.cantidadniveles - 1) {
             // Si no es el último nivel, la entrada apunta a la siguiente tabla de nivel
@@ -268,4 +257,3 @@
     
     return direccion_fisica;
 }
-
