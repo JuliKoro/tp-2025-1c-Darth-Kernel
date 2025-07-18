@@ -164,7 +164,8 @@ extern pthread_mutex_t mutex_lista_suspready;
 
 
 extern sem_t sem_largo_plazo;
-
+extern sem_t sem_corto_plazo;
+extern sem_t sem_cpu_disponible;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -502,35 +503,18 @@ void eliminar_procesos_en_exit();
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para planificacion corto plazo
+                                Actualizacion de PCB
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /**
- * @brief Aumenta el grado de multiprogramacion
+ * @brief Actualiza el PC del pcb en la lista blocked
  * 
- * Esta función no recibe parámetros. Aumenta el grado de multiprogramacion
- * 
+ * @param pid: El pid del pcb a actualizar
+ * @param pc: El nuevo valor del PC
+ * @return 0 si el pcb se actualiza correctamente
  */
-void aumentar_grado_multiprogramacion();
-
-/**
- * @brief Disminuye el grado de multiprogramacion
- * 
- * Esta función no recibe parámetros. Disminuye el grado de multiprogramacion
- * 
- */
-void disminuir_grado_multiprogramacion();
-
-/**
- * @brief Comprueba si el grado de multiprogramacion es el maximo
- * 
- * Esta función no recibe parámetros. Comprueba si el grado de multiprogramacion es el maximo
- * 
- */
-bool comprobar_grado_multiprogramacion_maximo();
-
-
+int actualizar_pcb_en_blocked(u_int32_t pid, u_int32_t pc);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -589,7 +573,21 @@ int buscar_cpu_por_socket_unsafe(int socket);
  */
 int asignar_pcb_a_cpu(t_pcb* pcb);
 
+/**
+ * @brief Obtiene la cpu que esta ejecutando un proceso
+ * 
+ * @param pid: El pid del proceso
+ * @return La cpu que esta ejecutando el proceso o -1 si no existe
+ */
+t_cpu_en_kernel* obtener_cpu_por_pid(u_int32_t pid);
 
+/**
+ * @brief Libera una cpu, cambia el valor de esta_ocupada a false y el pid_actual a -1 para indicar que esta libre
+ * 
+ * @param cpu: La cpu a liberar
+ * @return 0 si la cpu se libera correctamente
+ */
+int liberar_cpu(t_cpu_en_kernel* cpu);
 
 
 
@@ -651,6 +649,6 @@ int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso);
  */
 int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid);
 
-
+int exit_syscall();
 
 #endif

@@ -53,6 +53,8 @@ pthread_mutex_t mutex_lista_suspready = PTHREAD_MUTEX_INITIALIZER;
 
 
 sem_t sem_largo_plazo;
+sem_t sem_corto_plazo;
+sem_t sem_cpu_disponible;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -199,6 +201,8 @@ void inicializar_listas_y_sem() {
     lista_cpu = list_create();
     lista_io = list_create();
     sem_init(&sem_largo_plazo, 0, 0);
+    sem_init(&sem_corto_plazo, 0, 0);
+    sem_init(&sem_cpu_disponible, 0, 0);
 }
 
 int recibir_mensaje_cpu(int socket_cpu) {
@@ -259,11 +263,13 @@ void mover_a_ready(t_pcb* pcb) {
         list_add(lista_ready, pcb);
         pthread_mutex_unlock(&mutex_lista_ready);
         actualizar_estado_pcb(pcb, READY);
+        sem_post(&sem_corto_plazo);
     } else if(algoritmo == PMCP) {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add_sorted(lista_ready, pcb, es_mas_chico);
         pthread_mutex_unlock(&mutex_lista_ready);
         actualizar_estado_pcb(pcb, READY);
+        sem_post(&sem_corto_plazo);
     }
 }
 
@@ -338,6 +344,25 @@ int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo
     
     pthread_mutex_unlock(&mutex_lista_executing);
 
+    //Tengo que avisar al CPU que el proceso se bloqueo
+    if(pcb_encontrado != NULL) {
+        t_cpu_en_kernel* cpu = obtener_cpu_por_pid(pcb_encontrado->pid);
+        if(cpu != NULL) {
+            t_interrupcion* interrupcion = malloc(sizeof(t_interrupcion));
+            interrupcion->pid = pcb_encontrado->pid;
+            interrupcion->pc = pcb_encontrado->pc;
+            interrupcion->motivo = INTERRUPCION_BLOQUEO;
+            t_buffer* buffer = serializar_interrupcion(interrupcion);
+            t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
+            enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+            liberar_cpu(cpu);
+        }
+    } else {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        return -1;
+    }
+    
+
     return 0;
 }
 
@@ -391,8 +416,26 @@ int mover_executing_a_blocked(u_int32_t pid) {
             break;
         }
     }
-
     pthread_mutex_unlock(&mutex_lista_executing);
+
+    //Tengo que avisar al CPU que el proceso se bloqueo
+    if(pcb_encontrado != NULL) {
+        t_cpu_en_kernel* cpu = obtener_cpu_por_pid(pcb_encontrado->pid);
+        if(cpu != NULL) {
+            t_interrupcion* interrupcion = malloc(sizeof(t_interrupcion));
+            interrupcion->pid = pcb_encontrado->pid;
+            interrupcion->pc = pcb_encontrado->pc;
+            interrupcion->motivo = INTERRUPCION_BLOQUEO;
+            t_buffer* buffer = serializar_interrupcion(interrupcion);
+            t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
+            enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+            liberar_cpu(cpu);
+        }
+    } else {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
+        return -1;
+    }
+    
 
     return 0;
 }
@@ -758,29 +801,22 @@ void eliminar_procesos_en_exit(){
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                Funciones para planificacion corto plazo
+                                Actualizacion de PCB
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void aumentar_grado_multiprogramacion() {
-    pthread_mutex_lock(&mutex_grado_multiprogramacion);
-    grado_multiprogramacion++;
-    pthread_mutex_unlock(&mutex_grado_multiprogramacion);
+int actualizar_pcb_en_blocked(u_int32_t pid, u_int32_t pc) {
+    pthread_mutex_lock(&mutex_lista_blocked);
+    for(int i = 0; i < list_size(lista_blocked); i++) {
+        t_pcb* pcb = list_get(lista_blocked, i);
+        if(pcb->pid == pid) {
+            pcb->pc = pc;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_blocked);
+    return 0;
 }
-
-void disminuir_grado_multiprogramacion() {
-    pthread_mutex_lock(&mutex_grado_multiprogramacion);
-    grado_multiprogramacion--;
-    pthread_mutex_unlock(&mutex_grado_multiprogramacion);
-}
-
-bool comprobar_grado_multiprogramacion_maximo() {
-    pthread_mutex_lock(&mutex_grado_multiprogramacion);
-    bool valor = grado_multiprogramacion < GRADO_MULTIPROGRAMACION_MAXIMO;
-    pthread_mutex_unlock(&mutex_grado_multiprogramacion);
-    return valor;
-}
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones para planificacion mediano plazo
@@ -861,10 +897,41 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
     t_paquete* paquete = empaquetar_buffer(PAQUETE_PROCESO_CPU, buffer);
     enviar_paquete(cpu->socket_cpu_dispatch, paquete);
 
+    mover_ready_a_executing(pcb->pid);
 
     return 0;
 }
 
+t_cpu_en_kernel* obtener_cpu_por_pid(u_int32_t pid) {
+    t_cpu_en_kernel* cpu = NULL;
+    pthread_mutex_lock(&mutex_cpu);
+    for(int i = 0; i < list_size(lista_cpu); i++) {
+        cpu = list_get(lista_cpu, i);
+        if(cpu->pid_actual == pid) {
+            pthread_mutex_unlock(&mutex_cpu);
+            return cpu;
+        }
+    }
+    pthread_mutex_unlock(&mutex_cpu);
+    return NULL;
+}
+
+int liberar_cpu(t_cpu_en_kernel* cpu) {
+    pthread_mutex_lock(&mutex_cpu);
+    t_cpu_en_kernel* cpu_a_liberar = NULL;
+    for(int i = 0; i < list_size(lista_cpu); i++) {
+        cpu_a_liberar = list_get(lista_cpu, i);
+        if(cpu->id_cpu == cpu_a_liberar->id_cpu) {
+            cpu_a_liberar->esta_ocupada = false;
+            cpu_a_liberar->pid_actual = -1;
+            sem_post(&sem_cpu_disponible);
+            break;
+        } 
+    }
+    pthread_mutex_unlock(&mutex_cpu);
+    
+    return 0;
+}
 
                                     /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
                                     
@@ -917,7 +984,7 @@ int manejar_syscall(t_syscall* syscall) {
             return -1;
         }
     } else if(strcmp(tipo_syscall, "EXIT") == 0) {
-        //TODO: enviar a exit
+        exit_syscall(syscall->pid);
     } else if(strcmp(tipo_syscall, "DUMP_MEMORIA") == 0) {
         //TODO: dump_memoria
     } else {
@@ -1005,4 +1072,16 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
    
 
 
-    
+int exit_syscall(u_int32_t pid) {
+    t_pcb* pcb = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        pcb = list_get(lista_executing, i);
+        if(pcb->pid == pid) {
+            actualizar_estado_pcb(pcb, EXIT);
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_executing);
+    return 0;
+}

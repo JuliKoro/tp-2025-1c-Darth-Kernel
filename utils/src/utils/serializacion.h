@@ -41,7 +41,8 @@ typedef enum {
     PAQUETE_PROCESO_CPU=2,
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
-    PAQUETE_INTERRUPCION=5
+    PAQUETE_INTERRUPCION=5,
+
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -119,6 +120,24 @@ typedef struct {
     uint32_t pid;
 } t_syscall;
 
+//Estructura de interrupcion
+typedef enum {
+    INTERRUPCION_BLOQUEO=1,
+} t_motivo_interrupcion;
+
+/**
+ * @struct t_interrupcion
+ * @brief Estructura que representa una interrupcion. Tiene el pid del proceso al que se quiere interrumpir y el motivo de la interrupcion.
+ * 
+ * @param pid: Identificador del proceso al que se quiere interrumpir
+ * @param pc: PC del proceso al que se quiere interrumpir
+ * @param motivo: Motivo de la interrupcion
+ */
+typedef struct {
+    uint32_t pid;
+    uint32_t pc;
+    t_motivo_interrupcion motivo;
+} t_interrupcion;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -355,15 +374,15 @@ t_syscall* deserializar_syscall(t_buffer* buffer);
  * @param pid ID del proceso al que se quiere interrumpir
  * @return t_buffer* Puntero al buffer que contiene la serializacion de la interrupcion
  */
-t_buffer* serializar_interrupcion(uint32_t pid);
+t_buffer* serializar_interrupcion(t_interrupcion* interrupcion);
 
 /**
  * @brief Deserializa un buffer en una interrupcion
  * 
  * @param buffer Puntero al buffer que contiene la serializacion de la interrupcion
- * @return uint32_t ID del proceso al que se quiere interrumpir
+ * @return t_interrupcion* Puntero a la estructura de interrupcion
  */
-uint32_t deserializar_interrupcion(t_buffer* buffer);
+t_interrupcion* deserializar_interrupcion(t_buffer* buffer);
 
 #endif
 

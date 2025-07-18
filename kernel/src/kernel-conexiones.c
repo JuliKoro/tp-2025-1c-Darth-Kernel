@@ -30,20 +30,10 @@ int iniciar_servidor_interrupt() {
 
 int kernel_conectar_a_memoria(){
 
-    iniciar_logger_global(&logger_sockets, "kernel-conexiones.log", "[KERNEL-MEMORIA]");
-
     int socket_memoria = crear_conexion(kernel_configs.ipmemoria, int_a_string(kernel_configs.puertomemoria));
 
     log_info(logger_sockets, "FD de conexion con la MEMORIA %d", socket_memoria);
-    log_info(logger_sockets, "[HANDSHAKE] Enviando handhsake a MEMORIA...");
 
-    if(enviar_handshake (socket_memoria, HANDSHAKE_KERNEL) == -1) {
-        log_error(logger_sockets, "[HANDSHAKE] Fallo al enviar handshake a MEMORIA. Cierro conexion.");
-        close(socket_memoria);
-        return -1;
-    }
-
-    log_info(logger_sockets, "[HANDSHAKE] Handshake exitoso! Conexion abierta con MEMORIA");
     return socket_memoria;
 }
 

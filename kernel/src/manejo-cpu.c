@@ -73,11 +73,13 @@ void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
         cpu_nueva->pid_actual = -1;
         list_add(lista_cpu, cpu_nueva);
         pthread_mutex_unlock(&mutex_cpu);
+        sem_post(&sem_cpu_disponible);
     }
     else {
         //Si existe, actualizo el socket de dispatch
         cpu_en_kernel->socket_cpu_dispatch = (intptr_t)socket_cpu_dispatch;
         pthread_mutex_unlock(&mutex_cpu);
+        sem_post(&sem_cpu_disponible);
     }
 
     //Creo el hilo que estara operando infinitamente sobre ese socket de dispatch. 
@@ -100,10 +102,12 @@ void* guardar_cpu_interrupt(void* socket_cpu_interrupt, int id_cpu) {
         cpu_nueva->pid_actual = -1;
         list_add(lista_cpu, cpu_nueva);
         pthread_mutex_unlock(&mutex_cpu);
+        sem_post(&sem_cpu_disponible);
     }
     else {
         cpu_en_kernel->socket_cpu_interrupt = (intptr_t)socket_cpu_interrupt;
         pthread_mutex_unlock(&mutex_cpu);
+        sem_post(&sem_cpu_disponible);
     }
 
     //Creo el hilo que estara operando infinitamente sobre ese socket de interrupt. 
@@ -132,6 +136,12 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
             break;
         }
 
+        if(paquete->codigo_operacion == PAQUETE_SYSCALL) {
+            t_syscall* syscall = deserializar_syscall(paquete->buffer);
+            manejar_syscall(syscall);
+            free(syscall);
+        }
+
 
     }
     return NULL;
@@ -148,6 +158,15 @@ void* manejo_interrupt(void* socket_cpu_interrupt){
             //Ya fue eliminado en el hilo de manejo_dispatch
             break;
         }
+
+        if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
+            t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
+            //Tengo que buscar el PCB para actualizarlo
+            if(interrupcion->motivo == INTERRUPCION_BLOQUEO) {
+                actualizar_pcb_en_blocked(interrupcion->pid, interrupcion->pc);
+            }
+        }
+        liberar_paquete(paquete);
     }
     return NULL;
 };
@@ -171,6 +190,7 @@ void* eliminar_cpu_por_socket(int socket) {
         close(cpu_en_kernel->socket_cpu_dispatch);
         close(cpu_en_kernel->socket_cpu_interrupt);
         free(cpu_en_kernel);
+        sem_trywait(&sem_cpu_disponible);
     } else {
         pthread_mutex_unlock(&mutex_cpu);
     }

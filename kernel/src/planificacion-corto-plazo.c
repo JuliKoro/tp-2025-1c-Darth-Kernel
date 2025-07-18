@@ -9,19 +9,17 @@ void iniciar_planificador_corto_plazo() {
     switch (algoritmo) {
         case FIFO:
             while(true) {
-                //2. Envio proceso desde cola READY a cola EXECUTING
-                //TODO: erifico si hay CPUs disponibles
+                //Obtengo el pcb de lista ready, ya esta ordenado segun el algoritmo
+                sem_wait(&sem_corto_plazo); //Espero a que haya un pcb en ready
+                sem_wait(&sem_cpu_disponible); //Espero a que haya una cpu disponible
                 t_pcb* pcb = peek_lista_ready();
                 if(pcb == NULL) {
                     log_error(logger_kernel, "No hay nada en ready aun");
                     continue;
                 }
-                mover_ready_a_executing(pcb->pid);
-
-                //TODO: Manejar cola de executing, mandar procesos a CPU
-                //3. Envio proceso desde cola EXECUTING a cola BLOCKED
-                //TODO: Verifico si hay IO disponibles
-            }
+                //Esta funcion asigna el pcb a un cpu y lo manda a la cola executing
+                asignar_pcb_a_cpu(pcb);
+             }
             break;
         case SJF_SIN_DESALOJO:
             printf("No implementado aun\n");
