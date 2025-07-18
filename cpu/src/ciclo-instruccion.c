@@ -1,6 +1,6 @@
 #include "ciclo-instruccion.h"
 
-void ciclo_instruccion(t_proceso_cpu* proceso, uint32_t interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
+void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
     PC = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
     while(1){ // loop ciclo de instruccion
         
@@ -14,7 +14,8 @@ void ciclo_instruccion(t_proceso_cpu* proceso, uint32_t interrupcion, int socket
 
         // CHECK INTERRUPT
         if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
-            enviar_devolucion_interrupcion(proceso, socket_kernel_interrupt);
+            interrupcion->pc = PC;
+            enviar_devolucion_interrupcion(interrupcion, socket_kernel_interrupt);
             IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción
         }
@@ -122,10 +123,10 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
 }
 
 // CHECK INTERRUPT
-bool check_interrupt(uint32_t interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt) {
+bool check_interrupt(t_interrupcion* interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt) {
     if (IF == 1) {
         // Hay una Interrupcion
-        if (interrupcion == proceso->pid) {
+        if (interrupcion->pid == proceso->pid) {
             log_debug(logger_cpu, "Se ha detectado una interrupcion para el proceso %d", proceso->pid);
             return true;
         } else {
@@ -139,8 +140,8 @@ bool check_interrupt(uint32_t interrupcion, t_proceso_cpu* proceso, int socket_k
     }
 }
 
-void enviar_devolucion_interrupcion(t_proceso_cpu* proceso, int socket_kernel_interrupt){
-    t_buffer* buffer = serializar_proceso_cpu(proceso);
+void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_interrupt){
+    t_buffer* buffer = serializar_interrupcion(interrupcion_fb);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
     if(enviar_paquete(socket_kernel_interrupt, paquete) == -1){
         log_error(logger_cpu, "Error: No se pudo enviar la devulucion de la interrupcion a kernel");

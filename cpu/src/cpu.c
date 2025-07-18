@@ -3,6 +3,7 @@
 int socket_kernel_dispatch;
 int socket_kernel_interrupt;
 int socket_memoria;
+
 t_log* logger_cpu;
 
 // Mutex para proteger el acceso a la variable proceso
@@ -12,7 +13,7 @@ sem_t semaforo_proceso; // Semáforo para controlar la recepción de nuevos proc
 sem_t semaforo_interrupcion; // Semáforo para controlar la recepción de interrupciones
 
 t_proceso_cpu* proceso = NULL;
-uint32_t interrupcion;
+t_interrupcion* interrupcion = NULL;
 
 // REGISTROS
 uint32_t PC; // Declaracion de la variable global para el PC (Porgram Counter)
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
    socket_kernel_interrupt = cpu_conectar_a_kernel(cpu_configs.puertokernelinterrupt, id_cpu);
 
    // Conexion con Memoria
-   //socket_memoria = cpu_conectar_a_memoria(id_cpu);
+   socket_memoria = cpu_conectar_a_memoria(id_cpu);
 
    // HILOS
    pthread_t thread_dispatch, thread_interrupt, thread_ciclo_instruccion;
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]) {
    pthread_create(&thread_interrupt, NULL, hilo_interrupt, NULL);
     
    // Crear hilo para ejecutar el ciclo de instrucción
-   //pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
+   pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
 
    // Inicializaion de Semaforos
    sem_init(&semaforo_proceso, 0, 0); // Inicializa el semáforo en 0 (entre hilos)
