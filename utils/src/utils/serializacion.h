@@ -73,6 +73,19 @@ typedef struct {
     uint32_t pc;  // Contador de programa que indica la dirección de la instrucción
 } t_proceso_cpu;
 
+/**
+ * @struct t_tabla_pag
+ * @brief Estructura que contien info sobre la Tabla de Paginas en Memoria
+ * 
+ * @param tamanio_pagina Tamaño de cada pagina en memoria (en bytes)
+ * @param cant_entradas_tabla Cantidad de entradas de cada tabla de páginas
+ * @param cant_niveles Cantidad de niveles de tablas de páginas
+ */
+typedef struct {
+    uint32_t tamanio_pagina;
+    uint32_t cant_entradas_tabla;
+    uint32_t cant_niveles;
+} t_tabla_pag;
 
 //Estructura de buffer para serializacion y deserializacion
 
