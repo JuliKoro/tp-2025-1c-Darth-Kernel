@@ -35,6 +35,7 @@
  * @param PAQUETE_PCB: Código de operación para PCB
  * @param PAQUETE_SYSCALL: Código de operación para syscall
  * @param PAQUETE_INTERRUPCION: Código de operación para interrupcion de un proceso
+ * @param PAQUETE_INFO_TP: Código de operación para handshake Memoria-CPU (Info Tabla de Paginas)
  */
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
@@ -42,6 +43,7 @@ typedef enum {
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
     PAQUETE_INTERRUPCION=5,
+    PAQUETE_INFO_TP=6
 
 } t_codigo_operacion;
 
@@ -396,6 +398,28 @@ t_buffer* serializar_interrupcion(t_interrupcion* interrupcion);
  * @return t_interrupcion* Puntero a la estructura de interrupcion
  */
 t_interrupcion* deserializar_interrupcion(t_buffer* buffer);
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                    Funciones de serializacion y deserializacion Info Tabla de Paginas
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * @brief Serializa una info de Tabla de Paginas
+ * 
+ * @param info_tabla_pag Estructura con informacion de la Tabla de Pagians en Memoria
+ * @return t_buffer* Puntero al buffer que contiene la serializacion de info_tabla_pag
+ */
+t_buffer* serializar_info_tabla_pag(t_tabla_pag* info_tabla_pag);
+
+/**
+ * @brief Deserializa un buffer en una interrupcion
+ * 
+ * @param buffer Puntero al buffer que contiene la serializacion de info_tabla_pag
+ * @return t_tabla_pag* Puntero a la estructura de info_tabla_pag
+ */
+t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer);
 
 #endif
 

@@ -299,3 +299,25 @@ t_interrupcion* deserializar_interrupcion(t_buffer* buffer){
     interrupcion->pc = buffer_read_uint32(buffer);
     return interrupcion;
 }
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                            Funciones de serializacion y deserializacion info de TP
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_buffer* serializar_info_tabla_pag(t_tabla_pag* info_tabla_pag){
+    t_buffer* buffer = buffer_create(sizeof(t_tabla_pag));
+    buffer_add_uint32(buffer, info_tabla_pag->tamanio_pagina);
+    buffer_add_uint32(buffer, info_tabla_pag->cant_entradas_tabla);
+    buffer_add_uint32(buffer, info_tabla_pag->cant_niveles);
+    return buffer;
+}
+
+t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer){
+    t_tabla_pag* info_tabla_pag = malloc(sizeof(t_tabla_pag));
+    info_tabla_pag->tamanio_pagina = buffer_read_uint32(buffer);
+    info_tabla_pag->cant_entradas_tabla = buffer_read_uint32(buffer);
+    info_tabla_pag->cant_niveles = buffer_read_uint32(buffer);
+    return info_tabla_pag;
+}
