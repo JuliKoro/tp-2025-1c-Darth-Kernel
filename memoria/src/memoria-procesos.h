@@ -64,7 +64,7 @@ t_proceso* leer_archivo_de_proceso(const char* filepath, int pid);
  *
  * @param proceso_void Puntero a la estructura `t_proceso` a destruir (se castea internamente).
  */
-void destruir_proceso(void* proceso_void);
+bool destruir_proceso(void* proceso_void);
 
 /**
  * @brief Carga un proceso en memoria.
@@ -136,7 +136,7 @@ void actualizar_metricas(int pid, int tipo_operacion);
  *
  * @param pid PID del proceso a suspender.
  */
-void suspender_proceso(int pid);
+int suspender_proceso(int pid);
 
 /**
  * @brief Des-suspende un proceso.
@@ -158,7 +158,7 @@ void desuspender_proceso(int pid);
  *
  * @param pid PID del proceso a finalizar.
  */
-void finalizar_proceso(int pid);
+int finalizar_proceso(int pid);
 
 /**
  * @brief Realiza un "memory dump" de la memoria principal de un proceso.

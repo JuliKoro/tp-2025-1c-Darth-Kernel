@@ -35,10 +35,25 @@ void* manejar_conexion(void* socket_cliente){
 
         }
         if (paquete->codigo_operacion == PAQUETE_ELIMINAR_PROCESO){
+            t_pcb* pcb = deserializar_pcb(paquete->buffer);
+            //ver si puedo eliminar proceso de memoria
+            if(finalizar_proceso(pcb->pid) == -1){
+                log_error(logger_memoria, "[CARGAR PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
+            enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+            }
             //Aca tenes que devolverme un bool
         }
         if(paquete->codigo_operacion == PAQUETE_SUSPENDER_PROCESO){
-            //Aca tenes que devolverme un bool
+            t_pcb* pcb = deserializar_pcb(paquete->buffer);
+            //ver si puedo suspender proceso de memoria
+            if(suspender_proceso(pcb->pid) == -1){
+                log_error(logger_memoria, "[SUSPENDER PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
+            enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+            }
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);

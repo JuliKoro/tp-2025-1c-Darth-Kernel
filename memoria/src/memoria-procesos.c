@@ -110,70 +110,7 @@
     return proceso;
 }
 
- /**
-  * @brief Destruye una estructura `t_proceso` y libera sus recursos.
-  *
-  * Libera la memoria de las instrucciones y de la propia estructura `t_proceso`.
-  * También muestra las métricas finales del proceso antes de liberarlas.
-  * Esta función está diseñada para ser usada como `element_destroyer` en `dictionary_destroy_and_destroy_elements`.
-  *
-  * @param proceso_void Puntero a la estructura `t_proceso` a destruir (se castea internamente).
-  */
- void destruir_proceso(void* proceso_void) {
-    t_proceso* proceso = (t_proceso*)proceso_void;
-    if (proceso == NULL) return;
-    
 
-    char pid_str[16];
-    sprintf(pid_str, "%d", proceso->pid);
-
-    t_metricas_por_proceso* metricas =
-    dictionary_get(administrador_memoria->metricas_por_proceso, pid_str);
-
-    // Mostrar métricas antes de que sean liberadas por `finalizar_proceso`
-    // NOTA: La lógica de liberación de tablas de páginas y métricas se ha movido
-    // a `finalizar_proceso` en `memoria.c` para centralizar la liberación de recursos
-    // del proceso. Esta función `destruir_proceso` ahora solo se encarga de liberar
-    // la estructura `t_proceso` y sus instrucciones.
-    // Si `destruir_proceso` es llamada por `dictionary_destroy_and_destroy_elements`
-    // al final del `main`, las métricas ya habrán sido mostradas y liberadas por
-    // `finalizar_proceso` cuando el proceso terminó su ejecución.
-    // Por lo tanto, el bloque de métricas aquí es redundante si `finalizar_proceso`
-    // ya se encarga de ello. Se mantiene el log de debug para claridad.
-
-        // Log obligatorio del enunciado, si se encontraron las métricas
-        if (metricas != NULL) {
-            log_info(logger_memoria,
-                "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d;"
-                " Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
-                proceso->pid,
-                metricas->accesos_tablas_paginas,
-                metricas->instrucciones_solicitadas,
-                metricas->bajadas_swap,
-                metricas->subidas_memoria,
-                metricas->lecturas_memoria,
-                metricas->escrituras_memoria);
-        } else {
-            log_warning(logger_memoria, "No se encontraron métricas para el PID %d al destruir proceso", proceso->pid);
-        }
-
-    // Liberar instrucciones del proceso
-    log_debug(logger_memoria, "Liberando instrucciones para PID %d.", proceso->pid);
-    if (proceso->instrucciones) {
-        for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
-            if (proceso->instrucciones[i]) {
-                free(proceso->instrucciones[i]);
-            }
-        }
-        free(proceso->instrucciones);
-    }
-    // Liberar la estructura principal
-    log_debug(logger_memoria, "Estructura t_proceso para PID %d liberada.", proceso->pid);
-    free(proceso);
-
-
-
-}
 
 /**
  * @brief Carga un proceso en memoria.
@@ -369,20 +306,22 @@ static void suspender_paginas_recursivo(t_tabla_nivel *current_tabla, int pid) {
     }
 }
 
-void suspender_proceso(int pid) {
+int suspender_proceso(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
+    int resultado = 0;
 
     t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
     if (!tabla) {
         log_warning(logger_memoria,
                     "Intento de suspender PID %d, pero no se encontró su tabla de páginas.",
                     pid);
-        return;
+        return -1;
     }
 
     suspender_paginas_recursivo(tabla, pid);
     log_info(logger_memoria, "## PID: %d - Proceso Suspendido", pid);
+    return resultado;
 }
 
  /**
@@ -447,38 +386,75 @@ void desuspender_proceso(int pid) {
     log_info(logger_memoria, "## PID: %d - Proceso Desuspendido", pid);
 }
 
- /**
-  * @brief Finaliza un proceso y libera todos sus recursos.
+/**
+  * @brief Destruye una estructura `t_proceso` y libera sus recursos.
+  * 
+  * Libera la memoria de las instrucciones y de la propia estructura `t_proceso`.
+  * Esta función está diseñada para ser usada como `element_destroyer` en diccionarios.
   *
-  * Libera los recursos de memoria principal y SWAP asociados al proceso
-  * utilizando `destruir_tabla_paginas`. Muestra las métricas finales del proceso
-  * y elimina el proceso de la lista de procesos en memoria.
+  * @param proceso_void Puntero a la estructura `t_proceso` a destruir.
+  */
+ void destruir_proceso(void* proceso_void) {
+    t_proceso* proceso = (t_proceso*)proceso_void;
+    if (proceso == NULL) return;
+
+    // Liberar instrucciones del proceso
+    if (proceso->instrucciones) {
+        for (int i = 0; i < proceso->cantidad_instrucciones; i++) {
+            free(proceso->instrucciones[i]);
+        }
+        free(proceso->instrucciones);
+    }
+    free(proceso);
+}
+
+
+/**
+  * @brief Finaliza un proceso y libera todos sus recursos.
+  * 
+  * Libera tablas de páginas, registra métricas, y destruye el proceso.
   *
   * @param pid PID del proceso a finalizar.
   */
- void finalizar_proceso(int pid) {
+int finalizar_proceso(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
+    int resultado = 0;
+
+    // Liberar tabla de páginas
     t_tabla_nivel *tabla = dictionary_remove(administrador_memoria->tablas_paginas, pid_str);
     if (tabla) {
         destruir_tabla_paginas(tabla);
-        log_debug(logger_memoria, "PID %d: Tablas de páginas liberadas.", pid);
+    } else {
+        resultado = -1;
     }
 
-    t_metricas_por_proceso *metricas =
-        dictionary_remove(administrador_memoria->metricas_por_proceso, pid_str);
+    // Registrar métricas y liberarlas
+    t_metricas_por_proceso *metricas = dictionary_remove(administrador_memoria->metricas_por_proceso, pid_str);
     if (metricas) {
         log_info(logger_memoria,
                  "## PID: %d - Proceso Destruido - Métricas - Acc.T.Pag: %d; Inst.Sol.: %d; SWAP: %d; Mem.Prin.: %d; Lec.Mem.: %d; Esc.Mem.: %d",
-                 pid, metricas->accesos_tablas_paginas, metricas->instrucciones_solicitadas,
-                 metricas->bajadas_swap, metricas->subidas_memoria, metricas->lecturas_memoria,
+                 pid, 
+                 metricas->accesos_tablas_paginas, 
+                 metricas->instrucciones_solicitadas,
+                 metricas->bajadas_swap, 
+                 metricas->subidas_memoria, 
+                 metricas->lecturas_memoria,
                  metricas->escrituras_memoria);
         free(metricas);
+    } else {
+        resultado = -1;
     }
 
+    // Liberar la estructura del proceso
     t_proceso *proc = dictionary_remove(procesos_en_memoria, pid_str);
-    if (proc) destruir_proceso(proc);
+    if (proc) {
+        destruir_proceso(proc);
+    } else {
+        resultado = -1;
+    }
+    return resultado;
 }
 
  /**
