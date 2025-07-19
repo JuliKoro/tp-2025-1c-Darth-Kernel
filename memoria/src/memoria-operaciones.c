@@ -59,7 +59,41 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
   * @param valor Puntero a los datos a escribir.
   * @return true si la escritura fue exitosa, false en caso contrario.
   */
+ bool escribir_memoria(int pid, int direccion_fisica, int tam, void* valor) {
+    // Validar límites
+    if (direccion_fisica < 0 || direccion_fisica + tam > memoria_configs.tammemoria) {
+        log_error(logger_memoria, "PID %d: Intento de escritura fuera de los límites. Dir. Física: %d, Tamaño: %d.", pid, direccion_fisica, tam);
+        return false;
+    }
 
+    // Escribir datos en memoria principal
+    memcpy((char*)administrador_memoria->memoria_principal + direccion_fisica, valor, tam);
+
+    // Calcular marco físico
+    int numero_marco_fisico = direccion_fisica / memoria_configs.tampagina;
+
+    // Buscar tabla de páginas del proceso y marcar la página como modificada
+    char pid_str[16];
+    sprintf(pid_str, "%d", pid);
+    t_tabla_nivel* tabla_nivel_0 = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+
+    if (tabla_nivel_0) {
+        marcar_modificado_recursivo(tabla_nivel_0, pid, numero_marco_fisico);
+    } else {
+        log_warning(logger_memoria, "PID %d: No se encontró tabla de páginas para marcar marco %d como modificado.", pid, numero_marco_fisico);
+    }
+
+    // Actualizar métricas y logs
+    actualizar_metricas(pid, ESCRITURA_MEMORIA_MET);
+    log_info(logger_memoria, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam);
+    aplicar_retardo_memoria();
+
+    return true;
+}
+
+
+
+/* 
   bool escribir_memoria(int pid, int direccion_fisica, int tam, void* valor) {
 
     memcpy((char*)administrador_memoria->memoria_principal + direccion_fisica, valor, tam);
@@ -69,7 +103,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
     aplicar_retardo_memoria();
     return true;
 }
-
+*/
   /*
  bool escribir_memoria(int pid, int direccion_logica, int tam, void* valor) {
     char pid_str[16];
