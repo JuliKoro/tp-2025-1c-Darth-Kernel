@@ -25,11 +25,11 @@ void aplicar_retardo_memoria();
  * desde la memoria principal a un nuevo buffer.
  *
  * @param pid PID del proceso.
- * @param direccion_logica Dirección lógica de inicio de la lectura.
+ * @param direccion_fisica Dirección fisica de inicio de la lectura.
  * @param tam Cantidad de bytes a leer.
  * @return Puntero a un nuevo buffer con los datos leídos, or NULL si hay un error.
  */
-void* leer_memoria(int pid, int direccion_logica, int tam);
+void* leer_memoria(int pid, int direccion_fisica, int tam);
 
 /**
  * @brief Escribe datos en la memoria principal.
