@@ -49,7 +49,7 @@ void destruir_tabla_paginas(void* tabla_void);
  * @return Dirección física resultante del marco asignado más el desplazamiento,
  *         o -1 si no se pudo manejar el fallo (no hay marcos libres).
  */
-int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada, int desplazamiento);
+int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada);
 
 
 //ESTO LO HACE CPU

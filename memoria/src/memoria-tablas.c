@@ -128,38 +128,42 @@
   * @return Dirección física resultante del marco asignado más el desplazamiento,
   *         o -1 si no se pudo manejar el fallo (no hay marcos libres).
   */
- int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada, int desplazamiento) {
-    log_info(logger_memoria, "Fallo de página detectado para PID %d. Intentando asignar marco.", pid);
+ int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada) {
+    log_info(logger_memoria, "TLB MISS para PID %d. Asignando marco.", pid);
 
     void* nuevo_marco = obtener_marco_libre();
     if (!nuevo_marco) {
-        log_error(logger_memoria, "No hay marcos libres para manejar fallo de página para PID %d. Operación fallida.", pid);
+        log_error(logger_memoria, "No hay marcos libres para PID %d.", pid);
         return -1; // No hay marcos disponibles
     }
 
     if (entrada->posicion_swap != -1) {
-        // La página estaba en SWAP, cargarla a memoria principal
+        // Página en SWAP: cargarla a memoria principal
         leer_pagina_swap(entrada->posicion_swap, nuevo_marco);
-        aplicar_retardo_swap(); // Aplicar retardo por acceso a SWAP
-        actualizar_metricas(pid, SUBIDA_MEMORIA); // Métrica de subida a Memoria Principal
-        liberar_posicion_swap(entrada->posicion_swap); // Liberar la posición en SWAP
-        entrada->posicion_swap = -1; // Marcar como no en SWAP
-        // Corrección: Usar %ld para el resultado de la resta de punteros
-        log_info(logger_memoria, "Página de PID %d cargada desde SWAP a marco %ld.", pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
+        aplicar_retardo_swap();
+        actualizar_metricas(pid, SUBIDA_MEMORIA); // Métrica subida desde SWAP
+        liberar_posicion_swap(entrada->posicion_swap);
+        entrada->posicion_swap = -1;
+        log_info(logger_memoria, "PID %d: Página cargada desde SWAP a marco %ld.",
+                 pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
     } else {
-        // Es una página nueva, inicializar el marco con ceros
+        // Página nueva: inicializar marco con ceros
         memset(nuevo_marco, 0, memoria_configs.tampagina);
-        // Corrección: Usar %ld para el resultado de la resta de punteros
-        log_info(logger_memoria, "Nueva página asignada para PID %d en marco %ld.", pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
+        log_info(logger_memoria, "PID %d: Nueva página asignada en marco %ld.",
+                 pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
     }
 
+    // Actualizar entrada de tabla de páginas
     entrada->presente = true;
     entrada->marco = ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina;
-    entrada->modificado = false; // Se asume que al cargarla o crearla no está modificada
+    entrada->modificado = false;
 
-    log_debug(logger_memoria, "Fallo de página manejado para PID %d. Marco asignado: %d.", pid, entrada->marco);
-    return entrada->marco * memoria_configs.tampagina + desplazamiento;
+    log_debug(logger_memoria, "PID %d: fallo de página resuelto, marco asignado: %d.", pid, entrada->marco);
+
+    // Devuelve número de marco, CPU calculará dirección física sumando desplazamiento
+    return entrada->marco;
 }
+
 
 
 
