@@ -26,27 +26,16 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
 /**
   * @brief Lee datos de la memoria principal.
   *
-  * Traduce la dirección lógica a física, valida los límites y copia `tam` bytes
+  * Recibe la dirección física, valida los límites y copia `tam` bytes
   * desde la memoria principal a un nuevo buffer.
   *
   * @param pid PID del proceso.
-  * @param direccion_logica Dirección lógica de inicio de la lectura.
+  * @param direccion_fisica Dirección fisica de inicio de la lectura.
   * @param tam Cantidad de bytes a leer.
   * @return Puntero a un nuevo buffer con los datos leídos, o NULL si hay un error.
   */
- void* leer_memoria(int pid, int direccion_logica, int tam) {
-    int direccion_fisica = traducir_direccion(pid, direccion_logica, NULL);
 
-    if (direccion_fisica < 0) {
-        log_error(logger_memoria, "PID %d: Fallo al leer memoria. Error al traducir dirección lógica %d.", pid, direccion_logica);
-        return NULL;
-    }
-
-    // Validar que la lectura no exceda los límites de la memoria principal
-    if (direccion_fisica + tam > memoria_configs.tammemoria || direccion_fisica < 0) {
-        log_error(logger_memoria, "PID %d: Intento de lectura fuera de los límites de la memoria principal. Dir. Física: %d, Tamaño: %d.", pid, direccion_fisica, tam);
-        return NULL;
-    }
+ void* leer_memoria(int pid, int direccion_fisica, int tam) {
 
     void *buffer = malloc(tam);
     if (!buffer) return NULL;
@@ -62,41 +51,18 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
  /**
   * @brief Escribe datos en la memoria principal.
   *
-  * Traduce la dirección lógica a física, valida los límites y copia `tam` bytes
-  * desde `valor` a la memoria principal. Marca la página como modificada.
+  * Marca la página como modificada.
   *
   * @param pid PID del proceso.
-  * @param direccion_logica Dirección lógica de inicio de la escritura.
+  * @param direccion_fisica Dirección fisica de inicio de la escritura.
   * @param tam Cantidad de bytes a escribir.
   * @param valor Puntero a los datos a escribir.
   * @return true si la escritura fue exitosa, false en caso contrario.
   */
 
-  bool escribir_memoria(int pid, int direccion_logica, int tam, void* valor) {
-    // CAMBIO PRINCIPAL: Usar nueva versión de traducir_direccion que devuelve entrada
-    t_entrada_pagina* entrada = NULL;
-    int direccion_fisica = traducir_direccion(pid, direccion_logica, &entrada);
-    
-    if (direccion_fisica < 0) {
-        log_error(logger_memoria, "PID %d: Fallo al escribir memoria. Error al traducir dirección lógica %d.", pid, direccion_logica);
-        return false;
-    }
-
-    // Validar que la escritura no exceda los límites de la memoria principal
-    if (direccion_fisica + tam > memoria_configs.tammemoria || direccion_fisica < 0) {
-        log_error(logger_memoria, "PID %d: Intento de escritura fuera de los límites de la memoria principal. Dir. Física: %d, Tamaño: %d.", pid, direccion_fisica, tam);
-        return false;
-    }
+  bool escribir_memoria(int pid, int direccion_fisica, int tam, void* valor) {
 
     memcpy((char*)administrador_memoria->memoria_principal + direccion_fisica, valor, tam);
-
-    // CORRECCIÓN: Marcar directamente usando la entrada obtenida
-    if (entrada != NULL) {
-        entrada->modificado = true;
-        log_debug(logger_memoria, "PID %d: Página marcada como modificada (marco %d).", pid, entrada->marco);
-    } else {
-        log_warning(logger_memoria, "PID %d: No se pudo obtener la entrada de página para marcar como modificada.", pid);
-    }
 
     actualizar_metricas(pid, ESCRITURA_MEMORIA_MET);
     log_info(logger_memoria, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam);

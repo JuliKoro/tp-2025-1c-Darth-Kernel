@@ -161,6 +161,9 @@
     return entrada->marco * memoria_configs.tampagina + desplazamiento;
 }
 
+
+
+// ESTO LO HACE CPU
  /**
   * @brief Traduce una dirección lógica a una dirección física.
   *
@@ -172,6 +175,7 @@
   * @param direccion_logica Dirección lógica a traducir.
   * @return Dirección física resultante, o -1 si hay un error (ej. tabla no encontrada, fallo de página no manejado).
   */
+ /*
  int traducir_direccion(int pid, int direccion_logica, t_entrada_pagina** entrada_out) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
@@ -257,3 +261,4 @@
     
     return direccion_fisica;
 }
+*/

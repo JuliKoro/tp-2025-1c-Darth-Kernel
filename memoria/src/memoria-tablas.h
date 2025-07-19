@@ -51,6 +51,8 @@ void destruir_tabla_paginas(void* tabla_void);
  */
 int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada, int desplazamiento);
 
+
+//ESTO LO HACE CPU
 /**
  * @brief Traduce una dirección lógica a una dirección física.
  *
@@ -62,7 +64,7 @@ int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada, int desplazamiento)
  * @param direccion_logica Dirección lógica a traducir.
  * @return Dirección física resultante, o -1 si hay un error (ej. tabla no encontrada, fallo de página no manejado).
  */
-int traducir_direccion(int pid, int direccion_logica, t_entrada_pagina** entrada_out);
+//int traducir_direccion(int pid, int direccion_logica, t_entrada_pagina** entrada_out);
 
 void destruir_tabla_paginas(void *tabla_void);
 
