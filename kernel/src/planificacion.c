@@ -668,6 +668,31 @@ int mover_ready_a_executing(u_int32_t pid) {
 
     return 0;
 }
+
+int mover_suspblocked_a_exit(u_int32_t pid) {
+    t_pcb* pcb_a_mover = NULL;
+    
+    pthread_mutex_lock(&mutex_lista_suspblocked);
+
+    for(int i = 0; i < list_size(lista_suspblocked); i++) {
+        t_pcb* pcb_temp = list_get(lista_suspblocked, i);
+        if(pcb_temp->pid == pid) {
+            pcb_a_mover = list_remove(lista_suspblocked, i);
+            break;
+        }
+    }
+        pthread_mutex_unlock(&mutex_lista_suspblocked);
+
+    if(pcb_a_mover != NULL) {
+        mover_a_exit(pcb_a_mover);
+    } else {
+        log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_suspblocked", pid);
+        return -1;
+    }
+
+    return 0;
+}
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones auxiliares para listas y colas
@@ -723,6 +748,20 @@ t_pcb* obtener_pcb_de_lista_suspready() {
     }
     pthread_mutex_unlock(&mutex_lista_suspready);
     return pcb;
+}
+
+t_pcb* obtener_pcb_de_lista_executing(u_int32_t pid) {
+    t_pcb* pcb_encontrado = NULL;
+    pthread_mutex_lock(&mutex_lista_executing);
+    for(int i = 0; i < list_size(lista_executing); i++) {
+        t_pcb* pcb = list_get(lista_executing, i);
+        if(pcb->pid == pid) {
+            pcb_encontrado = pcb;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_executing);
+    return pcb_encontrado;
 }
 
 
@@ -796,8 +835,8 @@ void mover_procesos_terminados() {
     for(int i = list_size(lista_executing) - 1; i >= 0; i--) {
         t_pcb* pcb = list_get(lista_executing, i);
         if(pcb != NULL && pcb->estado == EXIT) {
-            t_pcb* pcb_a_mover = list_remove(lista_executing, i);
-
+            t_pcb* pcb_a_mover = list_remove(lista_executing, i);   
+            //Posible deadlock?
             pthread_mutex_lock(&mutex_lista_exit);
             list_add(lista_exit, pcb_a_mover);
             pthread_mutex_unlock(&mutex_lista_exit);
@@ -811,7 +850,7 @@ void eliminar_procesos_en_exit(){
     for(int i = list_size(lista_exit) - 1; i >= 0; i--) {
         t_pcb* pcb = list_get(lista_exit, i);
         if(pcb->estado == EXIT) {
-            //TODO Aca debo asvisar a memoria, me da el ok y recien ahi borro el PCB
+            // Aca debo asvisar a memoria, me da el ok y recien ahi borro el PCB
             int socket_memoria = kernel_conectar_a_memoria();
             if(socket_memoria == -1) {
             log_error(logger_kernel, "Error al conectar con memoria");
@@ -1022,8 +1061,8 @@ int manejar_syscall(t_syscall* syscall) {
         }
     } else if(strcmp(tipo_syscall, "EXIT") == 0) {
         exit_syscall(syscall->pid);
-    } else if(strcmp(tipo_syscall, "DUMP_MEMORIA") == 0) {
-        //TODO: dump_memoria
+    } else if(strcmp(tipo_syscall, "DUMP_MEMORY") == 0) {
+        dump_memory(syscall->pid);
     } else {
         printf("Syscall no valida\n");
         return -1;
@@ -1121,4 +1160,55 @@ int exit_syscall(u_int32_t pid) {
     }
     pthread_mutex_unlock(&mutex_lista_executing);
     return 0;
+}
+
+int dump_memory(u_int32_t pid) {
+    //Muevo proceso a blocked
+    t_pcb* pcb = obtener_pcb_de_lista_executing(pid);
+    mover_executing_a_blocked(pid);
+    int socket_memoria = kernel_conectar_a_memoria();
+    if(socket_memoria == -1) {
+    log_error(logger_kernel, "Error al conectar con memoria");
+    close(socket_memoria);
+    //Si falla el proceso va de blocked a exit
+    mover_blocked_a_exit(pid);
+    return -1;
+    }
+    
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_DUMP_MEMORY, serializar_pcb(pcb));
+    enviar_paquete(socket_memoria, paquete);
+   
+    if(recibir_bool(socket_memoria)) {
+        log_info(logger_kernel, "DUMP MEMORY COMPLETO");
+        pthread_mutex_lock(&pcb->mutex_cambio_estado); //Lo lockeo para que no pueda cambiar el estado mientras chequeo
+        if(pcb->estado == BLOCKED) {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            mover_blocked_a_ready(pid);
+        } else if(pcb->estado == SUSP_BLOCKED) {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            mover_suspblocked_a_suspready(pid);
+        } else {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            log_error(logger_kernel, "PID %d en estado inesperado %s durante DUMP", pid, estado_pcb_to_string(pcb->estado));
+        }
+    } else {
+        pthread_mutex_lock(&pcb->mutex_cambio_estado); //Lo lockeo para que no pueda cambiar el estado mientras chequeo
+        if(pcb->estado == BLOCKED) {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            mover_blocked_a_exit(pid);
+        } else if(pcb->estado == SUSP_BLOCKED) {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            mover_suspblocked_a_exit(pid);
+        } else {
+            pthread_mutex_unlock(&pcb->mutex_cambio_estado);
+            log_error(logger_kernel, "PID %d en estado inesperado %s durante DUMP", pid, estado_pcb_to_string(pcb->estado));
+        }
+
+    }
+
+    //Cierro conexion efimera
+    close(socket_memoria);
+    return 0;
+   
+    
 }

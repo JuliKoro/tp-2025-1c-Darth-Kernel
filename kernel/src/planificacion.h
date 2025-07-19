@@ -393,6 +393,14 @@ int mover_suspready_a_ready(u_int32_t pid);
  */
 int mover_ready_a_executing(u_int32_t pid);
 
+/**
+ * @brief Mueve un pcb de la lista susp_blocked a la lista exit
+ * 
+ * @param pid: El pid del pcb a mover
+ * 
+ */
+int mover_suspblocked_a_exit(u_int32_t pid);
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones auxiliares para listas y colas
@@ -437,6 +445,14 @@ t_pcb* obtener_pcb_de_lista_new();
  * @return pcb de la lista susp_ready o NULL si esta vacia.
  */
 t_pcb* obtener_pcb_de_lista_suspready();
+
+/**
+ * @brief Obtiene un pcb de la lista executing sin removerlo
+ * 
+ * @param pid: El pid del pcb a obtener
+ * @return pcb de la lista executing o NULL si no se encuentra.
+ */
+t_pcb* obtener_pcb_de_lista_executing(u_int32_t pid);
 
 /**
  * @brief Saca un t_blocked_io de la lista blocked_io
@@ -649,6 +665,23 @@ int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso);
  */
 int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid);
 
-int exit_syscall();
+/**
+ * @brief Ejecuta la syscall de exit
+ * 
+ * @param pid: El PID del proceso a finalizar
+ * @return 0 si la syscall se ejecuta correctamente
+ */
+int exit_syscall(u_int32_t pid);
+
+
+
+/**
+ * @brief Ejecuta la syscall de dump_memory
+ * 
+ * @return 0 si la syscall se ejecuta correctamente
+ */
+int dump_memory(u_int32_t pid);
+
+
 
 #endif

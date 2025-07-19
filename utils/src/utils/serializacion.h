@@ -47,6 +47,7 @@ typedef enum {
     PAQUETE_ELIMINAR_PROCESO=7,
     PAQUETE_SUSPENDER_PROCESO=8,
     PAQUETE_CARGAR_PROCESO=9,
+    PAQUETE_DUMP_MEMORY=10,
 
 } t_codigo_operacion;
 
@@ -339,7 +340,7 @@ void liberar_paquete(t_paquete* paquete);
 
 //Serializa las partes necesarias de un pcb para enviarlas a memoria
 /**
- * @brief Serializa las partes necesarias de un pcb para enviarlas a memoria
+ * @brief Serializa las partes necesarias de un pcb para enviarlas a memoria o CPU
  * 
  * @param pcb Puntero a la estructura de pcb
  * @return t_buffer* Puntero al buffer que contiene la serializacion del pcb
