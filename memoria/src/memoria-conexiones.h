@@ -24,7 +24,7 @@
  int iniciar_servidor_memoria();
 
  // Prototipos para manejo de conexiones con Kernel. Están en instrucciones.h, ahí está la explicacion tambien de porqué
- void* recibir_peticiones_kernel(void* socket_memoria);
+ void* escuchar_peticiones(void* socket_memoria);
  void atender_peticion_kernel(void* socket_cliente);
  
  #endif /* MEMORIA_CONEXIONES_H_ */

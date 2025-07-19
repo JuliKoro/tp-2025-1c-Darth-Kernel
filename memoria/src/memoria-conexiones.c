@@ -38,7 +38,7 @@ void* manejar_conexion(void* socket_cliente){
             t_pcb* pcb = deserializar_pcb(paquete->buffer);
             //ver si puedo eliminar proceso de memoria
             if(finalizar_proceso(pcb->pid) == -1){
-                log_error(logger_memoria, "[CARGAR PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
+                log_error(logger_memoria, "[ELIMINAR PROCESO] Error al finalizar proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
             } else {
                 enviar_bool(socket_fd, true);
@@ -49,7 +49,17 @@ void* manejar_conexion(void* socket_cliente){
             t_pcb* pcb = deserializar_pcb(paquete->buffer);
             //ver si puedo suspender proceso de memoria
             if(suspender_proceso(pcb->pid) == -1){
-                log_error(logger_memoria, "[SUSPENDER PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
+                log_error(logger_memoria, "[SUSPENDER PROCESO] Error al suspender proceso. PID: %d", pcb->pid);
+            enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+            }
+        }
+        if(paquete->codigo_operacion == PAQUETE_DUMP_MEMORY){
+            t_pcb* pcb = deserializar_pcb(paquete->buffer);
+            //ver si puedo suspender proceso de memoria
+            if(realizar_memory_dump(pcb->pid) == -1){
+                log_error(logger_memoria, "[MEMORIA DUMP PROCESO] Error al dumpear proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
             } else {
                 enviar_bool(socket_fd, true);
@@ -75,7 +85,9 @@ void* manejar_conexion(void* socket_cliente){
 
 
 
-void* recibir_peticiones_cpu(void* socket_cliente){}
+void* recibir_peticiones_cpu(void* socket_cliente){
+
+}
 
 
 

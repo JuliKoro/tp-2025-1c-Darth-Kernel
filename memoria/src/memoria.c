@@ -53,7 +53,7 @@
     // Crea un hilo para atender las peticiones provenientes del módulo Kernel.
     pthread_t hilo_kernel;
     // Se pasa una copia del socket_servidor para evitar problemas de concurrencia si se modifica.
-    pthread_create(&hilo_kernel, NULL, recibir_peticiones_kernel, (void*)&socket_servidor);
+    pthread_create(&hilo_kernel, NULL, escuchar_peticiones, (void*)&socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes de las múltiples CPU.
     //pthread_t hilo_cpus;

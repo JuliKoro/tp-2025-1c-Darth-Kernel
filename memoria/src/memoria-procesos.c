@@ -489,14 +489,14 @@ int finalizar_proceso(int pid) {
 }
 
 
-void realizar_memory_dump(int pid) {
+int realizar_memory_dump(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
     t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
     if (!tabla) {
         log_warning(logger_memoria, "PID %d – dump fallido: sin tabla de páginas", pid);
-        return;
+        return -1;
     }
 
     /* construir nombre de archivo <PID>-<timestamp>.dmp en DUMP_PATH */
@@ -511,11 +511,12 @@ void realizar_memory_dump(int pid) {
     FILE *f = fopen(filepath, "wb");
     if (!f) {
         log_error(logger_memoria, "No se pudo crear el dump en %s", filepath);
-        return;
+        return -1;
     }
 
     dump_paginas_recursivo(tabla, pid, f);
     fclose(f);
 
     log_info(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
+    return 0;
 }

@@ -64,7 +64,7 @@ t_proceso* leer_archivo_de_proceso(const char* filepath, int pid);
  *
  * @param proceso_void Puntero a la estructura `t_proceso` a destruir (se castea internamente).
  */
-bool destruir_proceso(void* proceso_void);
+void destruir_proceso(void* proceso_void);
 
 /**
  * @brief Carga un proceso en memoria.
@@ -169,7 +169,7 @@ int finalizar_proceso(int pid);
  *
  * @param pid PID del proceso para el cual se realizará el dump.
  */
-void realizar_memory_dump(int pid);
+int realizar_memory_dump(int pid);
 
 void aplicar_retardo_swap();
 
