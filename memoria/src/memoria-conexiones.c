@@ -23,7 +23,7 @@ void* manejar_conexion(void* socket_cliente){
             close(socket_fd);
             return NULL;
         }
-        if(paquete->codigo_operacion == PAQUETE_PCB){
+        if(paquete->codigo_operacion == PAQUETE_CARGAR_PROCESO){
             t_pcb* pcb = deserializar_pcb(paquete->buffer);
             //Ver si puedo cargar instrucciones en memoria
             if(cargar_proceso(pcb->pid, pcb->archivo_pseudocodigo) == -1){
@@ -34,10 +34,11 @@ void* manejar_conexion(void* socket_cliente){
             }
 
         }
-        if (paquete->codigo_operacion == NULL){
-            
+        if (paquete->codigo_operacion == PAQUETE_ELIMINAR_PROCESO){
+            //Aca tenes que devolverme un bool
         }
-        if(paquete->codigo_operacion == NULL ){
+        if(paquete->codigo_operacion == PAQUETE_SUSPENDER_PROCESO){
+            //Aca tenes que devolverme un bool
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
