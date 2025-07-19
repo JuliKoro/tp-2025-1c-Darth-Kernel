@@ -55,6 +55,7 @@ pthread_mutex_t mutex_lista_suspready = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_largo_plazo;
 sem_t sem_corto_plazo;
 sem_t sem_cpu_disponible;
+sem_t sem_memoria_disponible;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -203,6 +204,7 @@ void inicializar_listas_y_sem() {
     sem_init(&sem_largo_plazo, 0, 0);
     sem_init(&sem_corto_plazo, 0, 0);
     sem_init(&sem_cpu_disponible, 0, 0);
+    sem_init(&sem_memoria_disponible, 0, 0);
 }
 
 int recibir_mensaje_cpu(int socket_cpu) {
@@ -277,8 +279,9 @@ int mover_a_exit(t_pcb* pcb) {
     
     actualizar_estado_pcb(pcb, EXIT);
     log_fin_proceso(pcb);
+    log_metricas_estado(pcb);
 
-    //TODO> Mensajes a memoria, esto lo va a verificar el planificador largo plazo en cada iteracion
+    // Mensajes a memoria, esto lo va a verificar el planificador largo plazo en cada iteracion
 
     //list_add(lista_exit, pcb); //Solo iran a la lista de exit los que terminen por alguna interrupcion 
     //Aca solo actualizo el estado. Luego el hilo planificador de largo plazo va revisar la lista de ready lo que esten en estado exit
@@ -562,7 +565,23 @@ int mover_blocked_a_suspblocked(u_int32_t pid) {
     for(int i = 0; i < list_size(lista_blocked); i++) {
         t_pcb* pcb_temp = list_get(lista_blocked, i);
         if(pcb_temp->pid == pid) {
-            pcb_encontrado = list_remove(lista_blocked, i);
+            //Aviso a memoria para que pase el pcb a swap
+            int socket_memoria = kernel_conectar_a_memoria();
+            if(socket_memoria == -1) {
+                log_error(logger_kernel, "Error al conectar con memoria");
+                return -1;
+            }
+            t_paquete* paquete = empaquetar_buffer(PAQUETE_SUSPENDER_PROCESO, serializar_pcb(pcb_encontrado));
+            enviar_paquete(socket_memoria, paquete);
+            if(recibir_bool(socket_memoria)) {
+                log_info(logger_kernel, "Memoria liberada correctamente");
+                pcb_encontrado = list_remove(lista_blocked, i);
+                sem_post(&sem_memoria_disponible); //Ticket de memoria libre
+            } else {
+                log_error(logger_kernel, "Error al liberar memoria");
+            }
+            close(socket_memoria);
+            //Termina conexion con memoria
             break;
         }
     }
@@ -576,6 +595,8 @@ int mover_blocked_a_suspblocked(u_int32_t pid) {
         list_add(lista_suspblocked, pcb_encontrado);
         pthread_mutex_unlock(&mutex_lista_suspblocked);
         actualizar_estado_pcb(pcb_encontrado, SUSP_BLOCKED);
+
+
     }
     return 0;
 };
@@ -771,28 +792,44 @@ t_io* buscar_io_por_socket(int socket_io){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 void mover_procesos_terminados() {
-    int elementos_procesados = 0;
-    int total_elementos = list_size(lista_executing);
-    //Recorro la lista de executing
-    while(elementos_procesados < total_elementos) {
-        t_pcb* pcb = list_get(lista_executing, elementos_procesados);
-        //Si encontre un pcb y su estado es EXIT, lo agrego a la lista de exit
+    pthread_mutex_lock(&mutex_lista_executing);
+    for(int i = list_size(lista_executing) - 1; i >= 0; i--) {
+        t_pcb* pcb = list_get(lista_executing, i);
         if(pcb != NULL && pcb->estado == EXIT) {
-            list_add(lista_exit, pcb);
-            //Lo saco de la lista de executing
-            list_remove(lista_executing, elementos_procesados);
+            t_pcb* pcb_a_mover = list_remove(lista_executing, i);
+
+            pthread_mutex_lock(&mutex_lista_exit);
+            list_add(lista_exit, pcb_a_mover);
+            pthread_mutex_unlock(&mutex_lista_exit);
         }
-        elementos_procesados++;
     }
+    pthread_mutex_unlock(&mutex_lista_executing);
 }
 
 void eliminar_procesos_en_exit(){
     pthread_mutex_lock(&mutex_lista_exit);
-    for(int i = 0; i < list_size(lista_exit); i++) {
+    for(int i = list_size(lista_exit) - 1; i >= 0; i--) {
         t_pcb* pcb = list_get(lista_exit, i);
         if(pcb->estado == EXIT) {
             //TODO Aca debo asvisar a memoria, me da el ok y recien ahi borro el PCB
-            list_remove(lista_exit, i);
+            int socket_memoria = kernel_conectar_a_memoria();
+            if(socket_memoria == -1) {
+            log_error(logger_kernel, "Error al conectar con memoria");
+            close(socket_memoria);
+            return;
+            }
+            t_paquete* paquete = empaquetar_buffer(PAQUETE_ELIMINAR_PROCESO, serializar_pcb(pcb));
+            enviar_paquete(socket_memoria, paquete);
+            if(recibir_bool(socket_memoria)) {
+                log_info(logger_kernel, "Memoria liberada correctamente");
+                t_pcb* pcb_a_eliminar = list_remove(lista_exit, i);
+                destruir_pcb(pcb_a_eliminar);
+                sem_post(&sem_memoria_disponible); //Ticket de memoria libre
+            } else {
+                log_error(logger_kernel, "Error al liberar memoria");
+        }
+            close(socket_memoria);
+
         }
     }
 }

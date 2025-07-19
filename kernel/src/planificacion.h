@@ -166,7 +166,7 @@ extern pthread_mutex_t mutex_lista_suspready;
 extern sem_t sem_largo_plazo;
 extern sem_t sem_corto_plazo;
 extern sem_t sem_cpu_disponible;
-
+extern sem_t sem_memoria_disponible;
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Colas Y listas de planificacion

@@ -100,5 +100,11 @@ typedef struct t_pcb {
  */
 t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso);
 
+/**
+ * @brief Destruye un PCB y todas las estructuras
+ * 
+ * @param pcb: Puntero al PCB a destruir
+ */
+void destruir_pcb(t_pcb* pcb);
 
 #endif

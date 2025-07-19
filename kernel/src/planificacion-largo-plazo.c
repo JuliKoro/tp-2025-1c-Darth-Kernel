@@ -33,19 +33,8 @@ void* iniciar_planificador_largo_plazo() {
                     log_info(logger_kernel, "Planificador en espera de liberacion de memoria");
                     
                     //Espero a que memoria libere memoria
-                    int socket_memoria_efimero = kernel_conectar_a_memoria();
-                    t_sincronizacion sincronizacion;
-                    ssize_t bytes_recibidos = recv(socket_memoria_efimero, &sincronizacion, sizeof(t_sincronizacion), MSG_WAITALL);
-                    if(bytes_recibidos <= 0) {
-                        log_error(logger_kernel, "Error al recibir sincronizacion de memoria");
-                        close(socket_memoria_efimero);
-                        continue;
-                    }
-                    if(sincronizacion == MEMORIA_DISPONIBLE) {
-                        close(socket_memoria_efimero);
-                        continue;
-                    }
-                    close(socket_memoria_efimero);
+                    sem_wait(&sem_memoria_disponible);
+                    continue;
                 }
         }
     return NULL;

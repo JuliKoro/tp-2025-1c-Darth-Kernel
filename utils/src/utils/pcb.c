@@ -29,5 +29,9 @@ t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tama
     return pcb;
 }
 
-
+void destruir_pcb(t_pcb* pcb) {
+    pthread_mutex_destroy(&pcb->mutex_cambio_estado);
+    free(pcb->archivo_pseudocodigo);
+    free(pcb);
+}
 

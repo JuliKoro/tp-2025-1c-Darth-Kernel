@@ -45,8 +45,8 @@ bool solicitar_creacion_proceso(t_pcb* pcb) {
         return false;
     }
     
-    t_paquete* paquete = empaquetar_buffer(PAQUETE_PCB, serializar_pcb(pcb));
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_CARGAR_PROCESO, serializar_pcb(pcb));
     enviar_paquete(socket_memoria, paquete);
-    //liberar_paquete(paquete); doble liberacion, testeando
     return recibir_bool(socket_memoria);
+    close(socket_memoria);
 }

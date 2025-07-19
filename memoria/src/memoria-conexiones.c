@@ -5,61 +5,67 @@
 
 int iniciar_servidor_memoria(){
 
-    id_modulo_t modulo_recibido;
-    iniciar_logger_global(&logger_sockets, "memoria-conexiones.log", "[MEMORIA-SERVIDOR]");
-
     //Creo el socket del servidor
     int memoria_server_fd = iniciar_servidor(int_a_string(memoria_configs.puertoescucha));
 
     return memoria_server_fd;
 }
 
-void atender_peticion_kernel(void* socket_cliente){
-    int socket_fd = *(int*) socket_cliente;
-    free(socket_cliente);
+void* manejar_conexion(void* socket_cliente){
+    int socket_fd = (intptr_t)socket_cliente;
 
-    id_modulo_t modulo_recibido;
-
-    if(recibir_handshake(socket_fd, &modulo_recibido) == -1){
-        log_error(logger_sockets, "[HANDSHAKE] Error en recepcion de handshake. Cierro conexion.");
-        close(socket_fd);
-        return;
-    }
-
-    log_info(logger_memoria, "[HANDSHAKE] Handshake recibido correctamente. Conexion establecida con kernel");
-
-    
         //Recibir pid, tamanio, pc, archivo pseudocodigo
         t_paquete* paquete = recibir_paquete(socket_fd);
-        t_pcb* pcb = deserializar_pcb(paquete->buffer);
-        liberar_paquete(paquete);
 
-        //Ver si puedo cargar instrucciones en memoria
-        if(cargar_proceso(pcb->pid, pcb->archivo_pseudocodigo) == -1){
+        //Evaluo paquete
+        if(paquete == NULL){
+            log_info(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
+            close(socket_fd);
+            return NULL;
+        }
+        if(paquete->codigo_operacion == PAQUETE_PCB){
+            t_pcb* pcb = deserializar_pcb(paquete->buffer);
+            //Ver si puedo cargar instrucciones en memoria
+            if(cargar_proceso(pcb->pid, pcb->archivo_pseudocodigo) == -1){
             log_error(logger_memoria, "[CARGAR PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+            }
+
         }
+        if (paquete->codigo_operacion == NULL){
+            
+        }
+        if(paquete->codigo_operacion == NULL ){
+        }
+        //Enviar respuesta al kernel     
+        liberar_paquete(paquete);
+        close(socket_fd);
+    }
+        
 
-    //Enviar respuesta al kernel
-    enviar_bool(socket_fd, true);      
-    
-    close(socket_fd);
-}
-
- void* recibir_peticiones_kernel(void* socket_memoria){
-    int socket_fd = *(int*) socket_memoria;
-    //free(socket_memoria);
+ void* escuchar_peticiones(void* socket_memoria){
+    int socket_fd = (intptr_t) socket_memoria;
+    //Aca escucho peticiones en el socket, pueden ser de kernel o de cpu.
     while(true){
-        int cliente_fd = esperar_cliente(socket_fd);
-
+        int cliente_fd = esperar_cliente(socket_fd); //Se conecta un cliente
+        //Creo un hilo para atender la peticion
         pthread_t hilo_cliente;
-        int* socket_cliente = malloc(sizeof(int));
-        *socket_cliente = cliente_fd;
-
-        pthread_create(&hilo_cliente, NULL, (void*)atender_peticion_kernel, (void*) socket_cliente);
+        pthread_create(&hilo_cliente, NULL, manejar_conexion, (void*)(intptr_t) cliente_fd);
         pthread_detach(hilo_cliente);
     }
 }
+
+
+
+void* recibir_peticiones_cpu(void* socket_cliente){}
+
+
+
+
+
+
 
 /*void* recibir_peticiones_cpu(void* socket_memoria) {
     int socket_fd = *(int*)socket_memoria;
