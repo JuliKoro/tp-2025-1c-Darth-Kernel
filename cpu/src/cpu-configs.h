@@ -45,7 +45,6 @@ typedef struct cpuconfigs {
      char* reemplazocache;      // Algoritmo de reemplazo de la caché
      int retardocache;          // Retardo de acceso a la caché
      char* loglevel;            // Nivel de log para el módulo
-     int tampagina;             // Tamaño de página
 } cpuconfigs;
 
 /**

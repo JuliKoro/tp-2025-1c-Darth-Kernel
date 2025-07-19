@@ -25,7 +25,6 @@ int inicializar_configs(){
     configcargado.reemplazocache = cargar_variable_string(cpu_tconfig, "REEMPLAZO_CACHE");
     configcargado.retardocache = cargar_variable_int(cpu_tconfig, "RETARDO_CACHE");
     configcargado.loglevel = cargar_variable_string(cpu_tconfig, "LOG_LEVEL");
-    configcargado.tampagina = cargar_variable_int(cpu_tconfig, "TAM_PAGINA"); //Agrego el tamaño de las paginas al config
 
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo
     fprintf(stderr, "[DEBUG en cpu-configs.c] Antes: cpu_configs.ipkernel apunta a %p\n", (void*)cpu_configs.ipkernel);
