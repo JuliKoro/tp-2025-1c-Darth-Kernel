@@ -43,8 +43,6 @@ pthread_mutex_t mutex_lista_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_ready = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_exit = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_executing = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_susp_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_lista_susp_blocked = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_lista_blocked_io = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid_counter = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_grado_multiprogramacion = PTHREAD_MUTEX_INITIALIZER;
@@ -701,39 +699,51 @@ int mover_suspblocked_a_exit(u_int32_t pid) {
 
 t_pcb* peek_lista_new() {
     pthread_mutex_lock(&mutex_lista_new);
-    t_pcb* pcb = list_get(lista_new, 0);
-    if(pcb == NULL) {
+
+    if (list_is_empty(lista_new)) {
         pthread_mutex_unlock(&mutex_lista_new);
         return NULL;
     }
+
+    t_pcb* pcb = list_get(lista_new, 0);
     pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
 }   
 
 t_pcb* peek_lista_suspready() {
     pthread_mutex_lock(&mutex_lista_suspready);
-    t_pcb* pcb = list_get(lista_suspready, 0);
-    if(pcb == NULL) {
+
+    if (list_is_empty(lista_suspready)) {
         pthread_mutex_unlock(&mutex_lista_suspready);
         return NULL;
     }
+
+    t_pcb* pcb = list_get(lista_suspready, 0);
     pthread_mutex_unlock(&mutex_lista_suspready);
     return pcb;
 }
 
 t_pcb* peek_lista_ready() {
     pthread_mutex_lock(&mutex_lista_ready);
-    t_pcb* pcb = list_get(lista_ready, 0);
-    if(pcb == NULL) {
+
+    if (list_is_empty(lista_ready)) {
         pthread_mutex_unlock(&mutex_lista_ready);
         return NULL;
     }
+
+    t_pcb* pcb = list_get(lista_ready, 0);
     pthread_mutex_unlock(&mutex_lista_ready);
     return pcb;
 }   
 
 t_pcb* obtener_pcb_de_lista_new() {
     pthread_mutex_lock(&mutex_lista_new);
+
+    if (list_is_empty(lista_new)) {
+        pthread_mutex_unlock(&mutex_lista_new);
+        return NULL;
+    }
+
     t_pcb* pcb = list_remove(lista_new, 0);
     pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
@@ -741,11 +751,14 @@ t_pcb* obtener_pcb_de_lista_new() {
 
 t_pcb* obtener_pcb_de_lista_suspready() {
     pthread_mutex_lock(&mutex_lista_suspready);
-    t_pcb* pcb = list_remove(lista_suspready, 0);
-    if(pcb == NULL) {
+
+    if (list_is_empty(lista_suspready)) {
         pthread_mutex_unlock(&mutex_lista_suspready);
         return NULL;
     }
+
+    t_pcb* pcb = list_remove(lista_suspready, 0);
+
     pthread_mutex_unlock(&mutex_lista_suspready);
     return pcb;
 }
@@ -853,9 +866,10 @@ void eliminar_procesos_en_exit(){
             // Aca debo asvisar a memoria, me da el ok y recien ahi borro el PCB
             int socket_memoria = kernel_conectar_a_memoria();
             if(socket_memoria == -1) {
-            log_error(logger_kernel, "Error al conectar con memoria");
-            close(socket_memoria);
-            return;
+                log_error(logger_kernel, "Error al conectar con memoria");
+                close(socket_memoria);
+                pthread_mutex_unlock(&mutex_lista_exit); // Liberar antes de salir por error
+                return;
             }
             t_paquete* paquete = empaquetar_buffer(PAQUETE_ELIMINAR_PROCESO, serializar_pcb(pcb));
             enviar_paquete(socket_memoria, paquete);
@@ -871,6 +885,7 @@ void eliminar_procesos_en_exit(){
 
         }
     }
+    pthread_mutex_unlock(&mutex_lista_exit); // Liberar al final del flujo normal
 }
 
 

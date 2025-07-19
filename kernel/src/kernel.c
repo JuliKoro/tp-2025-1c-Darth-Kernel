@@ -43,41 +43,16 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
     pthread_detach(thread_planificador_largo_plazo);
 
-  
-  
-      /**************************** MODO DE PRUEBA DE IO ****************************/
-    printf("\n\n\t*** MODO DE PRUEBA DE IO - Escenario 5: Falla de IO Estando Libre ***\n\n");
-    
-    log_info(logger_kernel, "[PRUEBA-IO] El Kernel está en modo de espera.");
-    log_info(logger_kernel, "[PRUEBA-IO] Por favor, en la otra terminal, inicia el módulo IO 'impresora'.");
-    sleep(5);
-
-    log_info(logger_kernel, "[PRUEBA-IO] Ahora, por favor, CIERRA el módulo IO 'impresora' (Ctrl+C).");
-    sleep(5);
-
-    log_info(logger_kernel, "[PRUEBA-IO] Verificando que ningún proceso haya sido afectado...");
-    // En un sistema real, aquí podríamos verificar que la lista de EXIT está vacía.
-    // Por ahora, confiaremos en los logs.
-
-    /**************************** FIN MODO DE PRUEBA ****************************/
-    
-    log_info(logger_kernel, "Finalizando prueba. El Kernel se cerrará en breve.");
-   
-
-
-    
-
-    // El kernel sigue su ejecución normal
+    // Hilo principal se queda en espera para mantener el proceso vivo.
+    // Todas las operaciones ahora son manejadas por los hilos planificadores.
     while(true){
         sleep(10);
-        // printf("enviando syscall a io impresora de prueba\n");
-        // io("impresora", 1000, 1);
-        // printf("syscall enviada\n");
     }
 
-
+    // Estas líneas nunca se alcanzarán en la lógica actual,
+    // pero son buenas prácticas para un cierre ordenado.
     destruir_logger_kernel();
-    config_destroy(kernel_tconfig);
+    destruir_configs();
     return 0;
 }
 

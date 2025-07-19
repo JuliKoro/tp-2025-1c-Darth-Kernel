@@ -153,8 +153,6 @@ extern pthread_mutex_t mutex_lista_blocked;
 extern pthread_mutex_t mutex_lista_ready;
 extern pthread_mutex_t mutex_lista_exit;
 extern pthread_mutex_t mutex_lista_executing;
-extern pthread_mutex_t mutex_lista_susp_ready;
-extern pthread_mutex_t mutex_lista_susp_blocked;
 extern pthread_mutex_t mutex_pid_counter;
 extern pthread_mutex_t mutex_grado_multiprogramacion;
 extern pthread_mutex_t mutex_lista_blocked_io;
