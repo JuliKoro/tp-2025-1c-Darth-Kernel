@@ -15,6 +15,8 @@ void destruir_logger_kernel() {
 
 void log_fin_io(t_pcb* pcb) {
     log_info(logger_kernel, "## (<%d>) finalizó IO y pasa a READY", pcb->pid);
+    //Este log esta en el manejador de IO, mas facil de implementar ahi
+
 }
 
 void log_cambio_estado(t_pcb* pcb, estado_pcb estado_anterior, estado_pcb estado_nuevo) {
@@ -25,8 +27,8 @@ void log_fin_proceso(t_pcb* pcb) {
     log_info(logger_kernel, "## (<%d>) - Finaliza el proceso", pcb->pid);
 }
 
-void log_solicitud_syscall(t_pcb* pcb, char* syscall) {
-    log_info(logger_kernel, "## (<%d>) - Solicitó syscall: <%s>", pcb->pid, syscall);
+void log_solicitud_syscall(u_int32_t pid, char* syscall) {
+    log_info(logger_kernel, "## (<%d>) - Solicitó syscall: <%s>", pid, syscall);
 }
 
 void log_creacion_proceso(t_pcb* pcb) {
@@ -73,8 +75,8 @@ void log_desalojo(t_pcb* pcb, int algoritmo){
     }
 }
 
-void log_motivo_bloqueo(t_pcb* pcb, char* nombreio) {
-    log_info(logger_kernel, "## (<%d>) - Bloqueado por IO: <%s>", pcb->pid, nombreio);
+void log_motivo_bloqueo(u_int32_t pid, char* nombreio) {
+    log_info(logger_kernel, "## (<%d>) - Bloqueado por IO: <%s>", pid, nombreio);
 }
 
 const char* estado_pcb_to_string(estado_pcb estado) {

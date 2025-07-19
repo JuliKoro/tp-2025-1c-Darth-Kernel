@@ -69,7 +69,7 @@ void log_creacion_proceso(t_pcb* pcb);
  * @param pcb: Puntero al PCB del proceso
  * @param syscall: La syscall solicitada, el string con el nombre de la syscall
  */
-void log_solicitud_syscall(t_pcb* pcb, char* syscall);
+void log_solicitud_syscall(u_int32_t pid, char* syscall);
 
 
 /**
@@ -101,10 +101,10 @@ void log_fin_io(t_pcb* pcb);
 /**
  * @brief Loggea el motivo de bloqueo de un proceso
  * 
- * @param pcb: Puntero al PCB del proceso
+ * @param pid: El PID del proceso
  * @param nombreio: El nombre del dispositivo IO que bloquea al proceso
  */
-void log_motivo_bloqueo(t_pcb* pcb, char* nombreio);
+void log_motivo_bloqueo(u_int32_t pid, char* nombreio);
 
 
 /**

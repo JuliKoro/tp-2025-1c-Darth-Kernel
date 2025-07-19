@@ -1060,6 +1060,7 @@ int manejar_syscall(t_syscall* syscall) {
         //Leo hasta el siguiente espacio, obtengo tiempo_io
         char* tiempo_io = strtok(NULL, " ");
         //Llamo a la funcion io
+        log_solicitud_syscall(syscall->pid, "IO");
         if(io(nombre_io, (u_int32_t)atoi(tiempo_io), (u_int32_t)(syscall->pid)) == -1) {
             printf("Error al ejecutar syscall IO\n");
             return -1;
@@ -1070,13 +1071,16 @@ int manejar_syscall(t_syscall* syscall) {
         //Leo hasta el siguiente espacio, obtengo tamanio_proceso
         char* tamanio_proceso = strtok(NULL, " ");
         //Llamo a la funcion init_proc
+        log_solicitud_syscall(syscall->pid, "INIT_PROC");
         if(init_proc(archivo_pseudocodigo, (u_int32_t)atoi(tamanio_proceso)) == -1) {
             printf("Error al ejecutar syscall INIT_PROC\n");
             return -1;
         }
     } else if(strcmp(tipo_syscall, "EXIT") == 0) {
+        log_solicitud_syscall(syscall->pid, "EXIT");
         exit_syscall(syscall->pid);
     } else if(strcmp(tipo_syscall, "DUMP_MEMORY") == 0) {
+        log_solicitud_syscall(syscall->pid, "DUMP_MEMORY");
         dump_memory(syscall->pid);
     } else {
         printf("Syscall no valida\n");
@@ -1116,7 +1120,8 @@ int io (char* nombre_io, u_int32_t tiempo_io, u_int32_t pid) {
     //Si existe pero no hay instancias, proceso va a BLOCKED IO (tambien va a blocked general, esto se hace en mover_executing_a_blockedio)
     if(io->instancias_disponibles == 0) {
         mover_executing_a_blockedio(pid, nombre_io, tiempo_io);
-        log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io); //Log obligatorio, no puedo usar funcion de logeo porque no conozco el pcb
+        //log_info(logger_kernel, "## PID (%d) - Bloqueado por IO: %s",pid, nombre_io); //Log obligatorio, no puedo usar funcion de logeo porque no conozco el pcb
+        log_motivo_bloqueo(pid, nombre_io);
         pthread_mutex_unlock(&mutex_io);
         return -1;
     
