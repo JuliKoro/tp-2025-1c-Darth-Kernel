@@ -10,6 +10,7 @@
 
 #include "registros.h"
 #include "instruccion.h"
+#include "traduccion.h"
 #include "cpu-log.h"
 #include "cpu-conexiones.h"
 

@@ -14,13 +14,17 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             break;
         case WRITE:
             // Lógica para escribir en memoria
-            // escribir_en_memoria(socket_memoria, instruccion->direccion, instruccion->datos);
+            uint32_t direccion_fisica;
+            direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
+            // escribir_en_memoria(socket_memoria, direccion_fisica, instruccion->datos);
             PC++;
             break;
 
         case READ:
             // Lógica para leer de memoria
-            // leer_de_memoria(socket_memoria, instruccion->direccion, instruccion->tamanio);
+            uint32_t direccion_fisica;
+            direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
+            // leer_de_memoria(socket_memoria, direccion_fisica, instruccion->tamanio);
             PC++;
             break;
 

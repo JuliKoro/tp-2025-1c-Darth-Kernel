@@ -10,11 +10,10 @@ void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int
 
         // ETAPA EXECUTE
         execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); 
-        proceso->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
 
         // CHECK INTERRUPT
         if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
-            interrupcion->pc = PC;
+            interrupcion->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
             enviar_devolucion_interrupcion(interrupcion, socket_kernel_interrupt);
             IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción

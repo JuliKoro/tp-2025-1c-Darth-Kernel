@@ -26,6 +26,21 @@ typedef struct {
     uint32_t cant_niveles;       // Cantidad de niveles
 } t_direccion_logica;
 
+typedef struct {
+    uint32_t pagina; // Número de página
+    uint32_t marco;  // Marco correspondiente
+} t_entrada_tlb;
+
+typedef struct {
+    t_entrada_tlb* entradas; // Arreglo dinámico de entradas de la TLB
+    uint32_t capacidad;     // Capacidad de la TLB
+    uint32_t tamaño;        // Tamaño actual de la TLB
+    char* algoritmo_reemplazo; // Algoritmo de reemplazo (FIFO, LRU, etc.)
+} tlb_t;
+
+extern t_tabla_pag* info_tabla_pag;
+extern tlb_t* tlb;
+
 /*
 //Estructura de dirección física
 /**
@@ -69,16 +84,18 @@ typedef struct {
 t_direccion_fisica direccion_logica_a_fisica(uint32_t direccion_logica);
 */
 
-uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int socket_memoria, t_tabla_pag* info_tabla_pag);
+uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int socket_memoria);
 
 uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, int socket_memoria, uint32_t pid);
 
-bool consultar_cache(uint32_t numero_pagina, uint32_t* marco_cache);
+tlb_t* crear_tlb(uint32_t capacidad);
 
-void agregar_a_cache(uint32_t numero_pagina, uint32_t marco_cache, uint32_t pid);
+void destruir_tlb();
 
 bool consultar_tlb(uint32_t numero_pagina, uint32_t* marco_tlb);
 
 void agregar_a_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid);
+
+void reemplazar_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid);
 
 #endif

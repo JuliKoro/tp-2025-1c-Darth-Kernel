@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
    socket_kernel_interrupt = cpu_conectar_a_kernel(cpu_configs.puertokernelinterrupt, id_cpu);
 
    // Conexion con Memoria
-   socket_memoria = cpu_conectar_a_memoria(id_cpu);
+   socket_memoria = cpu_conectar_a_memoria(id_cpu); // cambiar handshake con memoria por info de tablas de paginas
 
    // HILOS
    pthread_t thread_dispatch, thread_interrupt, thread_ciclo_instruccion;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
    pthread_join(thread_dispatch, NULL);
    pthread_join(thread_interrupt, NULL);
-   //pthread_join(thread_ciclo_instruccion, NULL);
+   pthread_join(thread_ciclo_instruccion, NULL);
 
    log_info(logger_cpu, "Finalizando ejecución del CPU %d", id_cpu);
 
@@ -118,9 +118,10 @@ void* hilo_dispatch(void* arg){
          proceso = deserializar_proceso_cpu(paquete->buffer);
          log_info(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
          pthread_mutex_unlock(&mutex_proceso); // Liberar el mutex
+         // Esperar a que el proceso ejecute su ciclo_instruccion (hasta que termine (syscall) o se interrumpa)
+         sem_wait(&semaforo_proceso);
       }
-      // Esperar a que el proceso ejecute su ciclo_instruccion (hasta que termine (syscall) o se interrumpa)
-      sem_wait(&semaforo_proceso);
+      
       liberar_paquete(paquete);
    }
 }
@@ -177,6 +178,7 @@ void* hilo_ciclo_instruccion(void* arg){
       }
       pthread_mutex_unlock(&mutex_proceso);
 
+      // Liberar cunado se desaloja proceso en CPU
       // Libera el semáforo para permitir que el hilo de despacho reciba un nuevo proceso
       sem_post(&semaforo_proceso);
       // Libera el semáforo para permitir que el hilo de interrupt reciba una nueva interrupcion

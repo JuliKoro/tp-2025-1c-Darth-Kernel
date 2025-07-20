@@ -8,6 +8,7 @@
 #include "cpu-configs.h"
 #include "cpu-log.h"
 #include "ciclo-instruccion.h"
+#include "traduccion.h"
 
 #include <utils/sockets.h>
 #include <utils/hello.h>
