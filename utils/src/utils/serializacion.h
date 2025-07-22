@@ -40,20 +40,21 @@
  * @param PAQUETE_READ: Código de operación cuando CPU quiere leer el valor en una determinada direccion en Memoria
  * @param PAQUETE_WRITE: Código de operación cuando CPU quiere escribir un valor en una determinada direccion en Memoria
  */
+
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
-    PAQUETE_PROCESO_CPU=2,
+    PAQUETE_PROCESO_CPU=2, //
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
     PAQUETE_INTERRUPCION=5,
-    PAQUETE_INFO_TP=6,
+    PAQUETE_INFO_TP=6, //
     PAQUETE_ELIMINAR_PROCESO=7,
     PAQUETE_SUSPENDER_PROCESO=8,
     PAQUETE_CARGAR_PROCESO=9,
     PAQUETE_DUMP_MEMORY=10,
-    PAQUETE_SOLICITUD_MARCO=11,
-    PAQUETE_READ=12,
-    PAQUETE_WRITE=13
+    PAQUETE_SOLICITUD_MARCO=11, //
+    PAQUETE_READ=12, //
+    PAQUETE_WRITE=13 //
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO

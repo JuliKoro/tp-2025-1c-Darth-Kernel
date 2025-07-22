@@ -64,6 +64,18 @@ void* manejar_conexion(void* socket_cliente){
             } else {
                 enviar_bool(socket_fd, true);
             }
+        if(paquete->codigo_operacion == PAQUETE_PROCESO_CPU){
+            t_proceso_cpu* proceso_cpu = deserializar_proceso_cpu(paquete->buffer);
+            char* instruccion = obtener_instruccion(pcb->pid, pcb->pc);
+            if(instruccion == NULL){
+                log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango (total instrucciones: %d).",
+               pcb->pid, pcb->pc);
+            enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+                enviar_mensaje(instruccion, socket_fd); 
+            }
+        }
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
