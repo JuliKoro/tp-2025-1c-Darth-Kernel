@@ -76,6 +76,12 @@ void* manejar_conexion(void* socket_cliente){
                 enviar_mensaje(instruccion, socket_fd); 
             }
         }
+        if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
+            t_entrada_tabla* entrada_tabla = deserializar_solicitud_marco(paquete->buffer);
+            if()    
+//            pid, entr nivel, num pag
+            
+        }
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);

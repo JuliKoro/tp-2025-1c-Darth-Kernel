@@ -119,6 +119,7 @@ t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer) {
     return proceso;
 }
 
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de empaquetado y desempaquetado

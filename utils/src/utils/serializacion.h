@@ -43,11 +43,11 @@
 
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
-    PAQUETE_PROCESO_CPU=2, //
+    PAQUETE_PROCESO_CPU=2, //ok
     PAQUETE_PCB=3,
     PAQUETE_SYSCALL=4,
     PAQUETE_INTERRUPCION=5,
-    PAQUETE_INFO_TP=6, //
+    PAQUETE_INFO_TP=6, // hacer unicamente en el hs
     PAQUETE_ELIMINAR_PROCESO=7,
     PAQUETE_SUSPENDER_PROCESO=8,
     PAQUETE_CARGAR_PROCESO=9,
@@ -163,6 +163,13 @@ typedef struct {
     uint32_t pc;
     t_motivo_interrupcion motivo;
 } t_interrupcion;
+
+//agregar descr
+typedef struct {
+    uint32_t pid;
+    uint32_t entrada_nivel;
+    uint32_t num_pag;
+} t_entrada_tabla;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -287,6 +294,10 @@ t_buffer* serializar_proceso_cpu(t_proceso_cpu* proceso);
  *                             del Kernel deserializada. Se debe liberar.
  */
 t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer);
+
+t_buffer* serializar_solicitud_marco(t_entrada_tabla* entrada_tabla);
+
+t_entrada_tabla* deserializar_solicitud_marco(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
