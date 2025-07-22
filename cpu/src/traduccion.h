@@ -29,12 +29,13 @@ typedef struct {
 typedef struct {
     uint32_t pagina; // Número de página
     uint32_t marco;  // Marco correspondiente
+    uint32_t pid;    // Proceso correspondiente
 } t_entrada_tlb;
 
 typedef struct {
     t_entrada_tlb* entradas; // Arreglo dinámico de entradas de la TLB
-    uint32_t capacidad;     // Capacidad de la TLB
-    uint32_t tamaño;        // Tamaño actual de la TLB
+    int32_t capacidad;     // Capacidad de la TLB
+    int32_t tamaño;        // Tamaño actual de la TLB
     char* algoritmo_reemplazo; // Algoritmo de reemplazo (FIFO, LRU, etc.)
 } tlb_t;
 
@@ -92,7 +93,7 @@ tlb_t* crear_tlb(uint32_t capacidad);
 
 void destruir_tlb();
 
-bool consultar_tlb(uint32_t numero_pagina, uint32_t* marco_tlb);
+int32_t consultar_tlb(uint32_t pid, uint32_t numero_pagina);
 
 void agregar_a_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid);
 

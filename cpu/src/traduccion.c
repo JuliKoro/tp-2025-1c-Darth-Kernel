@@ -1,17 +1,5 @@
 #include "traduccion.h"
 
-/* Traduccion NICO
-t_direccion_fisica direccion_logica_a_fisica(uint32_t direccion_logica){
-    t_direccion_fisica direccion_fisica;
-    //Obtengo los valores de la dirección física
-    direccion_fisica.nro_pagina = floor(direccion_logica / cpu_configs.tampagina); //El tamaño de página lo agregué a las configs
-    //direccion_fisica.entrada_nivel_X = floor(direccion_fisica.nro_pagina  / cpu_configs.entradastlb ^ (N - X)) % cpu_configs.entradastlb
-    direccion_fisica.desplazamiento = direccion_logica % cpu_configs.tampagina;
-    return direccion_fisica;
-}
-*/
-
-// Traduccion JULI
 t_tabla_pag* info_tabla_pag;
 tlb_t* tlb;
 
@@ -23,33 +11,37 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int 
     // Calcular las entradas de cada nivel
     uint32_t entradas_niveles[info_tabla_pag->cant_niveles];
     for (uint32_t i = 0; i < info_tabla_pag->cant_niveles; i++) {
-        entradas_niveles[i] = floor(nro_pagina / pow(info_tabla_pag->cant_entradas_tabla, info_tabla_pag->cant_niveles - 1 - i)) % info_tabla_pag->cant_entradas_tabla;
+        entradas_niveles[i] = (uint32_t)floor(nro_pagina / pow(info_tabla_pag->cant_entradas_tabla, info_tabla_pag->cant_niveles - 1 - i)) % info_tabla_pag->cant_entradas_tabla;
     }
 
     // Consultar TLB
-    uint32_t marco_tlb;
-    if (consultar_tlb(nro_pagina, &marco_tlb)) {
+    int32_t posicion = consultar_tlb(pid, nro_pagina);
+    if (posicion != -1) {
+        uint32_t marco_tlb = tlb->entradas[posicion].marco;
         // TLB Hit
         log_info(logger_cpu, "PID: %d - TLB HIT - Pagina: %d", pid, nro_pagina);
+
         return (marco_tlb * info_tabla_pag->tamanio_pagina) + desplazamiento; // Devolver dirección física
     }
-    // TLB Miss
-    log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", pid, nro_pagina);
+    else{
+        // TLB Miss
+        log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", pid, nro_pagina);
 
-    // Consultar memoria para obtener el marco
-    uint32_t marco_memoria = obtener_marco_de_memoria(nro_pagina, socket_memoria, pid);
-    if (marco_memoria == -1) {
-        // Manejo de error: no se pudo obtener el marco
-        return -1; // O manejar el error de otra manera
+        // Consultar memoria para obtener el marco
+        uint32_t marco_memoria = obtener_marco_de_memoria(nro_pagina, socket_memoria, pid);
+        if (marco_memoria == -1) {
+            // Manejo de error: no se pudo obtener el marco
+            return -1; // O manejar el error de otra manera
+        }
+
+        // Registrar el log de obtención de marco
+        log_info(logger_cpu, "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pid, nro_pagina, marco_memoria);
+
+        // Agregar a la TLB
+        agregar_a_tlb(nro_pagina, marco_memoria, pid);
+
+        return (marco_memoria * info_tabla_pag->tamanio_pagina) + desplazamiento; // Devolver dirección física
     }
-
-    // Registrar el log de obtención de marco
-    log_info(logger_cpu, "PID: %d - OBTENER MARCO - Página: %d - Marco: %d", pid, nro_pagina, marco_memoria);
-
-    // Agregar a la TLB
-    agregar_a_tlb(nro_pagina, marco_memoria, pid);
-
-    return (marco_memoria * info_tabla_pag->tamanio_pagina) + desplazamiento; // Devolver dirección física
 }
 
 tlb_t* crear_tlb(uint32_t capacidad) {
@@ -65,12 +57,29 @@ void destruir_tlb() {
 
 }
 
-bool consultar_tlb(uint32_t numero_pagina, uint32_t* marco_tlb) {
-
+int32_t consultar_tlb(uint32_t pid, uint32_t numero_pagina) { //Devuelve la posicion en el array de la tlb o -1
+    int32_t posicion = 0;
+    while(posicion < tlb->tamaño && (tlb->entradas[posicion].pid != pid || tlb->entradas[posicion].pagina != numero_pagina)){
+        posicion ++;
+    }
+    if(posicion == tlb->tamaño){ //Si no lo encuentra devuelve -1
+        return -1;
+    }
+    else{
+        return posicion;
+    }
 }
 
 void agregar_a_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid) {
-
+    if(tlb->capacidad > tlb->tamaño){
+        tlb->entradas[tlb->tamaño].marco = marco_tlb;
+        tlb->entradas[tlb->tamaño].pagina = numero_pagina;
+        tlb->entradas[tlb->tamaño].pid = pid;
+        tlb->tamaño ++;
+    }
+    else{
+        reemplazar_tlb(numero_pagina, marco_tlb, pid);
+    }
 }
 
 void reemplazar_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid) {
