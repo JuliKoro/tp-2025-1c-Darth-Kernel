@@ -2,6 +2,8 @@
 
 void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt){
     PC = proceso->pc; // Asigno el PC pasado desde Kernel al PC global de CPU
+    uint32_t tsc_proc_inicial = TSC;
+    uint32_t tsc_proc_final;
     while(1){ // loop ciclo de instruccion
         
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
@@ -11,9 +13,13 @@ void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int
         // ETAPA EXECUTE
         execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); 
 
+        TSC++; // Incrementa el TSC en cada ciclo de instrucción
+
         // CHECK INTERRUPT
         if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
             interrupcion->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
+            tsc_proc_final = TSC;
+            interrupcion->rafaga_cpu = rafaga_cpu(tsc_proc_final, tsc_proc_inicial);
             enviar_devolucion_interrupcion(interrupcion, socket_kernel_interrupt);
             IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción
@@ -137,6 +143,10 @@ bool check_interrupt(t_interrupcion* interrupcion, t_proceso_cpu* proceso, int s
         log_debug(logger_cpu, "No se ha detectado ninguna interrupcion para el proceso");
         return false;
     }
+}
+
+uint32_t rafaga_cpu(uint32_t tsc_proc_final, uint32_t tsc_proc_inicial) {
+    return tsc_proc_final - tsc_proc_inicial;
 }
 
 void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_interrupt){

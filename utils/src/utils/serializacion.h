@@ -156,11 +156,13 @@ typedef enum {
  * 
  * @param pid: Identificador del proceso al que se quiere interrumpir
  * @param pc: PC del proceso al que se quiere interrumpir
+ * @param rafaga_cpu: Cantidad de ciclos de maquina ejecutados del proceso que se desaloja
  * @param motivo: Motivo de la interrupcion
  */
 typedef struct {
     uint32_t pid;
     uint32_t pc;
+    uint32_t rafaga_cpu;
     t_motivo_interrupcion motivo;
 } t_interrupcion;
 

@@ -288,16 +288,20 @@ t_syscall* deserializar_syscall(t_buffer* buffer){
 t_buffer* serializar_interrupcion(t_interrupcion* interrupcion){
     t_buffer* buffer = buffer_create(sizeof(t_interrupcion));
     buffer_add_uint32(buffer, interrupcion->pid);
-    buffer_add_uint32(buffer, interrupcion->motivo);
     buffer_add_uint32(buffer, interrupcion->pc);
+    buffer_add_uint32(buffer, interrupcion->rafaga_cpu);
+    buffer_add_uint32(buffer, interrupcion->motivo);
+    
     return buffer;
 }
 
 t_interrupcion* deserializar_interrupcion(t_buffer* buffer){
     t_interrupcion* interrupcion = malloc(sizeof(t_interrupcion));
     interrupcion->pid = buffer_read_uint32(buffer);
-    interrupcion->motivo = buffer_read_uint32(buffer);
     interrupcion->pc = buffer_read_uint32(buffer);
+    interrupcion->rafaga_cpu = buffer_read_uint32(buffer);
+    interrupcion->motivo = buffer_read_uint32(buffer);
+    
     return interrupcion;
 }
 
