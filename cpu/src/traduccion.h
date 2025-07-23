@@ -27,9 +27,11 @@ typedef struct {
 } t_direccion_logica;
 
 typedef struct {
-    uint32_t pagina; // Número de página
-    uint32_t marco;  // Marco correspondiente
-    uint32_t pid;    // Proceso correspondiente
+    uint32_t pagina;     // Número de página
+    uint32_t marco;      // Marco correspondiente
+    uint32_t pid;        // Proceso correspondiente
+    uint32_t ingreso;    // Momento en que ingresó a la TLB
+    uint32_t ultimo_uso; // Momento en que se usó por última vez
 } t_entrada_tlb;
 
 typedef struct {

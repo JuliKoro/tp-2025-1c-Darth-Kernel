@@ -2,6 +2,7 @@
 
 t_tabla_pag* info_tabla_pag;
 tlb_t* tlb;
+uint32_t contador_accesos = 0;
 
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int socket_memoria) {
     // Calcular el número de página y el desplazamiento
@@ -28,7 +29,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int 
         log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", pid, nro_pagina);
 
         // Consultar memoria para obtener el marco
-        uint32_t marco_memoria = obtener_marco_de_memoria(nro_pagina, socket_memoria, pid);
+        int32_t marco_memoria = obtener_marco_de_memoria(nro_pagina, socket_memoria, pid);
         if (marco_memoria == -1) {
             // Manejo de error: no se pudo obtener el marco
             return -1; // O manejar el error de otra manera
@@ -58,7 +59,8 @@ void destruir_tlb() {
 }
 
 int32_t consultar_tlb(uint32_t pid, uint32_t numero_pagina) { //Devuelve la posicion en el array de la tlb o -1
-    int32_t posicion = 0;
+    contador_accesos ++;
+    uint32_t posicion = 0;
     while(posicion < tlb->tamaño && (tlb->entradas[posicion].pid != pid || tlb->entradas[posicion].pagina != numero_pagina)){
         posicion ++;
     }
@@ -66,24 +68,61 @@ int32_t consultar_tlb(uint32_t pid, uint32_t numero_pagina) { //Devuelve la posi
         return -1;
     }
     else{
-        return posicion;
+        tlb->entradas[posicion].ultimo_uso = contador_accesos; //Actualizo su último uso
+        return posicion; 
     }
 }
 
 void agregar_a_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid) {
+
+    // Si hay lugar lo agrega al final
     if(tlb->capacidad > tlb->tamaño){
         tlb->entradas[tlb->tamaño].marco = marco_tlb;
         tlb->entradas[tlb->tamaño].pagina = numero_pagina;
         tlb->entradas[tlb->tamaño].pid = pid;
+        tlb->entradas[tlb->tamaño].ingreso = contador_accesos;
+        tlb->entradas[tlb->tamaño].ultimo_uso = contador_accesos;
         tlb->tamaño ++;
     }
+    // Sino se reemplaza
     else{
         reemplazar_tlb(numero_pagina, marco_tlb, pid);
     }
+
 }
 
-void reemplazar_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid) {
+void reemplazar_tlb(uint32_t numero_pagina, uint32_t marco_tlb, uint32_t pid){
+    uint32_t posicion_aux = 0;
+    uint32_t posicion_reemplazo = 0; //Posición de la página a reemplazar
 
+    //Busco la posición de la página que voy a reemplazar
+
+    //En caso que sea FIFO
+    if(strcmp(tlb->algoritmo_reemplazo, "FIFO") == 0){
+        while(posicion_aux < tlb->tamaño){
+            if(tlb->entradas[posicion_aux].ingreso < tlb->entradas[posicion_reemplazo].ingreso){
+                posicion_reemplazo = posicion_aux;
+            }
+            posicion_aux ++;
+        }
+    }
+
+    //En caso que sea LRU
+    else{
+        while(posicion_aux < tlb->tamaño){
+            if(tlb->entradas[posicion_aux].ultimo_uso < tlb->entradas[posicion_reemplazo].ultimo_uso){
+                posicion_reemplazo = posicion_aux;
+            }
+            posicion_aux ++;
+        }    
+    }
+
+    //Reemplazo la página encontrada
+    tlb->entradas[posicion_reemplazo].marco = marco_tlb;
+    tlb->entradas[posicion_reemplazo].pagina = numero_pagina;
+    tlb->entradas[posicion_reemplazo].pid = pid;
+    tlb->entradas[posicion_reemplazo].ingreso = contador_accesos;
+    tlb->entradas[posicion_reemplazo].ultimo_uso = contador_accesos;
 }
 
 uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, int socket_memoria, uint32_t pid) {
