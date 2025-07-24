@@ -29,7 +29,7 @@ void aplicar_retardo_memoria();
  * @param tam Cantidad de bytes a leer.
  * @return Puntero a un nuevo buffer con los datos leídos, or NULL si hay un error.
  */
-void* leer_memoria(int pid, int direccion_fisica, int tam);
+void* leer_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tam);
 
 /**
  * @brief Escribe datos en la memoria principal.

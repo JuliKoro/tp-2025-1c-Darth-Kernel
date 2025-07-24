@@ -53,8 +53,8 @@ typedef enum {
     PAQUETE_CARGAR_PROCESO=9,
     PAQUETE_DUMP_MEMORY=10,
     PAQUETE_SOLICITUD_MARCO=11, //
-    PAQUETE_READ=12, //
-    PAQUETE_WRITE=13 //
+    PAQUETE_READ=12, //ok
+    PAQUETE_WRITE=13 //ok
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -172,6 +172,19 @@ typedef struct {
     uint32_t entrada_nivel;
     uint32_t num_pag;
 } t_entrada_tabla;
+
+typedef struct {
+    uint32_t pid;
+    uint32_t direccion_fisica;
+    uint32_t tamanio;
+} t_lectura_memoria;
+
+typedef struct {
+    uint32_t pid;
+    uint32_t direccion_fisica;
+    uint32_t tamanio;
+    void* valor;
+} t_escritura_memoria;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -300,6 +313,16 @@ t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer);
 t_buffer* serializar_solicitud_marco(t_entrada_tabla* entrada_tabla);
 
 t_entrada_tabla* deserializar_solicitud_marco(t_buffer* buffer);
+
+
+//funciones a desarrollar para operacion lectura memoria
+t_buffer* serializar_lectura_memoria(t_lectura_memoria* lectura_memoria);
+
+t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer);
+
+t_buffer* serializar_escritura_memoria(t_escritura_memoria* escritura_memoria);
+
+t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

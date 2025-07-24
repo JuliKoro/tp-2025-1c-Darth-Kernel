@@ -26,7 +26,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
 /**
   * @brief Lee datos de la memoria principal.
   *
-  * Recibe la dirección física, valida los límites y copia `tam` bytes
+  * Recibe la dirección física y copia `tam` bytes
   * desde la memoria principal a un nuevo buffer.
   *
   * @param pid PID del proceso.
@@ -35,7 +35,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
   * @return Puntero a un nuevo buffer con los datos leídos, o NULL si hay un error.
   */
 
- void* leer_memoria(int pid, int direccion_fisica, int tam) {
+ void* leer_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tam) {
 
     void *buffer = malloc(tam);
     if (!buffer) return NULL;

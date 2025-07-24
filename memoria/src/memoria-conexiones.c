@@ -69,19 +69,41 @@ void* manejar_conexion(void* socket_cliente){
             char* instruccion = obtener_instruccion(pcb->pid, pcb->pc);
             if(instruccion == NULL){
                 log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango (total instrucciones: %d).",
-               pcb->pid, pcb->pc);
+                    pcb->pid, pcb->pc);
             enviar_bool(socket_fd, false);
             } else {
                 enviar_bool(socket_fd, true);
                 enviar_mensaje(instruccion, socket_fd); 
             }
         }
-        if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
-            t_entrada_tabla* entrada_tabla = deserializar_solicitud_marco(paquete->buffer);
-            if()    
-//            pid, entr nivel, num pag
-            
+      //  if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
+        //    t_entrada_tabla* entrada_tabla = deserializar_solicitud_marco(paquete->buffer);
+          //  if()    ;
+//            pid, entr nivel, num pag            
         }
+        if(paquete->codigo_operacion == PAQUETE_READ){
+            t_lectura_memoria* datos_lectura_memoria = deserializar_lectura_memoria(paquete->buffer);
+            void* memoria_leida = leer_memoria(datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica, datos_lectura_memoria->tamanio);
+            if(memoria_leida == NULL){
+                log_error(logger_memoria, "[LECTURA MEMORIA] No se pudo leer la memoria del proceso %d y direccion fisica %d",
+                    datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica);
+                enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true);
+                enviar_mensaje(memoria_leida, socket_fd); 
+            }
+        }
+//int pid, int direccion_fisica, int tam, void* valor
+        if(paquete->codigo_operacion == PAQUETE_WRITE){
+            t_escritura_memoria* datos_escritura_memoria = deserializar_lectura_memoria(paquete->buffer);
+            if(escribir_memoria(datos_escritura_memoria->pid, datos_escritura_memoria->direccion_fisica, 
+                datos_escritura_memoria->tamanio, datos_escritura_memoria->valor) == false){
+                log_error(logger_memoria, "[ESCRITURA MEMORIA] No se pudo escribir la memoria del proceso %d y direccion fisica %d",
+                    datos_escritura_memoria->pid, datos_escritura_memoria->direccion_fisica);
+                enviar_bool(socket_fd, false);
+            } else {
+                enviar_bool(socket_fd, true); 
+            }
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
