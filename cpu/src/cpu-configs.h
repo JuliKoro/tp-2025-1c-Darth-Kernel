@@ -9,6 +9,7 @@
 #define CPU_CONFIGS_H
 
 #include <utils/configs.h>
+#include <utils/serializacion.h>
 
 extern t_config* cpu_tconfig;
 
@@ -26,8 +27,10 @@ extern t_config* cpu_tconfig;
  * @param entradascache: Número de entradas en la caché
  * @param reemplazocache: Algoritmo de reemplazo de la caché
  * @param retardocache: Retardo de acceso a la caché
+ * @param tamanio_pagina: Tamaño de cada pagina en memoria (en bytes)
+ * @param cant_entradas_tabla Cantidad de entradas de cada tabla de páginas
+ * @param cant_niveles Cantidad de niveles de tablas de páginas
  * @param loglevel: Nivel de log para el módulo
- * @param tampagina: Tamaño de pagina
  * 
  * Esta estructura almacena la configuración necesaria para el
  * funcionamiento del CPU, incluyendo direcciones IP, puertos y
@@ -44,6 +47,9 @@ typedef struct cpuconfigs {
      int entradascache;         // Número de entradas en la caché
      char* reemplazocache;      // Algoritmo de reemplazo de la caché
      int retardocache;          // Retardo de acceso a la caché
+     uint32_t tamanio_pagina; // Tamaño de cada pagina en memoria (en bytes)
+     uint32_t cant_entradas_tabla; // Cantidad de entradas de cada tabla de páginas
+     uint32_t cant_niveles; // Cantidad de niveles de tablas de páginas
      char* loglevel;            // Nivel de log para el módulo
 } cpuconfigs;
 
@@ -72,5 +78,14 @@ int inicializar_configs();
  * 
  */
 void destruir_configs();
+
+/**
+ * @brief Carga la configuración de la tabla de páginas en la estructura de configuración de la CPU.
+ *
+ * @param info_tabla_pag Puntero a una estructura de tipo t_tabla_pag que contiene la información
+ *                       de la tabla de páginas (tamaño de página, cantidad de
+ *                       entradas en la tabla y cantidad de niveles)
+ */
+void cargar_configs_tabla_paginas(t_tabla_pag* info_tabla_pag);
 
 #endif

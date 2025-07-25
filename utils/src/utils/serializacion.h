@@ -92,11 +92,13 @@ typedef struct {
  * @param tamanio_pagina Tamaño de cada pagina en memoria (en bytes)
  * @param cant_entradas_tabla Cantidad de entradas de cada tabla de páginas
  * @param cant_niveles Cantidad de niveles de tablas de páginas
+ * 
+ * @note Utilizada para Handshake entre CPU y Memoria
  */
 typedef struct {
-    uint32_t tamanio_pagina;
-    uint32_t cant_entradas_tabla;
-    uint32_t cant_niveles;
+    uint32_t tamanio_pagina; // Tamaño de cada pagina en memoria (en bytes)
+    uint32_t cant_entradas_tabla; // Cantidad de entradas de cada tabla de páginas
+    uint32_t cant_niveles; // Cantidad de niveles de tablas de páginas
 } t_tabla_pag;
 
 //Estructura de buffer para serializacion y deserializacion

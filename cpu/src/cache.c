@@ -6,7 +6,7 @@ cache_t* crear_cache(int capacidad, char* algoritmo_reemplazo) {
     cache_t* cache = malloc(sizeof(cache_t));
     cache->entradas = malloc(sizeof(entrada_cache) * cpu_configs.entradascache);
     cache->capacidad = cpu_configs.entradascache;
-    cache->tamaño = 0;
+    cache->tamanio = 0;
     cache->algoritmo_reemplazo = cpu_configs.reemplazocache;
 
     // Inicializacion de las entradas
@@ -18,7 +18,7 @@ cache_t* crear_cache(int capacidad, char* algoritmo_reemplazo) {
     return cache;
 }
 
-void destruir_cache(cache_t* cache) {
+void destruir_cache() {
     /*
     // Liberar el contenido de las entradas si es necesario
     for (int i = 0; i < cache->capacidad; i++) {
@@ -54,13 +54,13 @@ bool acceder_pagina_cache(uint32_t pagina, uint32_t pid) {
 }
 
 void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid) {
-    if (cache->tamaño < cache->capacidad) {
+    if (cache->tamanio < cache->capacidad) {
         // Hay espacio en la caché
-        cache->entradas[cache->tamaño].pagina = pagina;
-        cache->entradas[cache->tamaño].contenido = contenido;
-        cache->entradas[cache->tamaño].uso = true;
-        cache->entradas[cache->tamaño].modificado = false; // Inicialmente no modificado
-        cache->tamaño++;
+        cache->entradas[cache->tamanio].pagina = pagina;
+        cache->entradas[cache->tamanio].contenido = contenido;
+        cache->entradas[cache->tamanio].uso = true;
+        cache->entradas[cache->tamanio].modificado = false; // Inicialmente no modificado
+        cache->tamanio++;
     } else {
         // Caché llena, hay que reemplazar una página
         reemplazar_pagina(pagina, pid);
@@ -72,7 +72,7 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria) {
     // Recorrer todas las entradas de la caché
     for (int i = 0; i < cache->capacidad; i++) {
         // Verificar si la entrada está modificada
-        if (cache->entradas[i].modificada) {
+        if (cache->entradas[i].modificado) {
             // Consultar la dirección física de la página
             uint32_t direccion_fisica = obtener_direccion_fisica(cache->entradas[i].pagina, socket_memoria); // Función para obtener la dirección física
 

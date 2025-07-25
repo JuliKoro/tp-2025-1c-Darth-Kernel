@@ -16,3 +16,22 @@ int cpu_conectar_a_memoria(int id_cpu){
     return socket_memoria;
 
 }
+
+t_tabla_pag* hanshake_cpu_memoria(int socket_memoria, int id_cpu) {
+    //Hago el handshake con Memoria
+    if(enviar_handshake_cpu(socket_memoria, id_cpu) == -1){
+        log_error(logger_cpu, "Error al enviar handshake a Memoria. Cerrando conexion");
+    }
+
+    log_info(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de Memoria...");
+
+    //Recibo la confirmacion de Memoria con un paquete de t_tabla_pag
+    t_tabla_pag* info_tabla_pag;
+    t_paquete* paquete = recibir_paquete(socket_memoria);
+    if (paquete != PAQUETE_INFO_TP) {
+        log_error(logger_cpu, "Error al recibir confirmacion de Memoria. Cerrando conexion");
+        return NULL;
+    }
+    info_tabla_pag = deserializar_info_tabla_pag(paquete);
+    return info_tabla_pag;
+}

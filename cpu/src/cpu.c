@@ -49,10 +49,24 @@ int main(int argc, char* argv[]) {
    // SOCKETS
    // Conexiones al Kernel (dispatch & interrupt)
    socket_kernel_dispatch = cpu_conectar_a_kernel(cpu_configs.puertokerneldispatch, id_cpu);
+   if (socket_kernel_dispatch < 0) {
+      log_error(logger_cpu, "[CPU] Error al conectar al Kernel para dispatch");
+      return -1;
+   }
    socket_kernel_interrupt = cpu_conectar_a_kernel(cpu_configs.puertokernelinterrupt, id_cpu);
+   if (socket_kernel_interrupt < 0) {
+      log_error(logger_cpu, "[CPU] Error al conectar al Kernel para interrupt");
+      return -1;
+   }
 
    // Conexion con Memoria
    socket_memoria = cpu_conectar_a_memoria(id_cpu); // cambiar handshake con memoria por info de tablas de paginas
+   if (socket_memoria < 0) {
+      log_error(logger_cpu, "[CPU] Error al conectar con Memoria");
+      return -1;
+   }
+   t_tabla_pag* info_tabla_pag = hanshake_cpu_memoria(socket_memoria, id_cpu);
+   cargar_configs_tabla_paginas(info_tabla_pag);
 
    // HILOS
    pthread_t thread_dispatch, thread_interrupt, thread_ciclo_instruccion;
