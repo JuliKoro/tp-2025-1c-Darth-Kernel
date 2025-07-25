@@ -169,7 +169,6 @@ void* hilo_interrupt(void* arg){
 }
 
 void* hilo_ciclo_instruccion(void* arg){
-   // LIMPIAR TLB Y CACHE DE PAGINAS
    while (1) {
       // Adquirir el mutex antes de acceder a la variable proceso
       pthread_mutex_lock(&mutex_proceso);
@@ -179,10 +178,17 @@ void* hilo_ciclo_instruccion(void* arg){
       }
       pthread_mutex_unlock(&mutex_proceso);
 
+      // LIMPIAR TLB Y CACHE DE PAGINAS
+      if (acceder_cache()) { // Si esta habiliatada la Cache
+         actualizar_cache_a_memoria(proceso->pid, socket_memoria);
+         limpiar_cache();
+      }
+
       // Liberar cunado se desaloja proceso en CPU
       // Libera el semáforo para permitir que el hilo de despacho reciba un nuevo proceso
       sem_post(&semaforo_proceso);
       // Libera el semáforo para permitir que el hilo de interrupt reciba una nueva interrupcion
       sem_post(&semaforo_interrupcion);
+
    }
 }

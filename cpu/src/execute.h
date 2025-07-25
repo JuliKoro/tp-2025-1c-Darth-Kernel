@@ -13,6 +13,7 @@
 #include "traduccion.h"
 #include "cpu-log.h"
 #include "cpu-conexiones.h"
+#include "cache.h"
 
 /**
  * @brief Ejecuta una instrucción decodificada del CPU

@@ -4,16 +4,17 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#include <utils/sockets.h>
+#include <utils/hello.h>
+#include <utils/configs.h>
+
 #include "cpu-conexiones.h"
 #include "cpu-configs.h"
 #include "cpu-log.h"
 #include "ciclo-instruccion.h"
 #include "traduccion.h"
-
-#include <utils/sockets.h>
-#include <utils/hello.h>
-#include <utils/configs.h>
 #include "registros.h"
+#include "cache.h"
 
 // Prototipos de las funciones de los hilos
 

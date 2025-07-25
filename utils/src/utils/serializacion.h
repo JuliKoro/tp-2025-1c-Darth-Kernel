@@ -186,6 +186,11 @@ typedef struct {
     void* valor;
 } t_escritura_memoria;
 
+typedef struct {
+    uint32_t pid;
+    uint32_t num_pag;
+    uint32_t estado;
+}
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de buffer

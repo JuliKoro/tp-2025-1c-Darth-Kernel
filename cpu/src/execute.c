@@ -14,17 +14,29 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             break;
         case WRITE:
             // Lógica para escribir en memoria
-            uint32_t direccion_fisica;
-            direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
-            // escribir_en_memoria(socket_memoria, direccion_fisica, instruccion->datos);
+            if (acceder_cache()) { // Cache Habilitada
+                escribir_en_cache(instruccion->direccion, instruccion->datos, instruccion->pid, socket_memoria);
+            } else { // Si la caché está deshabilitada, escribo directamente en memoria
+                uint32_t direccion_fisica;
+                direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
+                escribir_en_memoria(socket_memoria, direccion_fisica, instruccion->datos); // FALTA HACER
+                log_info(logger_cpu, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, instruccion->datos);
+            }
             PC++;
             break;
 
         case READ:
+            char* datos;
             // Lógica para leer de memoria
-            uint32_t direccion_fisica;
-            direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
-            // leer_de_memoria(socket_memoria, direccion_fisica, instruccion->tamanio);
+            if (acceder_cache()) { // Cache Habilitada
+                datos = leer_de_cache(instruccion->direccion, instruccion->tamanio, instruccion->pid, socket_memoria); 
+            } else { // Si la caché deshabilitada, leer directamente de memoria
+                uint32_t direccion_fisica;
+                direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
+                datos = leer_de_memoria(socket_memoria, direccion_fisica, instruccion->tamanio); // FALTA HACER
+                log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, datos);
+            }
+            printf("PID: %d - Valor leído: %s", instruccion->pid, datos);
             PC++;
             break;
 
