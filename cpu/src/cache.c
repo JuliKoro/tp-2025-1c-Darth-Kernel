@@ -53,6 +53,44 @@ bool acceder_pagina_cache(uint32_t pagina, uint32_t pid) {
     return false; // Página no encontrada en caché
 }
 
+void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria) {
+    // Obtengo la DF de la página
+    uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
+    
+    // Creo y serializo la solicitud para cargar la página
+    t_sol_pag solicitud;
+    solicitud.pid = pid;
+    solicitud.direccion_fisica = direccion_fisica;
+
+    t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
+    
+    // Envio la solicitud a memoria
+    t_paquete paquete_solicitud;
+    paquete_solicitud.codigo_operacion = PAQUETE_SOLICITUD_PAG;
+    paquete_solicitud.buffer = buffer_solicitud;
+
+    if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
+        log_error(logger_cpu, "Error al enviar solicitud de carga de página a Memoria.");
+        return; // Manejo de error
+    }
+
+    // Recibo la respuesta de memoria
+    t_paquete* paquete_respuesta = recibir_paquete(socket_memoria);
+    if (paquete_respuesta->codigo_operacion != PAQUETE_PAG_CACHE) {
+        log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la carga de página.");
+        return; // Manejo de error
+    }
+
+    t_pag_cache* pagina_cache = deserializar_pagina_cache(paquete_respuesta->buffer);
+    
+    // Agrego la página a la caché
+    agregar_a_cache(pagina_cache->pagina, pagina_cache->contenido, pid);
+
+    // Liberar el paquete de respuesta y el contenido deserializado
+    liberar_paquete(paquete_respuesta);
+    free(pagina_cache);
+}
+
 void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid) {
     if (cache->tamanio < cache->capacidad) {
         // Hay espacio en la caché
@@ -74,7 +112,7 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria) {
         // Verificar si la entrada está modificada
         if (cache->entradas[i].modificado) {
             // Consultar la dirección física de la página
-            uint32_t direccion_fisica = obtener_direccion_fisica(cache->entradas[i].pagina, socket_memoria); // Función para obtener la dirección física
+            uint32_t direccion_fisica = traducir_direccion_logica(cache->entradas[i].pagina, pid, socket_memoria); // Función para obtener la dirección física
 
             // Enviar el contenido a la memoria
             if (cache->entradas[i].contenido != NULL) {
@@ -160,14 +198,14 @@ void reemplazar_pagina(uint32_t pagina, uint32_t pid) {
 
 void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pid, int socket_memoria) {
     uint32_t pagina = obtener_numero_pagina(direccion_logica); // Función para obtener el número de página (AGREGAR A traduccion.c)
-    if (acceder_pagina_cache(pagina, pid)) {
+    if (acceder_pagina_cache(pagina, pid)) { // Cache Hit
         // Si la página está en la caché, escribe los datos
         cache->entradas[cache->puntero].contenido = strdup(datos); // Asigno los datos a la entrada de la caché
         cache->entradas[cache->puntero].modificado = true; // Marco como modificada
         log_debug(logger_cpu, "## PID: %d - Escribiendo en caché: Página: %d, Datos: %s", pid, pagina, datos);
-    } else {
+    } else { // Cache Miss
         // Si no está en la caché, cargo la página desde la memoria
-        cargar_pagina_en_cache(cache, pagina, pid, socket_memoria);
+        cargar_pagina_en_cache(pagina, pid, socket_memoria);
         // Escribo los datos
         cache->entradas[cache->puntero].contenido = strdup(datos);
         cache->entradas[cache->puntero].modificado = true;
@@ -178,11 +216,13 @@ void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pi
 char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, int socket_memoria) {
     uint32_t pagina = obtener_numero_pagina(direccion_logica); // Función para obtener el número de página
     const char* datos; 
-    if (acceder_cache(cache, pagina, pid)) { // Si la página está en la caché, leer los datos
+    if (acceder_pagina_cache(pagina, pid)) { // Cache Hit
+        // Si la página está en la caché, leer los datos
         datos = cache->entradas[cache->puntero].contenido; // Obtener los datos de la entrada de la caché
         log_debug(logger_cpu, "## PID: %d - Leyendo de caché: Página: %d, Datos: %s", pid, pagina, datos);
-    } else { // Si no está en la caché, cargar la página desde la memoria
-        cargar_pagina_en_cache(cache, pagina, pid, socket_memoria);
+    } else { // Cache Miss
+        // Si no está en la caché, cargar la página desde la memoria
+        cargar_pagina_en_cache(pagina, pid, socket_memoria);
         // Leer los datos
         datos = cache->entradas[cache->puntero].contenido; // Obtener los datos de la entrada de la caché
         log_debug(logger_cpu, "## PID: %d - Página no encontrada en caché, cargando desde memoria: Página: %d, Datos: %s", pid, pagina, datos);

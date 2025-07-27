@@ -22,7 +22,7 @@
  */
 typedef struct {
     uint32_t pagina;      // Número de página.
-    void* contenido;      // Contenido de la página (puede ser un puntero a datos).
+    void* contenido;      // Contenido de la página (un puntero a datos).
     bool modificado;      // Indica si la página ha sido modificada (Bit de Modificado).
     bool uso;            // Indica si la página ha sido utilizada (Bit de Uso).
 } entrada_cache;
@@ -123,6 +123,8 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria);
  * @param pid Identificador del proceso que realiza la operación.
  */
 void reemplazar_pagina(uint32_t pagina, uint32_t pid);
+
+void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria);
 
 /**
  * @brief Escribe datos en la caché.

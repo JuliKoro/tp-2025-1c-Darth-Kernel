@@ -79,6 +79,24 @@ char *buffer_read_string(t_buffer *buffer, uint32_t *length) {
     return string;
 }
 
+void buffer_add_data(t_buffer *buffer, void* data, uint32_t size) {
+    if (buffer->offset + size > buffer->size) {
+        printf("Error: Buffer overflow\n");
+        exit(1);
+    }
+    memcpy(buffer->stream + buffer->offset, data, size);
+    buffer->offset += size;
+}
+
+void buffer_read_data(t_buffer *buffer, void* data, uint32_t size) {
+    if (buffer->offset + size > buffer->size) {
+        printf("Error: Buffer overflow\n");
+        exit(1);
+    }
+    memcpy(data, buffer->stream + buffer->offset, size);
+    buffer->offset += size;
+}
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de serializacion y deserializacion IO
@@ -307,10 +325,11 @@ t_interrupcion* deserializar_interrupcion(t_buffer* buffer){
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                            Funciones de serializacion y deserializacion info de TP
+                        Funciones de serializacion y deserializacion CPU y MEMORIA
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
+// Info de Tabla de Paginas
 t_buffer* serializar_info_tabla_pag(t_tabla_pag* info_tabla_pag){
     t_buffer* buffer = buffer_create(sizeof(t_tabla_pag));
     buffer_add_uint32(buffer, info_tabla_pag->tamanio_pagina);
@@ -325,4 +344,37 @@ t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer){
     info_tabla_pag->cant_entradas_tabla = buffer_read_uint32(buffer);
     info_tabla_pag->cant_niveles = buffer_read_uint32(buffer);
     return info_tabla_pag;
+}
+
+// Solicitud Pagina Cache / READ
+t_buffer* serializar_solicitud_pag(t_sol_pag* solicitud_pagina){
+    t_buffer* buffer = buffer_create(sizeof(t_sol_pag));
+    buffer_add_uint32(buffer, solicitud_pagina->pid);
+    buffer_add_uint32(buffer, solicitud_pagina->direccion_fisica);
+    return buffer;
+}
+
+t_sol_pag* deserializar_solicitud_pag(t_buffer* buffer){
+    t_sol_pag* solicitud_pagina = malloc(sizeof(t_sol_pag));
+    solicitud_pagina->pid = buffer_read_uint32(buffer);
+    solicitud_pagina->direccion_fisica = buffer_read_uint32(buffer);
+    return solicitud_pagina;
+}
+
+// Pagina de Cache
+
+t_buffer* serializar_pagina_cache(t_pag_cache* pagina_cache){
+    t_buffer* buffer = buffer_create(sizeof(t_tabla_pag));
+    buffer_add_uint32(buffer, pagina_cache->pid);
+    buffer_add_uint32(buffer, pagina_cache->pagina);
+    //buffer_add_string(buffer, pagina_cache->contenido, ); // void* CORREGIR
+    return buffer;
+}
+
+t_pag_cache* deserializar_pagina_cache(t_buffer* buffer){
+    t_pag_cache* pagina_cache = malloc(sizeof(t_pag_cache));
+    pagina_cache->pid = buffer_read_uint32(buffer);
+    pagina_cache->pagina = buffer_read_uint32(buffer);
+    //pagina_cache->contenido = buffer_read_string(buffer, ); // void* CORREGIR
+    return pagina_cache;
 }

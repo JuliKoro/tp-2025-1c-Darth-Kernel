@@ -28,7 +28,7 @@ t_tabla_pag* hanshake_cpu_memoria(int socket_memoria, int id_cpu) {
     //Recibo la confirmacion de Memoria con un paquete de t_tabla_pag
     t_tabla_pag* info_tabla_pag;
     t_paquete* paquete = recibir_paquete(socket_memoria);
-    if (paquete != PAQUETE_INFO_TP) {
+    if (paquete->codigo_operacion != PAQUETE_INFO_TP) {
         log_error(logger_cpu, "Error al recibir confirmacion de Memoria. Cerrando conexion");
         return NULL;
     }
