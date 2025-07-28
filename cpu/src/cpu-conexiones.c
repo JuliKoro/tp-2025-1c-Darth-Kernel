@@ -32,6 +32,6 @@ t_tabla_pag* hanshake_cpu_memoria(int socket_memoria, int id_cpu) {
         log_error(logger_cpu, "Error al recibir confirmacion de Memoria. Cerrando conexion");
         return NULL;
     }
-    info_tabla_pag = deserializar_info_tabla_pag(paquete);
+    info_tabla_pag = deserializar_info_tabla_pag(paquete->buffer);
     return info_tabla_pag;
 }

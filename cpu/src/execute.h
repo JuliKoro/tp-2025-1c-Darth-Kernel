@@ -34,26 +34,11 @@
  */
 int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch);
 
-/**
- * @brief Lee datos de la memoria a partir de una dirección física.
- *
- * @param pid Identificador del proceso que solicita la lectura de datos.
- * @param direccion_fisica Dirección física desde la cual se desea leer los datos.
- * @param tamanio Tamaño del bloque de datos a leer.
- * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
- *
- * @return char* Puntero a los datos leídos de la memoria. Si ocurre un error
- *                durante la operación, se retorna NULL.
- */
-char* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria);
-
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                     Agrego funciones de syscalls relevantes a kernel
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
 
 /**
  * @brief Envia una syscall a kernel a partir de interpretar la instruccion decodificada
@@ -71,7 +56,6 @@ int enviar_syscall(instruccion_decodificada* instruccion, int socket_kernel_disp
  */
 void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
 
-
 /**
  * @brief Envia una syscall de inicializacion de proceso a kernel
  * 
@@ -79,7 +63,6 @@ void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_
  * @param socket_kernel_dispatch socket de kernel al que se le enviara la syscall
  */
 void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
-
 
 /**
  * @brief Envia una syscall de volcado de memoria a kernel
@@ -89,7 +72,6 @@ void enviar_syscall_init_proc(instruccion_decodificada* instruccion, int socket_
  */
 void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
 
-
 /**
  * @brief Envia una syscall de salida a kernel
  * 
@@ -97,7 +79,5 @@ void enviar_syscall_dump_memory(instruccion_decodificada* instruccion, int socke
  * @param socket_kernel_dispatch socket de kernel al que se le enviara la syscall
  */
 void enviar_syscall_exit(instruccion_decodificada* instruccion, int socket_kernel_dispatch);
-
-
 
 #endif 

@@ -14,6 +14,21 @@
 #include "traduccion.h"
 
 /**
+ * @enum t_tipo_operacion
+ * @brief Enum que representa los tipos de operación para solicitudes a memoria.
+ * 
+ * - OPERACION_READ: Indica que se está realizando una operación de lectura
+ *   de datos desde la memoria.
+ * 
+ * - OPERACION_CACHE: Indica que se está solicitando cargar una página en
+ *   la caché desde la memoria.
+ */
+typedef enum {
+    OPERACION_READ = 1,   // Código para la operación de lectura de memoria.
+    OPERACION_CACHE = 2   // Código para la operación de carga de página en caché.
+} t_tipo_operacion;
+
+/**
  * @brief Estructura para representar una entrada en la caché.
  * 
  * @param pagina Número de página.
@@ -161,6 +176,20 @@ void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pi
  * @return char* Puntero a los datos leídos de la caché o de la memoria.
  */
 char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, int socket_memoria);
+
+/**
+ * @brief Lee datos de la memoria a partir de una dirección física.
+ *
+ * @param pid Identificador del proceso que solicita la lectura de datos.
+ * @param direccion_fisica Dirección física desde la cual se desea leer los datos.
+ * @param tamanio Tamaño del bloque de datos a leer (para cargar a cache tamanio=0)
+ * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
+ * @param t_tipo_operacion OPERACION_READ si se usa para instruccion READ (execute), OPERACION_CACHE si se usa para Cargar Paginas a la Cache
+ *
+ * @return void* Puntero a los datos leídos de la memoria. Si ocurre un error
+ *                durante la operación, se retorna NULL.
+ */
+void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria, t_tipo_operacion t_tipo_operacion);
 
 /**
  * @brief Limpia la caché de páginas.

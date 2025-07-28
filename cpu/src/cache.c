@@ -56,40 +56,11 @@ bool acceder_pagina_cache(uint32_t pagina, uint32_t pid) {
 void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria) {
     // Obtengo la DF de la página
     uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
-    
-    // Creo y serializo la solicitud para cargar la página
-    t_lectura_memoria solicitud;
-    solicitud.pid = pid;
-    solicitud.direccion_fisica = direccion_fisica;
-    solicitud.tamanio = 0; // No es de interes para solicitar una pagina para la Cache
 
-    t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
-    
-    // Envio la solicitud a memoria
-    t_paquete paquete_solicitud;
-    paquete_solicitud.codigo_operacion = PAQUETE_SOLICITUD_PAG;
-    paquete_solicitud.buffer = buffer_solicitud;
-
-    if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
-        log_error(logger_cpu, "Error al enviar solicitud de carga de página a Memoria.");
-        return; // Manejo de error
-    }
-
-    // Recibo la respuesta de memoria
-    t_paquete* paquete_respuesta = recibir_paquete(socket_memoria);
-    if (paquete_respuesta->codigo_operacion != PAQUETE_PAG_CACHE) {
-        log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la carga de página.");
-        return; // Manejo de error
-    }
-
-    t_contenido_pag* pagina_cache = deserializar_contenido_pagina(paquete_respuesta->buffer);
+    void* contenido = leer_de_memoria(pid, direccion_fisica, 0, socket_memoria, OPERACION_CACHE);
     
     // Agrego la página a la caché
-    agregar_a_cache(pagina, pagina_cache->contenido, pid);
-
-    // Liberar el paquete de respuesta y el contenido deserializado
-    liberar_paquete(paquete_respuesta);
-    free(pagina_cache);
+    agregar_a_cache(pagina, contenido, pid);
 }
 
 void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid) {
@@ -232,6 +203,46 @@ char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, i
     return datos;
 }
 
+void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria, t_tipo_operacion tipo_operacion) {
+    // Creo y serializo la solicitud para leer un dato de Memoria
+    t_lectura_memoria solicitud;
+    solicitud.pid = pid;
+    solicitud.direccion_fisica = direccion_fisica;
+    solicitud.tamanio = tamanio; // No es de interes para solicitar una pagina para la Cache (tamanio=0)
+    
+
+    t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
+    
+    // Envio la solicitud a memoria
+    t_paquete paquete_solicitud;
+
+    if (tipo_operacion == OPERACION_READ) paquete_solicitud.codigo_operacion = PAQUETE_READ;
+    else if (tipo_operacion == OPERACION_CACHE) paquete_solicitud.codigo_operacion = PAQUETE_SOLICITUD_PAG;
+
+    paquete_solicitud.buffer = buffer_solicitud;
+
+    if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
+        log_error(logger_cpu, "Error al enviar solicitud de lectura de datos de Memoria.");
+        return NULL; // Manejo de error
+    }
+
+    // Recibo la respuesta de memoria
+    t_paquete* paquete_respuesta = recibir_paquete(socket_memoria);
+    if (paquete_respuesta->codigo_operacion != PAQUETE_READ || paquete_respuesta->codigo_operacion != PAQUETE_PAG_CACHE) {
+        log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la lectura.");
+        return NULL; // Manejo de error
+    }
+
+    t_contenido_pag* contenido_leido = deserializar_contenido_pagina(paquete_respuesta->buffer);
+    void* datos = contenido_leido->contenido;
+
+    // Liberar el paquete de respuesta y el contenido deserializado
+    liberar_paquete(paquete_respuesta);
+    free(contenido_leido);
+
+    return datos;
+}
+
 void limpiar_cache() {
     if (!acceder_cache()) { // Verifico si la caché está habilitada
         log_debug(logger_cpu, "Caché deshabilitada o no inicializada, no se puede limpiar.");
@@ -252,3 +263,4 @@ void limpiar_cache() {
     }
     log_debug(logger_cpu, "Caché de páginas limpia.");
 }
+
