@@ -74,6 +74,9 @@ typedef struct t_metricas_tiempo {
  * @param tamanio_proceso: Tamaño del proceso en bytes
  * @param estado: Estado actual del proceso
  * @param mutex_cambio_estado: Mutex para proteger el cambio de estado
+ * @param proxima_estimacion: Estimacion inicial del proceso
+ * @param rafaga_real_anterior: Rafaga anterior real del proceso, -1 si no se ha ejecutado ninguna rafaga
+ * @param estimacion_rafaga_anterior: Estimacion de la rafaga anterior del proceso
  */
 typedef struct t_pcb { 
     struct timeval ult_update;
@@ -85,6 +88,9 @@ typedef struct t_pcb {
     u_int32_t tamanio_proceso;
     estado_pcb estado;
     pthread_mutex_t mutex_cambio_estado;
+    u_int32_t proxima_estimacion;
+    u_int32_t rafaga_real_anterior;
+    u_int32_t estimacion_rafaga_anterior;
 } t_pcb;
 
 
@@ -98,7 +104,7 @@ typedef struct t_pcb {
  * @param tamanio_proceso: Tamaño del proceso en bytes
  * @return Puntero al t_pcb inicializado
  */
-t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso);
+t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso, u_int32_t estimacion_inicial);
 
 /**
  * @brief Destruye un PCB y todas las estructuras

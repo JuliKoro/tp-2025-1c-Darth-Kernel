@@ -22,10 +22,28 @@ void iniciar_planificador_corto_plazo() {
              }
             break;
         case SJF_SIN_DESALOJO:
-            printf("No implementado aun\n");
+            while(true) {
+                sem_wait(&sem_corto_plazo); //Espero a que haya un pcb en ready
+                sem_wait(&sem_cpu_disponible); //Espero a que haya una cpu disponible
+                //Tengo que obtener el pcb con menor rafaga de cpu
+                t_pcb* pcb = obtener_pcb_con_menor_estimacion();
+                if(pcb == NULL) {
+                    log_error(logger_kernel, "No hay nada en ready aun D:");
+                    continue;
+                }
+                asignar_pcb_a_cpu(pcb);
+            }
             break;
-        case SFJ_CON_DESALOJO:
-            printf("No implementado aun\n");
+        case SJF_CON_DESALOJO:
+            while(true) {
+                sem_wait(&sem_corto_plazo); //Espero a que haya un pcb en ready
+                sem_wait(&sem_cpu_disponible); //Espero a que haya una cpu disponible
+                t_pcb* pcb = obtener_pcb_con_menor_estimacion();
+                if(pcb == NULL) {
+                    log_error(logger_kernel, "No hay nada en ready aun D:");
+                    continue;
+            }
+            asignar_pcb_a_cpu(pcb);
             break;
         default:
             printf("No tenido en cuenta o incorrecto\n");

@@ -184,6 +184,7 @@ typedef struct {
 //Estructura de interrupcion
 typedef enum {
     INTERRUPCION_BLOQUEO=1,
+    INTERRUPCION_FIN_EJECUCION=2
 } t_motivo_interrupcion;
 
 /**

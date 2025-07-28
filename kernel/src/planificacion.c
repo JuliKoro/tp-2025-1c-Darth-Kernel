@@ -75,6 +75,12 @@ bool comparar_pid(void* elemento, void* pid) {
     return pid_pcb == *(u_int32_t*)pid;
 }
 
+bool tiene_menor_estimacion(void* pcb1_void, void* pcb2_void) {
+    t_pcb* pcb1 = (t_pcb*)pcb1_void;
+    t_pcb* pcb2 = (t_pcb*)pcb2_void;
+    return pcb1->proxima_estimacion < pcb2->proxima_estimacion;
+}
+
 
 int actualizar_estado_pcb(t_pcb* pcb, estado_pcb estado) {
 
@@ -171,15 +177,15 @@ algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo) 
         return PMCP;
     } else if(strcmp(algoritmo, "SJF_SIN_DESALOJO") == 0) {
         return SJF_SIN_DESALOJO;
-    } else if(strcmp(algoritmo, "SFJ_CON_DESALOJO") == 0)   {
-        return SFJ_CON_DESALOJO;
+    } else if(strcmp(algoritmo, "SJF_CON_DESALOJO") == 0)   {
+        return SJF_CON_DESALOJO;
     }
     log_error(logger_kernel, "Algoritmo de planificacion '%s' no reconocido. Usando FIFO por defecto.", algoritmo);
     return FIFO;
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
-    t_pcb* pcb = inicializar_pcb(obtener_pid_actual(), archivo_pseudocodigo, tamanio_proceso);
+    t_pcb* pcb = inicializar_pcb(obtener_pid_actual(), archivo_pseudocodigo, tamanio_proceso, kernel_configs.estimacioninicial);
     pthread_mutex_lock(&mutex_pid_counter);
     pid_counter++;
     pthread_mutex_unlock(&mutex_pid_counter);
@@ -258,6 +264,7 @@ void agregar_a_new(t_pcb* pcb) {
 
 void mover_a_ready(t_pcb* pcb) {
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
+    algoritmos_de_planificacion algoritmocorto = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
     if(algoritmo == FIFO) {
         pthread_mutex_lock(&mutex_lista_ready);
         list_add(lista_ready, pcb);
@@ -271,6 +278,71 @@ void mover_a_ready(t_pcb* pcb) {
         actualizar_estado_pcb(pcb, READY);
         sem_post(&sem_corto_plazo);
     }
+    
+    if (algoritmocorto == SJF_CON_DESALOJO) {
+        //Me fijo si hay una cpu disponible
+        if(sem_trywait(&sem_cpu_disponible) == 0) {
+            //Si hay cpu disponible, no hago nada. Devuelvo el semaforo
+            sem_post(&sem_cpu_disponible);
+        } else {
+            //Si no hay CPU disponible, tengo que fijarme si el PCB que entro a ready tiene
+            //Una estimacion de CPU menor a los que se estan ejecutando
+
+            //Obtengo la hora actual, la voy a usar para calcular el tiempo de ejecucion de los procesos
+            struct timeval hora_actual;
+            gettimeofday(&hora_actual, NULL);
+            u_int32_t tiempo_transcurrido = 0;
+            u_int32_t rafaga_restante = 0;
+
+            //Itero sobre la lista de executing
+            pthread_mutex_lock(&mutex_lista_executing);
+
+            if(list_is_empty(lista_executing)) {
+                pthread_mutex_unlock(&mutex_lista_executing);
+                return;
+            }
+
+            t_pcb* pcb_a_desalojar = NULL;
+            double rafaga_restante_maxima = 0.0;
+
+            struct timeval ahora;
+            gettimeofday(&ahora, NULL);
+
+            int indice_a_desalojar = -1;
+
+            for(int i = 0; i < list_size(lista_executing); i++) {
+                t_pcb* pcb_ejecutando = list_get(lista_executing, i);
+
+                //Calculo cuanto tiempo ha estado ejecutando
+                struct timeval tiempo_en_cpu;
+                timersub(&ahora, &pcb_ejecutando->ult_update, &tiempo_en_cpu);
+                double tiempo_ejecutabdo_ms = (tiempo_en_cpu.tv_sec * 1000.0) + (tiempo_en_cpu.tv_usec / 1000.0);
+
+                //Calculo rafaga restante
+                double rafaga_restante = pcb_ejecutando->estimacion_rafaga_anterior - tiempo_ejecutabdo_ms;
+
+                //Comparo y guardo el maximo, y el indice del PCB con el maximo.
+
+                if(rafaga_restante > rafaga_restante_maxima) {
+                    rafaga_restante_maxima = rafaga_restante;
+                    pcb_a_desalojar = pcb_ejecutando;
+                    indice_a_desalojar = i;
+                }
+            }
+            //ahora veo si desalojar
+            if(pcb_a_desalojar != NULL && pcb->proxima_estimacion < rafaga_restante_maxima) {
+                //Desalojo
+                log_desalojo(pcb_a_desalojar);
+                pthread_mutex_unlock(&mutex_lista_executing);
+                mover_executing_a_ready(pcb_a_desalojar->pid);
+            } else {
+                pthread_mutex_unlock(&mutex_lista_executing);
+            }
+        
+        }
+    
+    }
+
 }
 
 int mover_a_exit(t_pcb* pcb) {
@@ -323,6 +395,7 @@ int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo
             pthread_mutex_lock(&mutex_lista_blocked);
             list_add(lista_blocked, pcb_encontrado);
             pthread_mutex_unlock(&mutex_lista_blocked);
+            actualizar_metricas_sjf(pcb_encontrado);
             actualizar_estado_pcb(pcb_encontrado, BLOCKED);
 
             //Llamo a la planificacion mediano plazo
@@ -374,6 +447,7 @@ int mover_executing_a_exit(u_int32_t pid) {
     for(int i = 0; i < list_size(lista_executing); i++) {
         t_pcb* pcb_temp = list_get(lista_executing, i);
         if(pcb_temp->pid == pid) {
+            actualizar_metricas_sjf(pcb_temp);
             pcb_a_mover = list_remove(lista_executing, i);
             break;
         }
@@ -381,14 +455,25 @@ int mover_executing_a_exit(u_int32_t pid) {
     
     pthread_mutex_unlock(&mutex_lista_executing);
 
-    if(pcb_a_mover != NULL) {
-        mover_a_exit(pcb_a_mover);
-    } else {
+    if(pcb_a_mover == NULL) {
         log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
         return -1;
     }
-    
-    
+
+    t_cpu_en_kernel* cpu = obtener_cpu_por_pid(pcb_a_mover->pid);
+    if(cpu != NULL) {
+        t_interrupcion* interrupcion = malloc(sizeof(t_interrupcion));
+        interrupcion->pid = pcb_a_mover->pid;
+        interrupcion->pc = pcb_a_mover->pc;
+        interrupcion->motivo = INTERRUPCION_FIN_EJECUCION;
+        t_buffer* buffer = serializar_interrupcion(interrupcion);
+        t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
+        enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+        liberar_cpu(cpu);
+    }
+
+    mover_a_exit(pcb_a_mover);
+
     return 0;
 }
 
@@ -405,6 +490,7 @@ int mover_executing_a_blocked(u_int32_t pid) {
             list_add(lista_blocked, pcb_encontrado);
             pthread_mutex_unlock(&mutex_lista_blocked);
             //Actualizo el estado del proceso
+            actualizar_metricas_sjf(pcb_encontrado);
             actualizar_estado_pcb(pcb_encontrado, BLOCKED);
 
 
@@ -447,6 +533,7 @@ int mover_executing_a_ready(u_int32_t pid) {
     for(int i = 0; i < list_size(lista_executing); i++) {
         t_pcb* pcb_temp = list_get(lista_executing, i);
         if(pcb_temp->pid == pid) {
+            actualizar_metricas_sjf(pcb_temp);
             pcb_encontrado = list_remove(lista_executing, i);
             break;
         }
@@ -456,6 +543,19 @@ int mover_executing_a_ready(u_int32_t pid) {
     if(pcb_encontrado == NULL) {
         log_error(logger_kernel, "Inconsistencia: PID %d no encontrado en lista_executing", pid);
         return -1;
+    }
+    //Tengo que avisar al CPU que el proceso no esta mas en executing
+    t_cpu_en_kernel* cpu = obtener_cpu_por_pid(pcb_encontrado->pid);
+    if(cpu != NULL) {
+        t_interrupcion* interrupcion = malloc(sizeof(t_interrupcion));
+        interrupcion->pid = pcb_encontrado->pid;
+        interrupcion->pc = pcb_encontrado->pc;
+        interrupcion->motivo = INTERRUPCION_FIN_EJECUCION;
+        t_buffer* buffer = serializar_interrupcion(interrupcion);
+        t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
+        enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+        liberar_cpu(cpu);
+        
     }
 
     mover_a_ready(pcb_encontrado);
@@ -659,9 +759,18 @@ int mover_ready_a_executing(u_int32_t pid) {
         actualizar_estado_pcb(pcb, RUNNING);
 
     } else if(algoritmo == SJF_SIN_DESALOJO) {
-        //TODO: Implementar SJF_SIN_DESALOJO
-    } else if(algoritmo == SFJ_CON_DESALOJO) {
-        //TODO: Implementar SFJ_CON_DESALOJO
+        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+        pthread_mutex_lock(&mutex_lista_executing);
+        list_add(lista_executing, pcb);
+        pthread_mutex_unlock(&mutex_lista_executing);
+        actualizar_estado_pcb(pcb, RUNNING);
+
+    } else if(algoritmo == SJF_CON_DESALOJO) {
+        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+        pthread_mutex_lock(&mutex_lista_executing);
+        list_add(lista_executing, pcb);
+        pthread_mutex_unlock(&mutex_lista_executing);
+        actualizar_estado_pcb(pcb, RUNNING);
     }
 
     return 0;
@@ -888,8 +997,37 @@ void eliminar_procesos_en_exit(){
     pthread_mutex_unlock(&mutex_lista_exit); // Liberar al final del flujo normal
 }
 
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+                                Funciones para planificacion corto plazo
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+t_pcb* obtener_pcb_con_menor_estimacion() {
+    pthread_mutex_lock(&mutex_lista_ready);
+
+    if(list_is_empty(lista_ready)) {
+        pthread_mutex_unlock(&mutex_lista_ready);
+        log_error(logger_kernel, "No hay procesos en lista_ready");
+        return NULL;
+    }
+
+    t_pcb* pcb_elegido= list_get(lista_ready, 0);
+    int indice_elegido = 0;
+
+    for(int i = 1; i < list_size(lista_ready); i++) {
+        t_pcb* pcb_actual = list_get(lista_ready, i);
+
+        if(pcb_actual->proxima_estimacion <= pcb_elegido->proxima_estimacion) {
+            pcb_elegido = pcb_actual;
+            indice_elegido = i;
+        }
+    }
+
+    list_remove(lista_ready, indice_elegido);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    return pcb_elegido;
+}
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Actualizacion de PCB
@@ -908,6 +1046,29 @@ int actualizar_pcb_en_blocked(u_int32_t pid, u_int32_t pc) {
     pthread_mutex_unlock(&mutex_lista_blocked);
     return 0;
 }
+int actualizar_metricas_sjf(t_pcb* pcb) {
+   //Calculo la rafaga real
+   struct timeval hora_fin_ejecucion;
+   gettimeofday(&hora_fin_ejecucion, NULL);
+   struct timeval tiempo_transcurrido;
+   timersub(&hora_fin_ejecucion, &pcb->ult_update, &tiempo_transcurrido);
+
+   double rafaga_real = (tiempo_transcurrido.tv_sec * 1000.0) + (tiempo_transcurrido.tv_usec / 1000.0);
+
+   pcb->rafaga_real_anterior = (u_int32_t)rafaga_real;
+
+   //Calculo la nueva estimacion
+
+   double alfa = kernel_configs.alfa;
+   u_int32_t nueva_estimacion = (u_int32_t)(alfa * pcb->rafaga_real_anterior + (1 - alfa) * pcb->estimacion_rafaga_anterior);
+   pcb->proxima_estimacion = nueva_estimacion;
+
+   return 0;
+   
+}
+
+
+
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                 Funciones para planificacion mediano plazo
@@ -1097,7 +1258,7 @@ int manejar_syscall(t_syscall* syscall) {
 
 
 int init_proc(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
-    t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso);
+    t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso, kernel_configs.estimacioninicial);
     agregar_a_new(pcb);
     return 0;
 } 

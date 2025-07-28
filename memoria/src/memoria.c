@@ -51,9 +51,9 @@
     log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes del módulo Kernel.
-    pthread_t hilo_kernel;
+    pthread_t hilo_conexiones;
     // Se pasa una copia del socket_servidor para evitar problemas de concurrencia si se modifica.
-    pthread_create(&hilo_kernel, NULL, escuchar_peticiones, (void*)&socket_servidor);
+    pthread_create(&hilo_conexiones, NULL, escuchar_peticiones, (void*)&socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes de las múltiples CPU.
     //pthread_t hilo_cpus;
@@ -61,7 +61,7 @@
     //pthread_create(&hilo_cpus, NULL, recibir_peticiones_cpu, (void*)&socket_servidor);
 
     // Espera a que los hilos de Kernel y CPU finalicen (en un sistema real, estos hilos suelen ser infinitos).
-    pthread_join(hilo_kernel, NULL);
+    pthread_detach(hilo_conexiones);
     //pthread_join(hilo_cpus, NULL);
 
     // Libera todos los recursos utilizados por el módulo de memoria.

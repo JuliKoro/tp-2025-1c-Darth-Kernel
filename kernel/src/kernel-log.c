@@ -62,17 +62,8 @@ void log_metricas_estado(t_pcb* pcb) {
 
 }
 
-void log_desalojo(t_pcb* pcb, int algoritmo){
-
-    switch(algoritmo){
-        case 2:
-            log_info(logger_kernel, "## (<%d>) - Desalojado por el algoritmo SJF", pcb->pid);
-            break;
-        case 3:
-            log_info(logger_kernel, "## (<%d>) - Desalojado por el algoritmo SRT", pcb->pid);
-            break;
-            
-    }
+void log_desalojo(t_pcb* pcb){
+    log_info(logger_kernel, "## (<%d>) - Desalojado por el algoritmo SJF", pcb->pid);
 }
 
 void log_motivo_bloqueo(u_int32_t pid, char* nombreio) {
