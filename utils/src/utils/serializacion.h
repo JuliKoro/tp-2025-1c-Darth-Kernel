@@ -107,33 +107,35 @@ typedef struct {
 } t_tabla_pag;
 
 /**
- * @brief Estrucutra utilizada para solicitar a Memoria cargar una pagina con su contenido
+ * @brief Estrucutra utilizada para solicitar a Memoria cargar/leer una pagina con su contenido
  * 
- * @param pid ID del proceso que necesita cargar la pagina
- * @param direccion_fisica Direccion fisica de la pagina que se desea leer
+ * @param pid ID del proceso que necesita cargar/leer la pagina
+ * @param direccion_fisica Direccion fisica de la pagina que se desea cargar/leer
+ * @param tamanio Tamanio de lo que se pretende leer (SOLO CUANDO SE USA PAQUETE_READ)
  * 
  * @note Se peude usar tanto para solicitar la carga de pagina a la cache (PAQUETE_SOLICITUD_PAG) como para la instruccion de READ (PAQUETE_READ). Lo usan CPU, Memoria
  */
 typedef struct {
     uint32_t pid; // ID del proceso que necesita cargar la pagina 
-    uint32_t direccion_fisica; // Numero de pagina faltante que se desea cargar/buscar
-} t_sol_pag;
+    uint32_t direccion_fisica; // Direccion fisica de la pagina que se desea cargar/leer
+    uint32_t tamanio; // Tamanio de lo que se pretende leer (SOLO CUANDO SE USA PAQUETE_READ)
+} t_lectura_memoria;
 
 /**
- * @brief Estrucutra utilizada para cargar paginas con su contenido a la Cache (CPU) desde Memoria
+ * @brief Estrucutra utilizada para leer/cargar paginas con su contenido a la Cache (CPU) desde Memoria
  * 
  * @param pid ID del proceso que necesita cargar la pagina
- * @param pagina Numero de pagina faltante que se desea cargar/buscar
  * @param contenido Contenido de la página (un puntero a datos).
+ * @param tamanio Tamanio en bytes del contenido
  * 
- * @note CPU le solicita a Memoria (PAQUETE_SOLICITUD_PAG), este busca la pagina, carga su contenido y lo envia a CPU
- *       COD_OP: PAQUETE_PAG_CACHE
+ * @note CPU le solicita a Memoria (PAQUETE_SOLICITUD_PAG/PAQUETE_READ), este busca la pagina, carga su contenido y lo envia a CPU
+ *       COD_OP: PAQUETE_PAG_CACHE/PAQUETE_READ
  */
 typedef struct {
     uint32_t pid; // ID del proceso que necesita cargar la pagina 
-    uint32_t pagina; // Numero de pagina faltante que se desea cargar/buscar
     void* contenido; // Contenido de la página (un puntero a datos).
-} t_pag_cache;
+    uint32_t tamanio; // Tamanio en Bytes del contenido
+} t_contenido_pag;
 
 //Estructura de buffer para serializacion y deserializacion
 
@@ -209,11 +211,7 @@ typedef struct {
     uint32_t num_pag;
 } t_entrada_tabla;
 
-typedef struct {
-    uint32_t pid;
-    uint32_t direccion_fisica;
-    uint32_t tamanio;
-} t_lectura_memoria;
+
 
 typedef struct {
     uint32_t pid;
@@ -492,6 +490,7 @@ t_interrupcion* deserializar_interrupcion(t_buffer* buffer);
  * 
  * @param info_tabla_pag Estructura con informacion de la Tabla de Pagians en Memoria
  * @return t_buffer* Puntero al buffer que contiene la serializacion de info_tabla_pag
+ * @note Utilizado para HANDSHAKE entre CPU y MEMORIA
  */
 t_buffer* serializar_info_tabla_pag(t_tabla_pag* info_tabla_pag);
 
@@ -500,6 +499,7 @@ t_buffer* serializar_info_tabla_pag(t_tabla_pag* info_tabla_pag);
  * 
  * @param buffer Puntero al buffer que contiene la serializacion de info_tabla_pag
  * @return t_tabla_pag* Puntero a la estructura de info_tabla_pag
+ * @note Utilizado para HANDSHAKE entre CPU y MEMORIA
  */
 t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer);
 
@@ -507,33 +507,41 @@ t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer);
  * @brief Serializa una solicitud para leer o cargar una Pagina
  * 
  * @param solicitud_pagina Estructura con pid y DF a leer/cargar
- * @return t_buffer* Puntero al buffer que contiene la serializacion de t_sol_pag
+ * @return t_buffer* Puntero al buffer que contiene la serializacion de t_lectura_memoria
+ * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
+ *       COD_OP: PAQUETE_SOLICITUD_PAG / PAQUETE_READ
  */
-t_buffer* serializar_solicitud_pag(t_sol_pag* solicitud_pagina);
+t_buffer* serializar_solicitud_pag(t_lectura_memoria* solicitud_pagina);
 
 /**
  * @brief Deserializa un buffer de una solicitud para leer o cargar una Pagina
  * 
- * @param buffer Puntero al buffer que contiene la serializacion de t_sol_pag
- * @return t_sol_pag* Puntero a la estructura de t_sol_pag
+ * @param buffer Puntero al buffer que contiene la serializacion de t_lectura_memoria
+ * @return t_lectura_memoria* Puntero a la estructura de t_lectura_memoria
+ * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
+ *       COD_OP: PAQUETE_SOLICITUD_PAG / PAQUETE_READ
  */
-t_sol_pag* deserializar_solicitud_pag(t_buffer* buffer);
+t_lectura_memoria* deserializar_solicitud_pag(t_buffer* buffer);
 
 /**
  * @brief Serializa una pagina para leer o cargar a la cache
  * 
  * @param pagina_cache Estructura con pid, numero de pagina y contenido
  * @return t_buffer* Puntero al buffer que contiene la serializacion de t_pag_cache
+ * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
+ *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
  */
-t_buffer* serializar_pagina_cache(t_pag_cache* pagina_cache);
+t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache);
 
 /**
  * @brief Deserializa un buffer de una pagina para leer o cargar a la cache
  * 
- * @param buffer Puntero al buffer que contiene la serializacion de t_pag_cache
- * @return t_pag_cache* Puntero a la estructura de t_pag_cache
+ * @param buffer Puntero al buffer que contiene la serializacion de t_contenido_pag
+ * @return t_contenido_pag* Puntero a la estructura de t_contenido_pag
+ * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
+ *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
  */
-t_pag_cache* deserializar_pagina_cache(t_buffer* buffer);
+t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer);
 
 #endif
 
