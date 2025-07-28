@@ -132,3 +132,6 @@ uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, int socket_memoria, ui
     return marco_memoria;
 }
 
+uint32_t obtener_numero_pagina(uint32_t direccion_logica) {
+    return floor(direccion_logica / info_tabla_pag->tamanio_pagina);
+}

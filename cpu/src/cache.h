@@ -11,6 +11,7 @@
 #include "cpu-configs.h"
 #include "cpu-log.h"
 #include "cpu-conexiones.h"
+#include "traduccion.h"
 
 /**
  * @brief Estructura para representar una entrada en la caché.
@@ -91,6 +92,15 @@ bool acceder_cache();
 bool acceder_pagina_cache(uint32_t pagina, uint32_t pid);
 
 /**
+ * @brief Carga una página en la caché desde el módulo de memoria.
+ *
+ * @param pagina Número de la página que se desea cargar en la caché.
+ * @param pid Identificador del proceso que solicita la carga de la página.
+ * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
+ */
+void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria);
+
+/**
  * @brief Agrega una página a la caché.
  *
  * Agrega una nueva página a la caché. Si la caché está llena,
@@ -123,8 +133,6 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria);
  * @param pid Identificador del proceso que realiza la operación.
  */
 void reemplazar_pagina(uint32_t pagina, uint32_t pid);
-
-void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria);
 
 /**
  * @brief Escribe datos en la caché.

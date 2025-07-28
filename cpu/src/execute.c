@@ -29,14 +29,14 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             char* datos;
             // Lógica para leer de memoria
             if (acceder_cache()) { // Cache Habilitada
-                datos = leer_de_cache(instruccion->direccion, instruccion->tamanio, instruccion->pid, socket_memoria); 
+                datos = leer_de_cache(instruccion->direccion, instruccion->tamanio, instruccion->pid, socket_memoria); // Imprime datos dentro de la funcion (printf)
             } else { // Si la caché deshabilitada, leer directamente de memoria
                 uint32_t direccion_fisica;
                 direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
-                datos = leer_de_memoria(socket_memoria, direccion_fisica, instruccion->tamanio); // FALTA HACER
+                datos = leer_de_memoria(instruccion->pid, direccion_fisica, instruccion->tamanio, socket_memoria);
                 log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, datos);
+                printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, datos);
             }
-            printf("PID: %d - Valor leído: %s", instruccion->pid, datos);
             PC++;
             break;
 
@@ -80,6 +80,37 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
     
     free(parametros);
     return 0; // Retorna 0 para indicar éxito
+}
+
+char* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria) {
+    // Creo y serializo la solicitud para leer un dato de Memoria
+    t_lectura_memoria solicitud;
+    solicitud.pid = pid;
+    solicitud.direccion_fisica = direccion_fisica;
+    solicitud.tamanio = tamanio;
+
+    t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
+    
+    // Envio la solicitud a memoria
+    t_paquete paquete_solicitud;
+    paquete_solicitud.codigo_operacion = PAQUETE_READ;
+    paquete_solicitud.buffer = buffer_solicitud;
+
+    if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
+        log_error(logger_cpu, "Error al enviar solicitud de lectura de datos de Memoria.");
+        return NULL; // Manejo de error
+    }
+
+    // Recibo la respuesta de memoria
+    t_paquete* paquete_respuesta = recibir_paquete(socket_memoria);
+    if (paquete_respuesta->codigo_operacion != PAQUETE_READ) {
+        log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la lectura.");
+        return NULL; // Manejo de error
+    }
+
+    t_contenido_pag* contenido_leido = deserializar_contenido_pagina(paquete_respuesta->buffer);
+
+    return contenido_leido->contenido;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////

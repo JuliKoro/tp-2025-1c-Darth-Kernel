@@ -34,6 +34,19 @@
  */
 int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch);
 
+/**
+ * @brief Lee datos de la memoria a partir de una dirección física.
+ *
+ * @param pid Identificador del proceso que solicita la lectura de datos.
+ * @param direccion_fisica Dirección física desde la cual se desea leer los datos.
+ * @param tamanio Tamaño del bloque de datos a leer.
+ * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
+ *
+ * @return char* Puntero a los datos leídos de la memoria. Si ocurre un error
+ *                durante la operación, se retorna NULL.
+ */
+char* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria);
+
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

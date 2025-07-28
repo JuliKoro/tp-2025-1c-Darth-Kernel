@@ -347,34 +347,36 @@ t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer){
 }
 
 // Solicitud Pagina Cache / READ
-t_buffer* serializar_solicitud_pag(t_sol_pag* solicitud_pagina){
-    t_buffer* buffer = buffer_create(sizeof(t_sol_pag));
+t_buffer* serializar_solicitud_pag(t_lectura_memoria* solicitud_pagina){
+    t_buffer* buffer = buffer_create(sizeof(t_lectura_memoria));
     buffer_add_uint32(buffer, solicitud_pagina->pid);
     buffer_add_uint32(buffer, solicitud_pagina->direccion_fisica);
+    buffer_add_uint32(buffer, solicitud_pagina->tamanio);
     return buffer;
 }
 
-t_sol_pag* deserializar_solicitud_pag(t_buffer* buffer){
-    t_sol_pag* solicitud_pagina = malloc(sizeof(t_sol_pag));
+t_lectura_memoria* deserializar_solicitud_pag(t_buffer* buffer){
+    t_lectura_memoria* solicitud_pagina = malloc(sizeof(t_lectura_memoria));
     solicitud_pagina->pid = buffer_read_uint32(buffer);
     solicitud_pagina->direccion_fisica = buffer_read_uint32(buffer);
+    solicitud_pagina->tamanio = buffer_read_uint32(buffer);
     return solicitud_pagina;
 }
 
-// Pagina de Cache
+// Pagina de Cache / READ
 
-t_buffer* serializar_pagina_cache(t_pag_cache* pagina_cache){
-    t_buffer* buffer = buffer_create(sizeof(t_tabla_pag));
+t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache){
+    t_buffer* buffer = buffer_create(sizeof(t_contenido_pag));
     buffer_add_uint32(buffer, pagina_cache->pid);
-    buffer_add_uint32(buffer, pagina_cache->pagina);
-    //buffer_add_string(buffer, pagina_cache->contenido, ); // void* CORREGIR
+    buffer_add_uint32(buffer, pagina_cache->tamanio);
+    buffer_add_string(buffer, pagina_cache->tamanio, pagina_cache->contenido); // void* -> char*
     return buffer;
 }
 
-t_pag_cache* deserializar_pagina_cache(t_buffer* buffer){
-    t_pag_cache* pagina_cache = malloc(sizeof(t_pag_cache));
+t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer){
+    t_contenido_pag* pagina_cache = malloc(sizeof(t_contenido_pag));
     pagina_cache->pid = buffer_read_uint32(buffer);
-    pagina_cache->pagina = buffer_read_uint32(buffer);
-    //pagina_cache->contenido = buffer_read_string(buffer, ); // void* CORREGIR
+    pagina_cache->tamanio = buffer_read_uint32(buffer);
+    pagina_cache->contenido = buffer_read_string(buffer, pagina_cache->tamanio); // char* -> void*
     return pagina_cache;
 }

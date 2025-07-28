@@ -58,9 +58,10 @@ void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria) {
     uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
     
     // Creo y serializo la solicitud para cargar la página
-    t_sol_pag solicitud;
+    t_lectura_memoria solicitud;
     solicitud.pid = pid;
     solicitud.direccion_fisica = direccion_fisica;
+    solicitud.tamanio = 0; // No es de interes para solicitar una pagina para la Cache
 
     t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
     
@@ -81,10 +82,10 @@ void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria) {
         return; // Manejo de error
     }
 
-    t_pag_cache* pagina_cache = deserializar_pagina_cache(paquete_respuesta->buffer);
+    t_contenido_pag* pagina_cache = deserializar_contenido_pagina(paquete_respuesta->buffer);
     
     // Agrego la página a la caché
-    agregar_a_cache(pagina_cache->pagina, pagina_cache->contenido, pid);
+    agregar_a_cache(pagina, pagina_cache->contenido, pid);
 
     // Liberar el paquete de respuesta y el contenido deserializado
     liberar_paquete(paquete_respuesta);
@@ -112,7 +113,7 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria) {
         // Verificar si la entrada está modificada
         if (cache->entradas[i].modificado) {
             // Consultar la dirección física de la página
-            uint32_t direccion_fisica = traducir_direccion_logica(cache->entradas[i].pagina, pid, socket_memoria); // Función para obtener la dirección física
+            uint32_t direccion_fisica = traducir_direccion_logica(cache->entradas[i].pagina, pid, socket_memoria);
 
             // Enviar el contenido a la memoria
             if (cache->entradas[i].contenido != NULL) {
@@ -227,6 +228,7 @@ char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, i
         datos = cache->entradas[cache->puntero].contenido; // Obtener los datos de la entrada de la caché
         log_debug(logger_cpu, "## PID: %d - Página no encontrada en caché, cargando desde memoria: Página: %d, Datos: %s", pid, pagina, datos);
     }
+    printf("PID: %d - Acción: LEER - Página: %d - Valor: %s", pid, pagina, datos);
     return datos;
 }
 

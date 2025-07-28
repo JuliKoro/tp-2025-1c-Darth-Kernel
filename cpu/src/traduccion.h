@@ -89,6 +89,8 @@ t_direccion_fisica direccion_logica_a_fisica(uint32_t direccion_logica);
 
 uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int socket_memoria);
 
+uint32_t obtener_numero_pagina(uint32_t direccion_logica);
+
 uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, int socket_memoria, uint32_t pid);
 
 tlb_t* crear_tlb(uint32_t capacidad);
