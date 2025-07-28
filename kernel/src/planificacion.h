@@ -68,7 +68,7 @@ typedef enum {
     FIFO,
     PMCP,
     SJF_SIN_DESALOJO,
-    SFJ_CON_DESALOJO,
+    SJF_CON_DESALOJO,
 
 } algoritmos_de_planificacion;
 

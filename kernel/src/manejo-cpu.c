@@ -141,7 +141,17 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
             manejar_syscall(syscall);
             free(syscall);
         }
-
+        
+        if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
+            t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
+            //Tengo que buscar el PCB para actualizarlo
+            if(interrupcion->motivo == INTERRUPCION_BLOQUEO) {
+                actualizar_pcb_en_blocked(interrupcion->pid, interrupcion->pc);
+            }
+            if(interrupcion->motivo == INTERRUPCION_FIN_EJECUCION) {
+                //actualizar_pcb_en_exit(interrupcion->pid);
+            }
+        }
 
     }
     return NULL;
@@ -158,14 +168,7 @@ void* manejo_interrupt(void* socket_cpu_interrupt){
             //Ya fue eliminado en el hilo de manejo_dispatch
             break;
         }
-
-        if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
-            t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
-            //Tengo que buscar el PCB para actualizarlo
-            if(interrupcion->motivo == INTERRUPCION_BLOQUEO) {
-                actualizar_pcb_en_blocked(interrupcion->pid, interrupcion->pc);
-            }
-        }
+        
         liberar_paquete(paquete);
     }
     return NULL;

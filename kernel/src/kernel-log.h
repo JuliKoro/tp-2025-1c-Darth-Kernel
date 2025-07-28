@@ -41,9 +41,8 @@ void log_fin_io(t_pcb* pcb);
  * @brief Loggea el desalojo de un proceso
  * 
  * @param pcb: Puntero al PCB del proceso
- * @param algoritmo: El algoritmo de desalojo, el int corresponde al algoritmo de desalojo. Hay que usar obtener_algoritmo_de_planificacion para obtener el enum
  */
-void log_desalojo(t_pcb* pcb, int algoritmo);
+void log_desalojo(t_pcb* pcb);
 
 /**
  * @brief Loggea las metricas de estado de un proceso

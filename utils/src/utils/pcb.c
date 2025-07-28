@@ -2,13 +2,16 @@
 
 u_int32_t pid_counter = 0;
 
-t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
+t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso, u_int32_t estimacion_inicial) {
     t_pcb* pcb = malloc(sizeof(t_pcb));
     pcb->pid = pid;
     pcb->archivo_pseudocodigo = strdup(archivo_pseudocodigo);
     pcb->tamanio_proceso = tamanio_proceso;
     pcb->estado = NEW;
     pcb->pc = 0;
+    pcb->proxima_estimacion = estimacion_inicial;
+    pcb->estimacion_rafaga_anterior = 0;
+    pcb->rafaga_real_anterior = 0;
     gettimeofday(&pcb->ult_update, NULL);
 
 

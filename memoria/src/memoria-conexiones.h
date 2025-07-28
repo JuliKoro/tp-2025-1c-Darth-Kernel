@@ -12,6 +12,7 @@
  #include <utils/sockets.h> // Incluye la librería de utilidades para sockets
  #include "memoria-configs.h" // Necesario para acceder a memoria_configs.puertoescucha
  #include "memoria-log.h"     // Necesario para usar el logger
+ #include <utils/serializacion.h>
  
  /**
   * @brief Inicia el servidor de memoria.

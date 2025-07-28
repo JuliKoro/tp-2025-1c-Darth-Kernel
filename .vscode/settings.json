@@ -48,7 +48,8 @@
         "list.h": "c",
         "registros.h": "c",
         "semaphore.h": "c",
-        "cache.h": "c"
+        "cache.h": "c",
+        "memoria-procesos.h": "c"
     },
     "C_Cpp.errorSquiggles": "enabledIfIncludesResolve"
 }
