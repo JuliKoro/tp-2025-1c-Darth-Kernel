@@ -12,30 +12,27 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             sleep(1); // Simula un ciclo de instrucción de 1 segundo
             PC++; // Incremento el PC en 1 (actualiza el PC global)
             break;
-        case WRITE:
+        case WRITE: // REVISAR WARNINGS
             // Lógica para escribir en memoria
             if (acceder_cache()) { // Cache Habilitada
                 escribir_en_cache(instruccion->direccion, instruccion->datos, instruccion->pid, socket_memoria);
             } else { // Si la caché está deshabilitada, escribo directamente en memoria
                 uint32_t direccion_fisica;
                 direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
-                escribir_en_memoria(socket_memoria, direccion_fisica, instruccion->datos); // FALTA HACER EN CACHE
-                log_info(logger_cpu, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, instruccion->datos);
+                escribir_en_memoria(instruccion->pid, direccion_fisica, string_length(instruccion->datos), instruccion->datos, socket_memoria);
             }
             PC++;
             break;
 
-        case READ:
+        case READ: // REVISAR WARNINGS
             char* datos;
-            
             if (acceder_cache()) { // Cache Habilitada
                 datos = leer_de_cache(instruccion->direccion, instruccion->tamanio, instruccion->pid, socket_memoria); // Imprime datos dentro de la funcion (printf)
             } else { // Si la caché deshabilitada, leer directamente de memoria
                 uint32_t direccion_fisica;
                 direccion_fisica = traducir_direccion_logica(instruccion->direccion, proceso->pid, socket_memoria);
-                datos = leer_de_memoria(instruccion->pid, direccion_fisica, instruccion->tamanio, socket_memoria, OPERACION_READ);
-                log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, datos);
-                printf("PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s",instruccion->pid, direccion_fisica, datos);
+                datos = leer_de_memoria(instruccion->pid, direccion_fisica, instruccion->tamanio, socket_memoria);
+                printf("PID: %d - Acción: LEER (Memoria) - Dirección Física: %d - Valor: %s", instruccion->pid, direccion_fisica, (char*)datos);
             }
             PC++;
             break;

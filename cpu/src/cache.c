@@ -40,6 +40,9 @@ bool acceder_cache() {
 }
 
 bool acceder_pagina_cache(uint32_t pagina, uint32_t pid) {
+    //RETARDO CACHE
+    usleep(cpu_configs.retardocache * 1000); // Multiplico * mil, xq usleep es en microsegundos, y el config esta en milisegundos
+
     for (int i = 0; i < cache->capacidad; i++) {
         if (cache->entradas[i].pagina == pagina) {
             // Cache Hit
@@ -57,13 +60,13 @@ void cargar_pagina_en_cache(uint32_t pagina, uint32_t pid, int socket_memoria) {
     // Obtengo la DF de la página
     uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
 
-    void* contenido = leer_de_memoria(pid, direccion_fisica, 0, socket_memoria, OPERACION_CACHE);
+    void* contenido = leer_de_memoria(pid, direccion_fisica, cpu_configs.tamanio_pagina, socket_memoria);
     
     // Agrego la página a la caché
-    agregar_a_cache(pagina, contenido, pid);
+    agregar_a_cache(pagina, contenido, pid, socket_memoria);
 }
 
-void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid) {
+void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid, int socket_memoria) {
     if (cache->tamanio < cache->capacidad) {
         // Hay espacio en la caché
         cache->entradas[cache->tamanio].pagina = pagina;
@@ -73,7 +76,7 @@ void agregar_a_cache(uint32_t pagina, void* contenido, uint32_t pid) {
         cache->tamanio++;
     } else {
         // Caché llena, hay que reemplazar una página
-        reemplazar_pagina(pagina, pid);
+        reemplazar_pagina(pagina, pid, socket_memoria);
     }
     log_info(logger_cpu, "PID: %d - Cache Add - Pagina: %d", pid, pagina);
 }
@@ -88,7 +91,7 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria) {
 
             // Enviar el contenido a la memoria
             if (cache->entradas[i].contenido != NULL) {
-                //escribir_en_memoria(socket_memoria, direccion_fisica, cache->entradas[i].contenido); // Escribir en memoria
+                escribir_en_memoria(pid, direccion_fisica, cpu_configs.tamanio_pagina, cache->entradas[i].contenido, socket_memoria);
                 log_debug(logger_cpu, "## PID: %d - Actualizando en memoria: Página: %d, Dirección: %d", pid, cache->entradas[i].pagina, direccion_fisica);
             }
         }
@@ -96,7 +99,7 @@ void actualizar_cache_a_memoria(uint32_t pid, int socket_memoria) {
     log_debug(logger_cpu, "Caché de páginas actualizada en memoria para el proceso PID: %d.", pid);
 }
 
-void reemplazar_pagina(uint32_t pagina, uint32_t pid) {
+void reemplazar_pagina(uint32_t pagina, uint32_t pid, int socket_memoria) {
     bool encontrado = false; // Flag para indicar si se encontró una página para reemplazar
 
     if (strcmp(cache->algoritmo_reemplazo, "CLOCK") == 0) { // Algoritmo CLOCK
@@ -142,8 +145,9 @@ void reemplazar_pagina(uint32_t pagina, uint32_t pid) {
             } else if (!cache->entradas[cache->puntero].uso && cache->entradas[cache->puntero].modificado) {
                 // (u=0; m=1): No accedido recientemente, modificado
                 log_debug(logger_cpu, "PID: %d - Actualizando en memoria página: %d", pid, cache->entradas[cache->puntero].pagina);
-                // Lógica para enviar el contenido a la memoria
                 // ACTUALIZAR MEMORIA
+                uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
+                escribir_en_memoria(pid, direccion_fisica, cpu_configs.tamanio_pagina, cache->entradas[cache->puntero].contenido, socket_memoria);
 
                 cache->entradas[cache->puntero].pagina = pagina;
                 cache->entradas[cache->puntero].contenido = NULL; // HAY QUE ASIGNAR EL NUEVO CONTENIDO TRAIDO DE MEMO
@@ -157,8 +161,9 @@ void reemplazar_pagina(uint32_t pagina, uint32_t pid) {
                 // (u=1; m=1): Accedido recientemente, modificado
                 cache->entradas[cache->puntero].uso = false; // Limpiar el bit de uso
                 log_debug(logger_cpu, "PID: %d - Actualizando en memoria página: %d", pid, cache->entradas[cache->puntero].pagina);
-                // Lógica para enviar el contenido a la memoria
                 // ACTUALIZAR MEMORIA
+                uint32_t direccion_fisica = traducir_direccion_logica(pagina, pid, socket_memoria);
+                escribir_en_memoria(pid, direccion_fisica, cpu_configs.tamanio_pagina, cache->entradas[cache->puntero].contenido, socket_memoria);
             }
 
             cache->puntero = (cache->puntero + 1) % cache->capacidad;
@@ -199,26 +204,53 @@ char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, i
         datos = cache->entradas[cache->puntero].contenido; // Obtener los datos de la entrada de la caché
         log_debug(logger_cpu, "## PID: %d - Página no encontrada en caché, cargando desde memoria: Página: %d, Datos: %s", pid, pagina, datos);
     }
-    printf("PID: %d - Acción: LEER - Página: %d - Valor: %s", pid, pagina, datos);
+    printf("PID: %d - Acción: LEER (Cache) - Página: %d - Valor: %s", pid, pagina, datos);
     return datos;
 }
 
-void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria, t_tipo_operacion tipo_operacion) {
+int escribir_en_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, void* dato, int socket_memoria) {
+    t_escritura_memoria pagina_escrita;
+    pagina_escrita.pid = pid;
+    pagina_escrita.direccion_fisica = direccion_fisica;
+    pagina_escrita.tamanio = tamanio;
+    pagina_escrita.dato = dato;
+
+    t_buffer* buffer = serializar_escritura_memoria(&pagina_escrita);
+    t_paquete paquete;
+
+    paquete.codigo_operacion = PAQUETE_WRITE;
+    paquete.buffer = buffer;
+
+    if (enviar_paquete(socket_memoria, &paquete) == -1) {
+        log_error(logger_cpu, "Error al enviar escritura de datos a Memoria.");
+        return -1; // Manejo de error
+    }
+
+    if (recibir_mensaje(socket_memoria) != "OK") { // REVISAR SI ESTA BIEN
+        log_error(logger_cpu, "Error en la escritura de datos en Memoria.");
+        return -1; // Manejo de error
+    }
+
+    log_debug(logger_cpu, "Escritura en Memoria exitosa!");
+
+    log_info(logger_cpu, "PID: %d - Acción: ESCRIBIR - Dirección Física: %d - Valor: %s",pid, direccion_fisica, (char*)dato);
+
+    return 0;
+}
+
+void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria) {
     // Creo y serializo la solicitud para leer un dato de Memoria
     t_lectura_memoria solicitud;
     solicitud.pid = pid;
     solicitud.direccion_fisica = direccion_fisica;
-    solicitud.tamanio = tamanio; // No es de interes para solicitar una pagina para la Cache (tamanio=0)
+    solicitud.tamanio = tamanio; // para solicitar una pagina para la Cache se usa el tamanio de la pagina completa
     
 
-    t_buffer* buffer_solicitud = serializar_solicitud_pag(&solicitud);
+    t_buffer* buffer_solicitud = serializar_lectura_memoria(&solicitud);
     
     // Envio la solicitud a memoria
     t_paquete paquete_solicitud;
-
-    if (tipo_operacion == OPERACION_READ) paquete_solicitud.codigo_operacion = PAQUETE_READ;
-    else if (tipo_operacion == OPERACION_CACHE) paquete_solicitud.codigo_operacion = PAQUETE_SOLICITUD_PAG;
-
+    paquete_solicitud.codigo_operacion = PAQUETE_READ;
     paquete_solicitud.buffer = buffer_solicitud;
 
     if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
@@ -227,18 +259,14 @@ void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio,
     }
 
     // Recibo la respuesta de memoria
-    t_paquete* paquete_respuesta = recibir_paquete(socket_memoria);
-    if (paquete_respuesta->codigo_operacion != PAQUETE_READ || paquete_respuesta->codigo_operacion != PAQUETE_PAG_CACHE) {
+    void* datos = recibir_mensaje(socket_memoria);
+
+    if ( datos == '\0') { // CORROBORAR SI SIRVE EL \0
         log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la lectura.");
         return NULL; // Manejo de error
     }
 
-    t_contenido_pag* contenido_leido = deserializar_contenido_pagina(paquete_respuesta->buffer);
-    void* datos = contenido_leido->contenido;
-
-    // Liberar el paquete de respuesta y el contenido deserializado
-    liberar_paquete(paquete_respuesta);
-    free(contenido_leido);
+    log_info(logger_cpu, "PID: %d - Acción: LEER - Dirección Física: %d - Valor: %s", pid, direccion_fisica, (char*)datos);
 
     return datos;
 }

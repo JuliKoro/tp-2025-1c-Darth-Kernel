@@ -46,22 +46,25 @@ void* manejar_conexion_cpu(void* socket_cliente){
             if(memoria_leida == NULL){
                 log_error(logger_memoria, "[LECTURA MEMORIA] No se pudo leer la memoria del proceso %d y direccion fisica %d",
                     datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica);
-                enviar_bool(socket_fd, false);
+                //enviar_bool(socket_fd, false);
+                enviar_mensaje('\0', socket_fd); // CORROBORAR SI SIRVE EL \0
             } else {
-                enviar_bool(socket_fd, true);
+                //enviar_bool(socket_fd, true);
                 enviar_mensaje(memoria_leida, socket_fd); 
             }
         }
 //int pid, int direccion_fisica, int tam, void* valor
         if(paquete->codigo_operacion == PAQUETE_WRITE){
-            t_escritura_memoria* datos_escritura_memoria = deserializar_lectura_memoria(paquete->buffer);
+            t_escritura_memoria* datos_escritura_memoria = deserializar_escritura_memoria(paquete->buffer);
             if(escribir_memoria(datos_escritura_memoria->pid, datos_escritura_memoria->direccion_fisica, 
-                datos_escritura_memoria->tamanio, datos_escritura_memoria->valor) == false){
+                datos_escritura_memoria->tamanio, datos_escritura_memoria->dato) == false){
                 log_error(logger_memoria, "[ESCRITURA MEMORIA] No se pudo escribir la memoria del proceso %d y direccion fisica %d",
                     datos_escritura_memoria->pid, datos_escritura_memoria->direccion_fisica);
-                enviar_bool(socket_fd, false);
+                //enviar_bool(socket_fd, false);
+                enviar_mensaje("ERROR", socket_fd);
             } else {
-                enviar_bool(socket_fd, true); 
+                //enviar_bool(socket_fd, true);
+                enviar_mensaje("OK", socket_fd);
             }
         }
         //Enviar respuesta al kernel     

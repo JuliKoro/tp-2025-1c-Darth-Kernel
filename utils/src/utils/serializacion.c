@@ -347,23 +347,23 @@ t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer){
 }
 
 // Solicitud Pagina Cache / READ
-t_buffer* serializar_solicitud_pag(t_lectura_memoria* solicitud_pagina){
+t_buffer* serializar_lectura_memoria(t_lectura_memoria* solicitud_lectura){
     t_buffer* buffer = buffer_create(sizeof(t_lectura_memoria));
-    buffer_add_uint32(buffer, solicitud_pagina->pid);
-    buffer_add_uint32(buffer, solicitud_pagina->direccion_fisica);
-    buffer_add_uint32(buffer, solicitud_pagina->tamanio);
+    buffer_add_uint32(buffer, solicitud_lectura->pid);
+    buffer_add_uint32(buffer, solicitud_lectura->direccion_fisica);
+    buffer_add_uint32(buffer, solicitud_lectura->tamanio);
     return buffer;
 }
 
-t_lectura_memoria* deserializar_solicitud_pag(t_buffer* buffer){
-    t_lectura_memoria* solicitud_pagina = malloc(sizeof(t_lectura_memoria));
-    solicitud_pagina->pid = buffer_read_uint32(buffer);
-    solicitud_pagina->direccion_fisica = buffer_read_uint32(buffer);
-    solicitud_pagina->tamanio = buffer_read_uint32(buffer);
-    return solicitud_pagina;
+t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer){
+    t_lectura_memoria* solicitud_lectura = malloc(sizeof(t_lectura_memoria));
+    solicitud_lectura->pid = buffer_read_uint32(buffer);
+    solicitud_lectura->direccion_fisica = buffer_read_uint32(buffer);
+    solicitud_lectura->tamanio = buffer_read_uint32(buffer);
+    return solicitud_lectura;
 }
 
-// Pagina de Cache / READ
+// Pagina de Cache / READ (DEPRECADO)
 
 t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache){
     t_buffer* buffer = buffer_create(sizeof(t_contenido_pag));
@@ -379,4 +379,24 @@ t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer){
     pagina_cache->tamanio = buffer_read_uint32(buffer);
     pagina_cache->contenido = buffer_read_string(buffer, pagina_cache->tamanio); // char* -> void*
     return pagina_cache;
+}
+
+// Actualizar Paginas / WRITE
+
+t_buffer* serializar_escritura_memoria(t_escritura_memoria* pagina_escrita){
+    t_buffer* buffer = buffer_create(sizeof(t_escritura_memoria));
+    buffer_add_uint32(buffer, pagina_escrita->pid);
+    buffer_add_uint32(buffer, pagina_escrita->direccion_fisica);
+    buffer_add_uint32(buffer, pagina_escrita->tamanio);
+    buffer_add_string(buffer, pagina_escrita->tamanio, pagina_escrita->dato); // void* -> char*
+    return buffer;
+}
+
+t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer){
+    t_escritura_memoria* pagina_escrita = malloc(sizeof(t_escritura_memoria));
+    pagina_escrita->pid = buffer_read_uint32(buffer);
+    pagina_escrita->direccion_fisica = buffer_read_uint32(buffer);
+    pagina_escrita->tamanio = buffer_read_uint32(buffer);
+    pagina_escrita->dato = buffer_read_string(buffer, pagina_escrita->tamanio); // char* -> void*
+    return pagina_escrita;
 }

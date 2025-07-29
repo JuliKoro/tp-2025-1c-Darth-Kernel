@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include <commons/log.h>
+#include <commons/string.h>
 
 #include <utils/sockets.h>
 #include <utils/serializacion.h>

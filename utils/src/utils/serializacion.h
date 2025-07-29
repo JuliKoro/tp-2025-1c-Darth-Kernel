@@ -39,8 +39,8 @@
  * @param PAQUETE_SOLICITUD_MARCO: Código de operación cuando CPU solicita el Marco de una pagina a Memoria (Para la MMU)
  * @param PAQUETE_READ: Código de operación cuando CPU quiere leer el valor en una determinada direccion en Memoria
  * @param PAQUETE_WRITE: Código de operación cuando CPU quiere escribir un valor en una determinada direccion en Memoria
- * @param PAQUETE_SOLICITUD_PAG: Código de operación cuando CPU solicita cargar una pagina con su contenido a la Cache desde Memoria
- * @param PAQUETE_PAG_CACHE: Código de operación cuando Memoria le responde a CPU al PAQUETE_SOLICITUD_PAG
+ * @param PAQUETE_SOLICITUD_PAG: Código de operación cuando CPU solicita cargar una pagina con su contenido a la Cache desde Memoria (DEPRECADO)
+ * @param PAQUETE_PAG_CACHE: Código de operación cuando Memoria le responde a CPU al PAQUETE_SOLICITUD_PAG (DEPRECADO)
  */
 
 typedef enum {
@@ -57,8 +57,8 @@ typedef enum {
     PAQUETE_SOLICITUD_MARCO=11, //
     PAQUETE_READ=12, //ok
     PAQUETE_WRITE=13, //ok
-    PAQUETE_SOLICITUD_PAG=14, // Solicita CPU (pid + DF)
-    PAQUETE_PAG_CACHE=15 // Responde Memoria (pid + #pag + contenido)
+    PAQUETE_SOLICITUD_PAG=14, // DEPRECADO (SE USA PAQUETE_READ)
+    PAQUETE_PAG_CACHE=15 // DEPRECADO (SE ENVIA COMO MSJ)
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -88,6 +88,8 @@ typedef struct {
     uint32_t pid; // Identificador del proceso asociado a la instrucción
     uint32_t pc;  // Contador de programa que indica la dirección de la instrucción
 } t_proceso_cpu;
+
+// Estructuras usadas entre CPU y MEMORIA
 
 /**
  * @struct t_tabla_pag
@@ -122,6 +124,23 @@ typedef struct {
 } t_lectura_memoria;
 
 /**
+ * @brief Estrucutra utilizada para solicitar a Memoria actulizar/escribir una pagina con su contenido
+ * 
+ * @param pid ID del proceso que necesita actulizar/escribir la pagina
+ * @param direccion_fisica Direccion fisica de la pagina que se desea actulizar/escribir
+ * @param tamanio Tamanio de lo que se pretende actulizar/escribir
+ * @param dato Dato que se quiere actulizar/escribir en Memoria
+ * 
+ * @note Se peude usar tanto para solicitar la actualizacion de pagina de la cache (PAQUETE_SOLICITUD_PAG) como para la instruccion de WRITE (PAQUETE_WRITE). Lo usan CPU, Memoria
+ */
+typedef struct {
+    uint32_t pid;
+    uint32_t direccion_fisica;
+    uint32_t tamanio; // REVISAR SI ES NECESARIO
+    void* dato;
+} t_escritura_memoria;
+
+/**
  * @brief Estrucutra utilizada para leer/cargar paginas con su contenido a la Cache (CPU) desde Memoria
  * 
  * @param pid ID del proceso que necesita cargar la pagina
@@ -130,12 +149,13 @@ typedef struct {
  * 
  * @note CPU le solicita a Memoria (PAQUETE_SOLICITUD_PAG/PAQUETE_READ), este busca la pagina, carga su contenido y lo envia a CPU
  *       COD_OP: PAQUETE_PAG_CACHE/PAQUETE_READ
+ * // DEPRECADO
  */
 typedef struct {
     uint32_t pid; // ID del proceso que necesita cargar la pagina 
     void* contenido; // Contenido de la página (un puntero a datos).
     uint32_t tamanio; // Tamanio en Bytes del contenido
-} t_contenido_pag;
+} t_contenido_pag; // NO SE USA MAS -> SE RESPONDE A PAQUETE_READ CON UN MENSAJE DIRECTAMENTE (DEPRECADO)
 
 //Estructura de buffer para serializacion y deserializacion
 
@@ -211,15 +231,6 @@ typedef struct {
     uint32_t entrada_nivel;
     uint32_t num_pag;
 } t_entrada_tabla;
-
-
-
-typedef struct {
-    uint32_t pid;
-    uint32_t direccion_fisica;
-    uint32_t tamanio;
-    void* valor;
-} t_escritura_memoria;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -507,12 +518,12 @@ t_tabla_pag* deserializar_info_tabla_pag(t_buffer* buffer);
 /**
  * @brief Serializa una solicitud para leer o cargar una Pagina
  * 
- * @param solicitud_pagina Estructura con pid y DF a leer/cargar
+ * @param solicitud_lectura Estructura con pid y DF a leer/cargar
  * @return t_buffer* Puntero al buffer que contiene la serializacion de t_lectura_memoria
  * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
  *       COD_OP: PAQUETE_SOLICITUD_PAG / PAQUETE_READ
  */
-t_buffer* serializar_solicitud_pag(t_lectura_memoria* solicitud_pagina);
+t_buffer* serializar_lectura_memoria(t_lectura_memoria* solicitud_lectura);
 
 /**
  * @brief Deserializa un buffer de una solicitud para leer o cargar una Pagina
@@ -522,7 +533,7 @@ t_buffer* serializar_solicitud_pag(t_lectura_memoria* solicitud_pagina);
  * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
  *       COD_OP: PAQUETE_SOLICITUD_PAG / PAQUETE_READ
  */
-t_lectura_memoria* deserializar_solicitud_pag(t_buffer* buffer);
+t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer);
 
 /**
  * @brief Serializa una pagina para leer o cargar a la cache
@@ -531,8 +542,9 @@ t_lectura_memoria* deserializar_solicitud_pag(t_buffer* buffer);
  * @return t_buffer* Puntero al buffer que contiene la serializacion de t_pag_cache
  * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
  *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
+ * @note DEPRECADO
  */
-t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache);
+t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache); // DEPRECADO
 
 /**
  * @brief Deserializa un buffer de una pagina para leer o cargar a la cache
@@ -541,8 +553,29 @@ t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache);
  * @return t_contenido_pag* Puntero a la estructura de t_contenido_pag
  * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
  *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
+ * @note DEPRECADO
  */
-t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer);
+t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer); // DEPRECADO
+
+/**
+ * @brief Serializa una paquete de escritura para WRITE o Actualizar Pagina
+ * 
+ * @param escritura_memoria Estructura con pid, DF, tamanio y datos a escribir en Memoria
+ * @return t_buffer* Puntero al buffer que contiene la serializacion de t_escritura_memoria
+ * @note Utilizado para actualizar una pagina de la Cache (CPU) en Memoria a la Cache / Escribir directo en Memoria (WRITE)
+ *       COD_OP: PAQUETE_WRITE
+ */
+t_buffer* serializar_escritura_memoria(t_escritura_memoria* escritura_memoria);
+
+/**
+ * @brief Deserializa un buffer para la escritura de datos en Memoria
+ * 
+ * @param buffer Puntero al buffer que contiene la serializacion de t_escritura_memoria
+ * @return t_escritura_memoria* Puntero a la estructura de t_escritura_memoria
+ * @note Utilizado para escribir/actualizar una pagina en Memoria (datos provenientes de CPU)
+ *       COD_OP: PAQUETE_WRITE
+ */
+t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer);
 
 #endif
 

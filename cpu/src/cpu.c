@@ -192,11 +192,14 @@ void* hilo_ciclo_instruccion(void* arg){
       }
       pthread_mutex_unlock(&mutex_proceso);
 
-      // LIMPIAR TLB Y CACHE DE PAGINAS
+      // DESALOJO DE PROCESO
+      // LIMPIAR CACHE DE PAGINAS
       if (acceder_cache()) { // Si esta habiliatada la Cache
          actualizar_cache_a_memoria(proceso->pid, socket_memoria);
          limpiar_cache();
       }
+
+      // LIMPIAR TLB
 
       // Liberar cunado se desaloja proceso en CPU
       // Libera el semáforo para permitir que el hilo de despacho reciba un nuevo proceso
