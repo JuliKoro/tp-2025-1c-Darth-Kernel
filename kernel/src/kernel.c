@@ -43,6 +43,12 @@ int main(int argc, char* argv[]) {
     pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
     pthread_detach(thread_planificador_largo_plazo);
 
+    //Inicia el planificador corto plazo
+    pthread_t thread_planificador_corto_plazo;
+    pthread_create(&thread_planificador_corto_plazo, NULL, iniciar_planificador_corto_plazo, NULL);
+    pthread_detach(thread_planificador_corto_plazo);
+    log_info(logger_kernel, "Planificador corto plazo iniciado en %s", kernel_configs.cortoplazo);
+
     // Hilo principal se queda en espera para mantener el proceso vivo.
     // Todas las operaciones ahora son manejadas por los hilos planificadores.
     while(true){

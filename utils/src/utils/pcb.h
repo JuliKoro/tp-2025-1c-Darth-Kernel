@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <string.h>
+#include <commons/temporal.h>
 
 /**
  * @var pid_counter
@@ -65,7 +66,7 @@ typedef struct t_metricas_tiempo {
  * @struct t_pcb
  * @brief Estructura que representa un PCB (Program Control Block). Tiene los datos minimos por ahora.
  * 
- * @param ult_update: Ultima hora de actualizacion del proceso
+ * @param cronometro_estado: Cronometro para medir el tiempo que el proceso ha estado en cada estado
  * @param pid: Identificador único del proceso
  * @param pc: Contador de programa que indica la dirección de la instrucción actual
  * @param metricas_estado: Lista de métricas de estado
@@ -79,7 +80,7 @@ typedef struct t_metricas_tiempo {
  * @param estimacion_rafaga_anterior: Estimacion de la rafaga anterior del proceso
  */
 typedef struct t_pcb { 
-    struct timeval ult_update;
+    t_temporal* cronometro_estado;
     u_int32_t pid;
     u_int32_t pc;
     t_metricas_estado metricas_estado[ESTADOS_COUNT];

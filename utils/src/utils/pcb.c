@@ -12,7 +12,8 @@ t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tama
     pcb->proxima_estimacion = estimacion_inicial;
     pcb->estimacion_rafaga_anterior = 0;
     pcb->rafaga_real_anterior = 0;
-    gettimeofday(&pcb->ult_update, NULL);
+    //gettimeofday(&pcb->ult_update, NULL);
+    pcb->cronometro_estado = temporal_create();
 
 
     for (int i = 0; i < ESTADOS_COUNT; i++) {
@@ -35,6 +36,7 @@ t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tama
 void destruir_pcb(t_pcb* pcb) {
     pthread_mutex_destroy(&pcb->mutex_cambio_estado);
     free(pcb->archivo_pseudocodigo);
+    temporal_destroy(pcb->cronometro_estado);
     free(pcb);
 }
 
