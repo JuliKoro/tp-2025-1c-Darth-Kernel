@@ -219,7 +219,7 @@ void* atender_io(void* instancia_io){
                 mover_blocked_a_suspblocked(pid_que_termino);
             }
 
-            log_info(logger_kernel, "[IO] PID (%d) finalizo IO y pasa a %s", pid_que_termino, estado_pcb == BLOCKED ? "READY" : "SUSP_READY");
+            log_info(logger_kernel, "## <%d> finalizó IO y pasa a %s", pid_que_termino, estado_pcb == BLOCKED ? "READY" : "SUSP_READY");
 
 
             atender_siguiente_proceso_en_cola_io(instancia_io_a_manejar);
