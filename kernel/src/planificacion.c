@@ -259,6 +259,7 @@ void agregar_a_new(t_pcb* pcb) {
 
 
 void mover_a_ready(t_pcb* pcb) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d a READY.", pcb->pid); // DEBUG_LOG
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
     algoritmos_de_planificacion algoritmocorto = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
     if(algoritmo == FIFO) {
@@ -328,6 +329,7 @@ void mover_a_ready(t_pcb* pcb) {
 }
 
 int mover_a_exit(t_pcb* pcb) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d a EXIT.", pcb->pid); // DEBUG_LOG
     
     actualizar_estado_pcb(pcb, EXIT);
     log_fin_proceso(pcb);
@@ -344,6 +346,7 @@ int mover_a_exit(t_pcb* pcb) {
 }
 
 int mover_a_suspready(t_pcb* pcb) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d a SUSP_READY.", pcb->pid); // DEBUG_LOG
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.ingreasoaready);
     if(algoritmo == FIFO) {
         pthread_mutex_lock(&mutex_lista_suspready);
@@ -364,6 +367,7 @@ int mover_a_suspready(t_pcb* pcb) {
 
 
 int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo_io) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de EXECUTING a BLOCKED (IO).", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
     
@@ -423,6 +427,7 @@ int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo
 }
 
 int mover_executing_a_exit(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de EXECUTING a EXIT.", pid); // DEBUG_LOG
     t_pcb* pcb_a_mover = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
 
@@ -460,6 +465,7 @@ int mover_executing_a_exit(u_int32_t pid) {
 }
 
 int mover_executing_a_blocked(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de EXECUTING a BLOCKED.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
 
@@ -510,6 +516,7 @@ int mover_executing_a_blocked(u_int32_t pid) {
 }
 
 int mover_executing_a_ready(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de EXECUTING a READY.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_executing);
     for(int i = 0; i < list_size(lista_executing); i++) {
@@ -546,6 +553,7 @@ int mover_executing_a_ready(u_int32_t pid) {
 }
 
 int mover_blocked_a_ready(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de BLOCKED a READY.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_blocked);
     for(int i = 0; i < list_size(lista_blocked); i++) {
@@ -561,6 +569,7 @@ int mover_blocked_a_ready(u_int32_t pid) {
 }
 
 int mover_blockedio_a_exit(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de BLOCKED_IO a EXIT.", pid); // DEBUG_LOG
     
     //Primero busco el pcb en la lista de blocked_io y lo remuevo
 
@@ -614,6 +623,7 @@ int mover_blockedio_a_exit(u_int32_t pid) {
 
 
 int mover_blocked_a_exit(u_int32_t pid){
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de BLOCKED a EXIT.", pid); // DEBUG_LOG
     t_pcb* pcb_a_mover = NULL;
     
     // Paso 1: Buscar y remover el PCB de la lista de bloqueados de forma atómica.
@@ -640,6 +650,7 @@ int mover_blocked_a_exit(u_int32_t pid){
 }
 
 int mover_blocked_a_suspblocked(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de BLOCKED a SUSP_BLOCKED.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_blocked);
     for(int i = 0; i < list_size(lista_blocked); i++) {
@@ -682,6 +693,7 @@ int mover_blocked_a_suspblocked(u_int32_t pid) {
 };
 
 int mover_suspblocked_a_suspready(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de SUSP_BLOCKED a SUSP_READY.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_suspblocked);
     for(int i = 0; i < list_size(lista_suspblocked); i++) {
@@ -703,6 +715,7 @@ int mover_suspblocked_a_suspready(u_int32_t pid) {
 };
 
 int mover_suspready_a_ready(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de SUSP_READY a READY.", pid); // DEBUG_LOG
     t_pcb* pcb_encontrado = NULL;
     pthread_mutex_lock(&mutex_lista_suspready);
     for(int i = 0; i < list_size(lista_suspready); i++) {
@@ -724,6 +737,7 @@ int mover_suspready_a_ready(u_int32_t pid) {
 };
 
 int mover_ready_a_executing(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de READY a EXECUTING.", pid); // DEBUG_LOG
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
     t_pcb* pcb = NULL;
     for(int i = 0; i < list_size(lista_ready); i++) {
@@ -759,6 +773,7 @@ int mover_ready_a_executing(u_int32_t pid) {
 }
 
 int mover_suspblocked_a_exit(u_int32_t pid) {
+    log_debug(logger_kernel, "[Transición] Intentando mover PID %d de SUSP_BLOCKED a EXIT.", pid); // DEBUG_LOG
     t_pcb* pcb_a_mover = NULL;
     
     pthread_mutex_lock(&mutex_lista_suspblocked);
@@ -836,6 +851,7 @@ t_pcb* obtener_pcb_de_lista_new() {
     }
 
     t_pcb* pcb = list_remove(lista_new, 0);
+    log_debug(logger_kernel, "[Lista NEW] PID %d removido de la lista.", pcb->pid); // DEBUG_LOG
     pthread_mutex_unlock(&mutex_lista_new);
     return pcb;
 }
@@ -849,6 +865,7 @@ t_pcb* obtener_pcb_de_lista_suspready() {
     }
 
     t_pcb* pcb = list_remove(lista_suspready, 0);
+    log_debug(logger_kernel, "[Lista SUSP_READY] PID %d removido de la lista.", pcb->pid); // DEBUG_LOG
 
     pthread_mutex_unlock(&mutex_lista_suspready);
     return pcb;
@@ -1007,6 +1024,7 @@ t_pcb* obtener_pcb_con_menor_estimacion() {
     }
 
     list_remove(lista_ready, indice_elegido);
+    log_debug(logger_kernel, "[Lista READY] PID %d removido (menor estimación).", pcb_elegido->pid); // DEBUG_LOG
     pthread_mutex_unlock(&mutex_lista_ready);
     return pcb_elegido;
 }

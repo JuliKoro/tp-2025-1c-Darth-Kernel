@@ -8,6 +8,7 @@ void* iniciar_planificador_largo_plazo() {
 
         log_info(logger_kernel, "PLP-DEBUG: [Bloqueo] Esperando señal para iniciar ciclo de planificación (sem_largo_plazo).");
         sem_wait(&sem_largo_plazo);
+        log_debug(logger_kernel, "[PLP] Señal de sem_largo_plazo recibida."); // DEBUG_LOG
         log_info(logger_kernel, "PLP-DEBUG: [Señal Recibida] Iniciando nuevo ciclo de planificación.");
 
             while(true) {
@@ -51,6 +52,7 @@ void* iniciar_planificador_largo_plazo() {
                     //Espero a que memoria libere memoria
                     log_info(logger_kernel, "PLP-DEBUG: [Bloqueo] Planificador en espera de memoria libre (sem_memoria_disponible)...");
                     sem_wait(&sem_memoria_disponible);
+                    log_debug(logger_kernel, "[PLP] Señal de sem_memoria_disponible recibida."); // DEBUG_LOG
                     log_info(logger_kernel, "PLP-DEBUG: [Señal Recibida] Memoria ha liberado espacio. Reintentando ciclo.");
                     continue;
                 }

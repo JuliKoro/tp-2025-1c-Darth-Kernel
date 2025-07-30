@@ -85,6 +85,7 @@ void eliminar_instancia_io(int socket_io){
             t_instancia_io* instancia_io = list_get(io->instancias_io, j);
             if(instancia_io->socket_io == socket_io) {
                 list_remove(io->instancias_io, j);
+                log_debug(logger_kernel, "[IO Management] Liberando memoria para instancia de IO (Socket: %d). Dirección: %p", socket_io, (void*)instancia_io); // DEBUG_LOG
                 free(instancia_io);
                 if(io->instancias_disponibles > 0) {
                     io->instancias_disponibles--;
@@ -98,6 +99,7 @@ void eliminar_instancia_io(int socket_io){
                     list_remove(lista_io, i);
                     free(io->nombre_io);
                     list_destroy(io->instancias_io);
+                    log_debug(logger_kernel, "[IO Management] Liberando memoria para IO '%s' (última instancia eliminada). Dirección: %p", io->nombre_io, (void*)io); // DEBUG_LOG
                     free(io);
                     log_info(logger_kernel, "[IO] IO eliminada de la lista");
                 }
@@ -295,6 +297,7 @@ void* guardar_io(void* socket_ptr) {
         list_add(io_nueva->instancias_io, instancia_io); 
         io_nueva->instancias_disponibles = 1;
         log_info(logger_kernel, "[IO] Instancias disponibles de IO aumentadas a 1");
+        log_debug(logger_kernel, "[IO Management] Creada nueva IO '%s' con 1 instancia. Dirección IO: %p, Dirección Instancia: %p", io_nueva->nombre_io, (void*)io_nueva, (void*)instancia_io); // DEBUG_LOG
         agregar_io_a_lista(io_nueva);
         log_info(logger_kernel, "[IO] IO %s agregado a la lista", io_nueva->nombre_io);
 
@@ -323,6 +326,7 @@ void* guardar_io(void* socket_ptr) {
         list_add(io->instancias_io, instancia_io); //Agrego esta instancia en la lista de instancias del IO
         io->instancias_disponibles++;
         log_info(logger_kernel, "[IO] Instancias disponibles de %s aumentadas a %d", io->nombre_io, io->instancias_disponibles);
+        log_debug(logger_kernel, "[IO Management] Creada nueva instancia para IO '%s'. Dirección Instancia: %p", io->nombre_io, (void*)instancia_io); // DEBUG_LOG
 
         //Despues de agregar la instancia a la lista, creo el hilo de atencion
 

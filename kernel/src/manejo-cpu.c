@@ -72,6 +72,7 @@ void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
         cpu_nueva->esta_ocupada = false;
         cpu_nueva->pid_actual = -1;
         list_add(lista_cpu, cpu_nueva);
+        log_debug(logger_kernel, "[CPU Management] Nueva CPU (ID: %d, Dispatch Socket: %d) creada y añadida a la lista. Dirección: %p", cpu_nueva->id_cpu, cpu_nueva->socket_cpu_dispatch, (void*)cpu_nueva); // DEBUG_LOG
         pthread_mutex_unlock(&mutex_cpu);
         sem_post(&sem_cpu_disponible);
     }
@@ -101,6 +102,7 @@ void* guardar_cpu_interrupt(void* socket_cpu_interrupt, int id_cpu) {
         cpu_nueva->esta_ocupada = false;
         cpu_nueva->pid_actual = -1;
         list_add(lista_cpu, cpu_nueva);
+        log_debug(logger_kernel, "[CPU Management] Nueva CPU (ID: %d, Interrupt Socket: %d) creada y añadida a la lista. Dirección: %p", cpu_nueva->id_cpu, cpu_nueva->socket_cpu_interrupt, (void*)cpu_nueva); // DEBUG_LOG
         pthread_mutex_unlock(&mutex_cpu);
         sem_post(&sem_cpu_disponible);
     }
@@ -186,6 +188,7 @@ void* eliminar_cpu_por_socket(int socket) {
 
         close(cpu_en_kernel->socket_cpu_dispatch);
         close(cpu_en_kernel->socket_cpu_interrupt);
+        log_debug(logger_kernel, "[CPU Management] Liberando memoria para CPU ID %d. Dirección: %p", cpu_en_kernel->id_cpu, (void*)cpu_en_kernel); // DEBUG_LOG
         free(cpu_en_kernel);
         sem_trywait(&sem_cpu_disponible);
     } else {
