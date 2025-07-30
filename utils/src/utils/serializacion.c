@@ -1,12 +1,10 @@
 #include "serializacion.h"
 
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de buffer
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
 
 t_buffer *buffer_create(uint32_t size) {
     t_buffer *buffer = malloc(sizeof(t_buffer));
@@ -361,24 +359,6 @@ t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer){
     return solicitud_lectura;
 }
 
-// Pagina de Cache / READ (DEPRECADO)
-
-t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache){
-    t_buffer* buffer = buffer_create(sizeof(t_contenido_pag));
-    buffer_add_uint32(buffer, pagina_cache->pid);
-    buffer_add_uint32(buffer, pagina_cache->tamanio);
-    buffer_add_string(buffer, pagina_cache->tamanio, pagina_cache->contenido); // void* -> char*
-    return buffer;
-}
-
-t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer){
-    t_contenido_pag* pagina_cache = malloc(sizeof(t_contenido_pag));
-    pagina_cache->pid = buffer_read_uint32(buffer);
-    pagina_cache->tamanio = buffer_read_uint32(buffer);
-    pagina_cache->contenido = buffer_read_string(buffer, pagina_cache->tamanio); // char* -> void*
-    return pagina_cache;
-}
-
 // Actualizar Paginas / WRITE
 
 t_buffer* serializar_escritura_memoria(t_escritura_memoria* pagina_escrita){
@@ -395,6 +375,6 @@ t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer){
     pagina_escrita->pid = buffer_read_uint32(buffer);
     pagina_escrita->direccion_fisica = buffer_read_uint32(buffer);
     pagina_escrita->tamanio = buffer_read_uint32(buffer);
-    pagina_escrita->dato = buffer_read_string(buffer, pagina_escrita->tamanio); // char* -> void*
+    pagina_escrita->dato = buffer_read_string(buffer, &pagina_escrita->tamanio); // char* -> void*
     return pagina_escrita;
 }

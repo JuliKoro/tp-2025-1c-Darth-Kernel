@@ -150,7 +150,7 @@ int esperar_cliente(int socket_servidor) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-void enviar_mensaje(char* mensaje, int socket) {
+void enviar_mensaje(const char* mensaje, int socket) {
     if(mensaje == NULL || logger_sockets == NULL){
         return;
     }

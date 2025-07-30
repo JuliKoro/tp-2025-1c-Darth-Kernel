@@ -90,7 +90,7 @@ int esperar_cliente(int socket_servidor);
  * @param mensaje el mensaje a enviar
  * @param socket el socket de destino
  */
-void enviar_mensaje(char* mensaje, int socket);
+void enviar_mensaje(const char* mensaje, int socket);
 
 /**
 * @brief Recibe el mensaje desde el socket

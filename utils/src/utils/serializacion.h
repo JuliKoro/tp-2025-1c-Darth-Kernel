@@ -535,28 +535,6 @@ t_buffer* serializar_lectura_memoria(t_lectura_memoria* solicitud_lectura);
 t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer);
 
 /**
- * @brief Serializa una pagina para leer o cargar a la cache
- * 
- * @param pagina_cache Estructura con pid, numero de pagina y contenido
- * @return t_buffer* Puntero al buffer que contiene la serializacion de t_pag_cache
- * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
- *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
- * @note DEPRECADO
- */
-t_buffer* serializar_contenido_pagina(t_contenido_pag* pagina_cache); // DEPRECADO
-
-/**
- * @brief Deserializa un buffer de una pagina para leer o cargar a la cache
- * 
- * @param buffer Puntero al buffer que contiene la serializacion de t_contenido_pag
- * @return t_contenido_pag* Puntero a la estructura de t_contenido_pag
- * @note Utilizado para cargar una pagina de Memoria a la Cache (CPU) / Leer directo de Memoria (READ)
- *       COD_OP: PAQUETE_PAG_CACHE / PAQUETE_READ
- * @note DEPRECADO
- */
-t_contenido_pag* deserializar_contenido_pagina(t_buffer* buffer); // DEPRECADO
-
-/**
  * @brief Serializa una paquete de escritura para WRITE o Actualizar Pagina
  * 
  * @param escritura_memoria Estructura con pid, DF, tamanio y datos a escribir en Memoria
