@@ -15,6 +15,7 @@
 #include "cpu-log.h"
 #include "cpu-conexiones.h"
 #include "cache.h"
+#include "acceso_memoria.h"
 
 /**
  * @brief Ejecuta una instrucción decodificada del CPU

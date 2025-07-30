@@ -20,7 +20,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int
             interrupcion->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
             tsc_proc_final = TSC;
             interrupcion->rafaga_cpu = rafaga_cpu(tsc_proc_final, tsc_proc_inicial);
-            enviar_devolucion_interrupcion(interrupcion, socket_kernel_interrupt);
+            enviar_devolucion_interrupcion(interrupcion, socket_kernel_dispatch);
             IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción
         }
@@ -149,10 +149,10 @@ uint32_t rafaga_cpu(uint32_t tsc_proc_final, uint32_t tsc_proc_inicial) {
     return tsc_proc_final - tsc_proc_inicial;
 }
 
-void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_interrupt){
+void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_dispatch){
     t_buffer* buffer = serializar_interrupcion(interrupcion_fb);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
-    if(enviar_paquete(socket_kernel_interrupt, paquete) == -1){
+    if(enviar_paquete(socket_kernel_dispatch, paquete) == -1){
         log_error(logger_cpu, "Error: No se pudo enviar la devulucion de la interrupcion a kernel");
         return;
     }  

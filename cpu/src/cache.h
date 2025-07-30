@@ -1,9 +1,6 @@
 #ifndef CACHE_H
 #define CACHE_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
 #include <stdbool.h>
 
 #include "commons/collections/list.h"
@@ -13,6 +10,7 @@
 #include "cpu-log.h"
 #include "cpu-conexiones.h"
 #include "traduccion.h"
+#include "acceso_memoria.h"
 
 /**
  * @enum t_tipo_operacion
@@ -180,36 +178,6 @@ void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pi
  * @return char* Puntero a los datos leídos de la caché o de la memoria.
  */
 char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, int socket_memoria);
-
-/**
- * @brief Lee datos de la memoria a partir de una dirección física.
- *
- * @param pid Identificador del proceso que solicita la lectura de datos.
- * @param direccion_fisica Dirección física desde la cual se desea leer los datos.
- * @param tamanio Tamaño del bloque de datos a leer (para cargar a cache tamanio_pagina)
- * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
- * 
- * @return void* Puntero a los datos leídos de la memoria. Si ocurre un error
- *                durante la operación, se retorna NULL.
- * 
- * @note SUGERENCIA: Mudar a otro archivo aparte.
- */
-void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria);
-
-/**
- * @brief Escribe datos en la memoria.
- *
- * @param pid Identificador del proceso que realiza la escritura.
- * @param direccion_fisica Dirección física donde se desea escribir los datos.
- * @param tamanio Tamaño de los datos a escribir.
- * @param dato Puntero a los datos que se desean escribir en memoria.
- * @param socket_memoria Socket utilizado para la comunicación con el módulo de memoria.
- *
- * @return int Retorna 0 si la escritura fue exitosa, -1 en caso de error.
- * 
- * @note SUGERENCIA: Mudar a otro archivo aparte.
- */
-int escribir_en_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, void* dato, int socket_memoria);
 
 /**
  * @brief Limpia la caché de páginas.

@@ -76,7 +76,7 @@ uint32_t rafaga_cpu(uint32_t tsc_proc_final, uint32_t tsc_proc_inicial);
  * @param interrupcion_fb Estructura de la interrupcion con el PC actualizado y su motivo (feedback)
  * @param socket_kernel_dispatch Socket utilizado para enviar paquetes de interrupción al kernel.
  */
-void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_interrupt);
+void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_dispatch);
 
 /**
  * @brief Libera los recursos de una instrucción decodificada
