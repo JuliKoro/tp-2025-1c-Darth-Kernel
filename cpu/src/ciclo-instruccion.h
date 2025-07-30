@@ -61,16 +61,6 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
 bool check_interrupt(t_interrupcion* interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt);
 
 /**
- * @brief Calcula la rafaga de CPU de un proceso ejecutandose
- * 
- * @param tsc_proc_final Contador actual del registro TSC del CPU
- * @param tsc_proc_inicial Contador inicial del registro TSC del CPU, en el momento que comienza a ejecutarse un proceso
- * 
- * @return uint32_t La rafaga de CPU del proceso
- */
-uint32_t rafaga_cpu(uint32_t tsc_proc_final, uint32_t tsc_proc_inicial);
-
-/**
  * @brief Envia una estructura de interrupcion con el PID, PC (actualizado) y Motivo de la interrupcion a Kernel si es que ocurrio una
  * 
  * @param interrupcion_fb Estructura de la interrupcion con el PC actualizado y su motivo (feedback)

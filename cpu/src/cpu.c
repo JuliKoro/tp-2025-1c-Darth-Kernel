@@ -18,7 +18,6 @@ t_interrupcion* interrupcion = NULL;
 // REGISTROS
 uint32_t PC; // Declaracion de la variable global para el PC (Porgram Counter)
 bool IF = 0; // Declaracion de la pariable global para el IF (Interrupt Flag)
-uint32_t TSC = 0; // Declaracion de la pariable global para el TSC (Time Stamp Counter)
 
 int id_cpu; //La hice global para que se pueda usar en los hilos de dispatch e interrupt.
 
