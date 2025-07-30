@@ -189,6 +189,24 @@ int recibir_handshake_cpu(int socket, int* id_cpu);
                                 Funciones de handshake CPU
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+/**
+ * @brief Envía un número de marco a través de un socket.
+ *
+ * @param socket Descriptor del socket a través del cual se enviará el número de marco.
+ * @param numero_marco Número de marco que se desea enviar.
+ * @return int Retorna 0 en caso de éxito. En caso de error, se puede modificar para
+ *             retornar un código de error específico.
+ */
+int enviar_marco(int socket, uint32_t numero_marco);
+
+/**
+ * @brief Recibe un número de marco a través de un socket.
+ *
+ * @param socket Descriptor del socket desde el cual se recibirá el número de marco.
+ * @param numero_marco Puntero a una variable donde se almacenará el número de marco recibido (se pasa por referencia &)
+ * @return int Retorna 0 en caso de éxito. Retorna -1 si ocurre un error al recibir el mensaje.
+ */
+int recibir_marco(int socket, uint32_t* numero_marco);
 
 //TODO: EVALUAR mover funciones de handshake de cpu aca
 #endif

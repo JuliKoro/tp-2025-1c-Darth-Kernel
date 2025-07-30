@@ -287,3 +287,22 @@ int recibir_handshake_cpu(int socket, int* id_cpu){
     free(id_como_texto);
     return 0;
 }
+
+int enviar_marco(int socket, uint32_t numero_marco){
+    // Enviamos el #marco como mensaje
+    const char* marco_como_texto = int_a_string(numero_marco);
+    enviar_mensaje(numero_marco, socket);
+    return 0;
+}
+
+int recibir_marco(int socket, uint32_t* numero_marco){
+    // Recibimos el #marco como mensaje
+    uint32_t* numero_marco;
+    char* marco_como_texto = recibir_mensaje(socket);
+    if (marco_como_texto == NULL) {
+        return -1;
+    }
+    *numero_marco = atoi(marco_como_texto);
+    free(marco_como_texto);
+    return 0;
+}

@@ -68,14 +68,11 @@ extern cache_t* cache; // Variable global de caché.
 /**
  * @brief Crea una nueva caché de páginas.
  *
- * @param capacidad Capacidad máxima de la caché.
- * @param algoritmo_reemplazo Algoritmo de reemplazo a utilizar (ej. "CLOCK" o "CLOCK-M").
- *
  * @return cache_t* Puntero a la nueva caché de páginas creada.
  * 
  * @note Hay que destruirla con destruir_cache(cache_t* cache), ya que se asigna memoria y hay que liberarla
  */
-cache_t* crear_cache(int capacidad, char* algoritmo_reemplazo);
+cache_t* crear_cache();
 
 /**
  * @brief Destruye la caché de páginas.

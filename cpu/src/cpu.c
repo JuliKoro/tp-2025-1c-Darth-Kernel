@@ -45,6 +45,8 @@ int main(int argc, char* argv[]) {
    logger_cpu = iniciar_logger_cpu(id_cpu); // crea logger cpu_<id>.log
    log_info(logger_cpu, "Iniciando CPU con ID: %d", id_cpu);
 
+   cache = crear_cache(cpu_configs.entradascache, cpu_configs.reemplazocache);
+
    // SOCKETS
    // Conexiones al Kernel (dispatch & interrupt)
    socket_kernel_dispatch = cpu_conectar_a_kernel(cpu_configs.puertokerneldispatch, id_cpu);

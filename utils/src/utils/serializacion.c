@@ -35,14 +35,11 @@ void buffer_read(t_buffer *buffer, void *data, uint32_t size) {
     buffer->offset += size;
 }
 
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de buffer especificas
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-
-
 
 void buffer_add_uint32(t_buffer *buffer, uint32_t data) {
     buffer_add(buffer, &data, sizeof(uint32_t));
@@ -135,7 +132,6 @@ t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer) {
     return proceso;
 }
 
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de empaquetado y desempaquetado
@@ -148,9 +144,6 @@ t_paquete* empaquetar_buffer(t_codigo_operacion codigo_operacion, t_buffer* buff
     paquete->buffer = buffer;
     return paquete;
 }
-
-
-
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -170,7 +163,6 @@ void* stream_para_enviar(t_paquete* paquete){
     memcpy(stream + offset, paquete->buffer->stream, paquete->buffer->size);
     return stream; //Recordar liberar en donde se llame
 }
-
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -244,7 +236,6 @@ void liberar_paquete(t_paquete* paquete){
     free(paquete);
 }
 
-
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
                                         Funciones de serializacion y deserializacion PCB
@@ -272,7 +263,6 @@ t_pcb* deserializar_pcb(t_buffer* buffer){
     pcb->archivo_pseudocodigo = buffer_read_string(buffer, &length);
     return pcb;
 }
-
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -378,3 +368,26 @@ t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer){
     pagina_escrita->dato = buffer_read_string(buffer, &pagina_escrita->tamanio); // char* -> void*
     return pagina_escrita;
 }
+
+// Solicitud de Marco (CPU [MMU] -> Memoria [TP])
+
+t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t cant_niveles) {
+    t_buffer* buffer = buffer_create(sizeof(t_entradas_tabla));
+    buffer_add_uint32(buffer, entradas_tabla->pid);
+    for (uint32_t i = 0; i < cant_niveles; i++) { // Agregar las entradas de los niveles
+        buffer_add_uint32(buffer, &entradas_tabla->entradas_niveles[i]);
+    }
+    buffer_add_uint32(buffer, entradas_tabla->num_pag);
+    return buffer;
+}
+
+t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles) {
+    t_entradas_tabla* entradas_tabla = malloc(sizeof(t_entradas_tabla));
+    entradas_tabla->pid = buffer_read_uint32(buffer);
+    for (uint32_t i = 0; i < cant_niveles; i++) { // Extraigo las entradas de los niveles
+        entradas_tabla->entradas_niveles[i] = buffer_read_uint32(buffer);
+    }
+    entradas_tabla->num_pag = buffer_read_uint32(buffer);
+}
+
+// Marco (Memoria -> CPU)

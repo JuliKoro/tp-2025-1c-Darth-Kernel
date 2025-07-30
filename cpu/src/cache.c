@@ -2,7 +2,7 @@
 
 cache_t* cache = NULL; // Declaracion de variable global
 
-cache_t* crear_cache(int capacidad, char* algoritmo_reemplazo) {
+cache_t* crear_cache() {
     cache_t* cache = malloc(sizeof(cache_t));
     cache->entradas = malloc(sizeof(entrada_cache) * cpu_configs.entradascache);
     cache->capacidad = cpu_configs.entradascache;

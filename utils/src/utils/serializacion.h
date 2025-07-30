@@ -37,12 +37,10 @@
  * @param PAQUETE_INTERRUPCION: Código de operación para interrupcion de un proceso
  * @param PAQUETE_INFO_TP: Código de operación para handshake Memoria-CPU (Info Tabla de Paginas)
  * @param PAQUETE_SOLICITUD_MARCO: Código de operación cuando CPU solicita el Marco de una pagina a Memoria (Para la MMU)
+ * @param PAQUETE_MARCO: Código de operación, rta a PAQUETE_SOLICITUD_MARCO por parte de Memoria a CPU
  * @param PAQUETE_READ: Código de operación cuando CPU quiere leer el valor en una determinada direccion en Memoria
  * @param PAQUETE_WRITE: Código de operación cuando CPU quiere escribir un valor en una determinada direccion en Memoria
- * @param PAQUETE_SOLICITUD_PAG: Código de operación cuando CPU solicita cargar una pagina con su contenido a la Cache desde Memoria (DEPRECADO)
- * @param PAQUETE_PAG_CACHE: Código de operación cuando Memoria le responde a CPU al PAQUETE_SOLICITUD_PAG (DEPRECADO)
  */
-
 typedef enum {
     PAQUETE_SOLICITUD_IO=1,
     PAQUETE_PROCESO_CPU=2, //ok
@@ -55,10 +53,9 @@ typedef enum {
     PAQUETE_CARGAR_PROCESO=9,
     PAQUETE_DUMP_MEMORY=10,
     PAQUETE_SOLICITUD_MARCO=11, //
-    PAQUETE_READ=12, //ok
-    PAQUETE_WRITE=13, //ok
-    PAQUETE_SOLICITUD_PAG=14, // DEPRECADO (SE USA PAQUETE_READ)
-    PAQUETE_PAG_CACHE=15 // DEPRECADO (SE ENVIA COMO MSJ)
+    PAQUETE_MARCO=12,
+    PAQUETE_READ=13, //ok
+    PAQUETE_WRITE=14, //ok
 } t_codigo_operacion;
 
 //Estructura de mensaje para modulo IO
@@ -141,21 +138,39 @@ typedef struct {
 } t_escritura_memoria;
 
 /**
- * @brief Estrucutra utilizada para leer/cargar paginas con su contenido a la Cache (CPU) desde Memoria
+ * @brief Estrucutra utilizada para solicitar a Memoria un numero de marco (frame)
  * 
- * @param pid ID del proceso que necesita cargar la pagina
- * @param contenido Contenido de la página (un puntero a datos).
- * @param tamanio Tamanio en bytes del contenido
- * 
- * @note CPU le solicita a Memoria (PAQUETE_SOLICITUD_PAG/PAQUETE_READ), este busca la pagina, carga su contenido y lo envia a CPU
- *       COD_OP: PAQUETE_PAG_CACHE/PAQUETE_READ
- * // DEPRECADO
+ * @param pid ID del proceso
+ * @param entradas_niveles Arreglo de enteros, con las disitntas ntradas a los niveles de TP
+ * @param num_pag Numero de Pagina del que se requiere el numero de marco
  */
 typedef struct {
-    uint32_t pid; // ID del proceso que necesita cargar la pagina 
-    void* contenido; // Contenido de la página (un puntero a datos).
-    uint32_t tamanio; // Tamanio en Bytes del contenido
-} t_contenido_pag; // NO SE USA MAS -> SE RESPONDE A PAQUETE_READ CON UN MENSAJE DIRECTAMENTE (DEPRECADO)
+    uint32_t pid; //ID del proceso
+    uint32_t* entradas_niveles; //Arreglo de enteros, con las disitntas ntradas a los niveles de TP
+    uint32_t num_pag; //Numero de Pagina del que se requiere el numero de marco
+} t_entradas_tabla;
+
+/**
+ * @brief Codigos de Operacion para la respuesta del Marco por parte de Memoria a CPU
+ * 
+ * @param MARCO_OBTENIDO Marco encontrado
+ * @param ERROR_MEMORIA Error ocurriod en memoria, no se encontro el marco
+ */
+typedef enum {
+    MARCO_OBTENIDO=1,
+    ERROR_MEMORIA=2
+} op_code;
+
+/**
+ * @brief Estructura para serilizar y deserializar el numero de marco, con un codigo de operacion (OK/ERROR)
+ * 
+ * @param marco Numero de Marco hallado
+ * @param codigo_operacion Indica si se encontro correctamente o si ocurrio un error
+ */
+typedef struct {
+    uint32_t marco; // Numero de marco encontrado
+    op_code codigo_operacion; // Codigo de operacion que dice si se pudo encontrar el marco o hubo un error.
+} t_marco;
 
 //Estructura de buffer para serializacion y deserializacion
 
@@ -223,13 +238,6 @@ typedef struct {
     uint32_t pc;
     t_motivo_interrupcion motivo;
 } t_interrupcion;
-
-//agregar descr
-typedef struct {
-    uint32_t pid;
-    uint32_t entrada_nivel;
-    uint32_t num_pag;
-} t_entrada_tabla;
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -354,20 +362,6 @@ t_buffer* serializar_proceso_cpu(t_proceso_cpu* proceso);
  *                             del Kernel deserializada. Se debe liberar.
  */
 t_proceso_cpu* deserializar_proceso_cpu(t_buffer* buffer);
-
-t_buffer* serializar_solicitud_marco(t_entrada_tabla* entrada_tabla);
-
-t_entrada_tabla* deserializar_solicitud_marco(t_buffer* buffer);
-
-
-//funciones a desarrollar para operacion lectura memoria
-t_buffer* serializar_lectura_memoria(t_lectura_memoria* lectura_memoria);
-
-t_lectura_memoria* deserializar_lectura_memoria(t_buffer* buffer);
-
-t_buffer* serializar_escritura_memoria(t_escritura_memoria* escritura_memoria);
-
-t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -553,6 +547,24 @@ t_buffer* serializar_escritura_memoria(t_escritura_memoria* escritura_memoria);
  *       COD_OP: PAQUETE_WRITE
  */
 t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer);
+
+/**
+ * @brief Serializa una solicitud de marco en un buffer.
+ *
+ * @param entradas_tabla Puntero a la estructura de entradas de tabla que se desea serializar.
+ * @param cant_niveles Cantidad de niveles en la tabla de páginas (cargado de las configs).
+ * @return t_buffer* Puntero al buffer que contiene la solicitud serializada.
+ */
+t_buffer* serializar_solicitud_marco(t_entradas_tabla* entrada_tabla, uint32_t cant_niveles);
+
+/**
+ * @brief Deserializa una solicitud de marco desde un buffer.
+ *
+ * @param buffer Puntero al buffer que contiene la solicitud serializada.
+ * @param cant_niveles Cantidad de niveles en la tabla de páginas (cargado de las configs).
+ * @return t_entradas_tabla* Puntero a la estructura de entradas de tabla deserializada.
+ */
+t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles);
 
 #endif
 
