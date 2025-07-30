@@ -86,20 +86,16 @@ int actualizar_estado_pcb(t_pcb* pcb, estado_pcb estado) {
 
     //Actualizo el tiempo en milisegundos del estado actual
     estado_pcb estado_actual= pcb->estado;
-    struct timeval hora_actual;
-    gettimeofday(&hora_actual, NULL);
-    struct timeval tiempo_transcurrido;
 
     pthread_mutex_lock(&pcb->mutex_cambio_estado);
 
-    //Calculo diferencia entre la hora actual y la ultima hora de actualizacion
-    timersub(&hora_actual, &pcb->ult_update, &tiempo_transcurrido);
-    //Convierto la diferencia a milisegundos
-    double tiempo_en_ms = (tiempo_transcurrido.tv_sec * 1000.0) + (tiempo_transcurrido.tv_usec / 1000.0);
-    //Sumo el tiempo en milisegundos al tiempo acumulado del estado actual
+    //-----------------------------------------------------------------------------------------------------------//
+    //Obtengo el tiempo transcurrido en el estado anterior
+    int64_t tiempo_en_ms = temporal_gettime(pcb->cronometro_estado);
     pcb->metricas_tiempo[estado_actual].tiempo_acumulado += tiempo_en_ms;
-    //Actualizo la hora de actualizacion
-    pcb->ult_update = hora_actual;
+    //Reinicio el cronometro para el nuevo estado
+    temporal_destroy(pcb->cronometro_estado);
+    pcb->cronometro_estado = temporal_create();
    
     //Actualizo el contador de estado
     pcb->metricas_estado[estado].contador++;
@@ -288,11 +284,6 @@ void mover_a_ready(t_pcb* pcb) {
             //Si no hay CPU disponible, tengo que fijarme si el PCB que entro a ready tiene
             //Una estimacion de CPU menor a los que se estan ejecutando
 
-            //Obtengo la hora actual, la voy a usar para calcular el tiempo de ejecucion de los procesos
-            struct timeval hora_actual;
-            gettimeofday(&hora_actual, NULL);
-            u_int32_t tiempo_transcurrido = 0;
-            u_int32_t rafaga_restante = 0;
 
             //Itero sobre la lista de executing
             pthread_mutex_lock(&mutex_lista_executing);
@@ -305,28 +296,19 @@ void mover_a_ready(t_pcb* pcb) {
             t_pcb* pcb_a_desalojar = NULL;
             double rafaga_restante_maxima = 0.0;
 
-            struct timeval ahora;
-            gettimeofday(&ahora, NULL);
-
-            int indice_a_desalojar = -1;
 
             for(int i = 0; i < list_size(lista_executing); i++) {
                 t_pcb* pcb_ejecutando = list_get(lista_executing, i);
 
                 //Calculo cuanto tiempo ha estado ejecutando
-                struct timeval tiempo_en_cpu;
-                timersub(&ahora, &pcb_ejecutando->ult_update, &tiempo_en_cpu);
-                double tiempo_ejecutabdo_ms = (tiempo_en_cpu.tv_sec * 1000.0) + (tiempo_en_cpu.tv_usec / 1000.0);
-
-                //Calculo rafaga restante
-                double rafaga_restante = pcb_ejecutando->estimacion_rafaga_anterior - tiempo_ejecutabdo_ms;
+                int64_t tiempo_ejecutando_ms = temporal_gettime(pcb_ejecutando->cronometro_estado);
+                double rafaga_restante = pcb_ejecutando->estimacion_rafaga_anterior - tiempo_ejecutando_ms;
 
                 //Comparo y guardo el maximo, y el indice del PCB con el maximo.
 
                 if(rafaga_restante > rafaga_restante_maxima) {
                     rafaga_restante_maxima = rafaga_restante;
                     pcb_a_desalojar = pcb_ejecutando;
-                    indice_a_desalojar = i;
                 }
             }
             //ahora veo si desalojar
@@ -1034,28 +1016,82 @@ t_pcb* obtener_pcb_con_menor_estimacion() {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-int actualizar_pcb_en_blocked(u_int32_t pid, u_int32_t pc) {
+void actualizar_pcb(u_int32_t pid, u_int32_t pc) {
     pthread_mutex_lock(&mutex_lista_blocked);
+    pthread_mutex_lock(&mutex_lista_suspblocked);
+    pthread_mutex_lock(&mutex_lista_ready);
+    pthread_mutex_lock(&mutex_lista_suspready);
+
+    bool encontrado = false;
+    t_pcb* pcb_temporal = NULL;
+
+    //Busco en blocked
     for(int i = 0; i < list_size(lista_blocked); i++) {
-        t_pcb* pcb = list_get(lista_blocked, i);
-        if(pcb->pid == pid) {
-            pcb->pc = pc;
+        pcb_temporal = list_get(lista_blocked, i);
+        if(pcb_temporal->pid == pid) {
+            pcb_temporal->pc = pc;
+            encontrado = true;
             break;
         }
     }
+    //Busco en suspblocked
+    if(!encontrado) {
+        for(int i = 0; i < list_size(lista_suspblocked); i++) {
+            pcb_temporal = list_get(lista_suspblocked, i);
+            if(pcb_temporal->pid == pid) {
+                pcb_temporal->pc = pc;
+                encontrado = true;
+                break;
+            }
+        }
+    }
+    //Busco en ready
+    if(!encontrado) {
+        for(int i = 0; i < list_size(lista_ready); i++) {
+            pcb_temporal = list_get(lista_ready, i);
+            if(pcb_temporal->pid == pid) {
+                pcb_temporal->pc = pc;
+                encontrado = true;
+                break;
+            }
+        }
+    }   
+    //Busco en suspready
+    if(!encontrado) {
+        for(int i = 0; i < list_size(lista_suspready); i++) {
+            pcb_temporal = list_get(lista_suspready, i);
+        if(pcb_temporal->pid == pid) {
+            pcb_temporal->pc = pc;
+            encontrado = true;
+            break;
+        }
+        }
+    }
+    //Busco en exit
+    if(!encontrado) {
+        for(int i = 0; i < list_size(lista_exit); i++) {
+            pcb_temporal = list_get(lista_exit, i);
+            if(pcb_temporal->pid == pid) {
+                pcb_temporal->pc = pc;
+                encontrado = true;
+                break;
+            }
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_suspready);
+    pthread_mutex_unlock(&mutex_lista_ready);
+    pthread_mutex_unlock(&mutex_lista_suspblocked);
     pthread_mutex_unlock(&mutex_lista_blocked);
-    return 0;
+
+    if(!encontrado) {
+        log_warning(logger_kernel, "Se recibió contexto para el PID %d, pero no se encontró en ninguna lista para actualizar.", pid);
+    }
+    
 }
+
 int actualizar_metricas_sjf(t_pcb* pcb) {
-   //Calculo la rafaga real
-   struct timeval hora_fin_ejecucion;
-   gettimeofday(&hora_fin_ejecucion, NULL);
-   struct timeval tiempo_transcurrido;
-   timersub(&hora_fin_ejecucion, &pcb->ult_update, &tiempo_transcurrido);
-
-   double rafaga_real = (tiempo_transcurrido.tv_sec * 1000.0) + (tiempo_transcurrido.tv_usec / 1000.0);
-
-   pcb->rafaga_real_anterior = (u_int32_t)rafaga_real;
+   int64_t rafaga_real_ms = temporal_gettime(pcb->cronometro_estado);
+   pcb->rafaga_real_anterior = (u_int32_t)rafaga_real_ms;
 
    //Calculo la nueva estimacion
 

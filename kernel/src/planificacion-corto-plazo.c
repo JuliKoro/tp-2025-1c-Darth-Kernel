@@ -19,7 +19,7 @@ void iniciar_planificador_corto_plazo() {
                 }
                 //Esta funcion asigna el pcb a un cpu y lo manda a la cola executing
                 asignar_pcb_a_cpu(pcb);
-             }
+            }
             break;
         case SJF_SIN_DESALOJO:
             while(true) {
@@ -42,8 +42,9 @@ void iniciar_planificador_corto_plazo() {
                 if(pcb == NULL) {
                     log_error(logger_kernel, "No hay nada en ready aun D:");
                     continue;
+                }
+                asignar_pcb_a_cpu(pcb);
             }
-            asignar_pcb_a_cpu(pcb);
             break;
         default:
             printf("No tenido en cuenta o incorrecto\n");

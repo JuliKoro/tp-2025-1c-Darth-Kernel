@@ -144,13 +144,7 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
         
         if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
             t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
-            //Tengo que buscar el PCB para actualizarlo
-            if(interrupcion->motivo == INTERRUPCION_BLOQUEO) {
-                actualizar_pcb_en_blocked(interrupcion->pid, interrupcion->pc);
-            }
-            if(interrupcion->motivo == INTERRUPCION_FIN_EJECUCION) {
-                //actualizar_pcb_en_exit(interrupcion->pid);
-            }
+            actualizar_pcb(interrupcion->pid, interrupcion->pc);
         }
 
     }

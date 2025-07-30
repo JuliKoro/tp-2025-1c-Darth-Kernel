@@ -517,18 +517,38 @@ void eliminar_procesos_en_exit();
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+                                Funciones para planificacion corto plazo
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
+
+/**
+ * @brief Obtiene el pcb con menor estimacion de la lista ready
+ * 
+ * @return El pcb con menor estimacion de la lista ready
+ */
+t_pcb* obtener_pcb_con_menor_estimacion();
+
+/*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
                                 Actualizacion de PCB
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 /**
- * @brief Actualiza el PC del pcb en la lista blocked
+ * @brief Actualiza el PC de un pcb en cualquier lista de estado
  * 
- * @param pid: El pid del pcb a actualizar
- * @param pc: El nuevo valor del PC
- * @return 0 si el pcb se actualiza correctamente
+ * @param pid El pid del pcb a actualizar
+ * @param pc El nuevo valor del PC
  */
-int actualizar_pcb_en_blocked(u_int32_t pid, u_int32_t pc);
+void actualizar_pcb(u_int32_t pid, u_int32_t pc);
+
+/**
+ * @brief Actualiza las métricas de SJF de un pcb
+ * 
+ * @param pcb El pcb a actualizar
+ * @return 0 si se actualiza correctamente
+ */
+int actualizar_metricas_sjf(t_pcb* pcb);
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
