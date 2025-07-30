@@ -37,11 +37,10 @@ typedef struct {
 typedef struct {
     t_entrada_tlb* entradas; // Arreglo dinámico de entradas de la TLB
     int32_t capacidad;     // Capacidad de la TLB
-    int32_t tamaño;        // Tamaño actual de la TLB
+    int32_t tamanio;        // Tamaño actual de la TLB
     char* algoritmo_reemplazo; // Algoritmo de reemplazo (FIFO, LRU, etc.)
 } tlb_t;
 
-extern t_tabla_pag* info_tabla_pag;
 extern tlb_t* tlb;
 
 /*
@@ -96,6 +95,15 @@ uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, int socket_memoria, ui
 tlb_t* crear_tlb(uint32_t capacidad);
 
 void destruir_tlb();
+
+/**
+ * @brief Verifica si la TLB está habilitada.
+ *
+ * @return bool Retorna true si la TLB está habilitada y se puede acceder, 
+ *               false si la TLB está deshabilitada o no tiene entradas.
+ */
+bool acceder_tlb();
+
 
 int32_t consultar_tlb(uint32_t pid, uint32_t numero_pagina);
 
