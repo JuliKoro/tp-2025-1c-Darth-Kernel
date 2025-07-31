@@ -70,6 +70,7 @@ void* manejar_conexion_cpu(void* socket_cliente){
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
         close(socket_fd);
+        return NULL;
     }
 
 void* manejar_conexion_kernel(void* socket_cliente){
@@ -127,7 +128,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
                 enviar_bool(socket_fd, true);
             }
         }
-
+        return NULL;
 }
 
  void* escuchar_peticiones(void* socket_memoria){
