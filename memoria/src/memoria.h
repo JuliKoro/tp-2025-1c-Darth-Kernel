@@ -75,19 +75,6 @@
  extern t_administrador_memoria* administrador_memoria;
  extern t_bitarray* bitmap_swap; // Bitmap para la gestión del espacio en SWAP
  
- // Definir códigos de operación para la comunicación con CPU
- typedef enum {
-     SOLICITUD_INSTRUCCION,
-     LECTURA_MEMORIA,
-     ESCRITURA_MEMORIA,
-     LECTURA_PAGINA,
-     ACTUALIZACION_PAGINA,
-     SUSPENDER_PROCESO,
-     DESUSPENDER_PROCESO,
-     FINALIZAR_PROCESO,
-     MEMORY_DUMP
- } op_code;
- 
  // Definir tipos de operaciones para métricas (para la función actualizar_metricas)
  typedef enum {
      ACCESO_TABLA_PAGINA,
