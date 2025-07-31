@@ -118,6 +118,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
         }
          if(paquete->codigo_operacion == PAQUETE_DUMP_MEMORY){
             t_pcb* pcb = deserializar_pcb(paquete->buffer);
+            log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pcb->pid);
             //ver si puedo suspender proceso de memoria
             if(realizar_memory_dump(pcb->pid) == -1){
                 log_error(logger_memoria, "[MEMORIA DUMP PROCESO] Error al dumpear proceso. PID: %d", pcb->pid);
