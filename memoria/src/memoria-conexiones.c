@@ -49,13 +49,13 @@ void* manejar_conexion_cpu(void* socket_cliente){
                 log_error(logger_memoria, "[LECTURA MEMORIA] No se pudo leer la memoria del proceso %d y direccion fisica %d",
                     datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica);
                 //enviar_bool(socket_fd, false);
-                enviar_mensaje('\0', socket_fd); // CORROBORAR SI SIRVE EL \0
-                free(datos_lectura_memoria);
+                enviar_mensaje("", socket_fd); // string válido y vacío
             } else {
                 //enviar_bool(socket_fd, true);
                 enviar_mensaje(memoria_leida, socket_fd); 
-                free(datos_lectura_memoria);
+                free(memoria_leida);
             }
+            free(datos_lectura_memoria);
         }
 //int pid, int direccion_fisica, int tam, void* valor
         if(paquete->codigo_operacion == PAQUETE_WRITE){
@@ -66,10 +66,14 @@ void* manejar_conexion_cpu(void* socket_cliente){
                     datos_escritura_memoria->pid, datos_escritura_memoria->direccion_fisica);
                 //enviar_bool(socket_fd, false);
                 enviar_mensaje("ERROR", socket_fd);
+
+
             } else {
                 //enviar_bool(socket_fd, true);
                 enviar_mensaje("OK", socket_fd);
             }
+            free(datos_escritura_memoria->dato);
+            free(datos_escritura_memoria);
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
