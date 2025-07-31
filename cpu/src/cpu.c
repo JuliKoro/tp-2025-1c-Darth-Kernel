@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 
    finalizacion_cpu();
 
-   return 0;
+    return 0;
 }
 
 void* hilo_dispatch(void* arg){

@@ -95,13 +95,31 @@ void eliminar_instancia_io(int socket_io){
                 }
                 
                 if(list_is_empty(io->instancias_io)) {
-
+                    
+                    for(int k = list_size(lista_blocked_io) - 1; k >= 0; k--) {
+                        t_blocked_io* pcb_en_espera = list_get(lista_blocked_io, k);
+                        if(strcmp(pcb_en_espera->nombre_io, io->nombre_io) == 0) {
+                            if(mover_blocked_a_exit(pcb_en_espera->pid) == -1){
+                                mover_suspblocked_a_exit(pcb_en_espera->pid);
+                            }
+                            sacar_de_blockedio(pcb_en_espera);
+                            free(pcb_en_espera->nombre_io);
+                            free(pcb_en_espera);
+                        }
+                    }
                     list_remove(lista_io, i);
                     free(io->nombre_io);
                     list_destroy(io->instancias_io);
                     log_debug(logger_kernel, "[IO Management] Liberando memoria para IO '%s' (última instancia eliminada). Dirección: %p", io->nombre_io, (void*)io); // DEBUG_LOG
                     free(io);
                     log_info(logger_kernel, "[IO] IO eliminada de la lista");
+                    //TODO> mandar procesos encolados por la io que fue eliminada, a exit.
+                    //Deberia buscar por el nombre de la io en la lista de blocked_io y por cada match, mover 
+                    //ese pid a exit. (desde blockedio o blocked no se)
+
+                    
+
+
                 }
                 return;
             }
@@ -218,7 +236,7 @@ void* atender_io(void* instancia_io){
             if(estado_pcb == BLOCKED){
                 mover_blocked_a_ready(pid_que_termino);
             } else {
-                mover_blocked_a_suspblocked(pid_que_termino);
+                mover_suspblocked_a_suspready(pid_que_termino);
             }
 
             log_info(logger_kernel, "## <%d> finalizó IO y pasa a %s", pid_que_termino, estado_pcb == BLOCKED ? "READY" : "SUSP_READY");

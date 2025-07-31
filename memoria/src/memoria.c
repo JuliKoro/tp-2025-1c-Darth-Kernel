@@ -67,8 +67,6 @@
     // Libera todos los recursos utilizados por el módulo de memoria.
     // Destruye el diccionario de procesos en memoria y sus elementos asociados.
     dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);
-    // Destruye el logger de sockets.
-    log_destroy(logger_sockets);
     // Destruye el logger del módulo de memoria.
     destruir_logger_memoria();
     // Destruye la configuración cargada.

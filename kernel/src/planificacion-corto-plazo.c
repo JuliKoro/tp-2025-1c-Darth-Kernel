@@ -2,7 +2,7 @@
 
 
 
-void iniciar_planificador_corto_plazo() {
+void* iniciar_planificador_corto_plazo() {
     //Obtengo el enum correspondiente al algoritmo de planificacion
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
     

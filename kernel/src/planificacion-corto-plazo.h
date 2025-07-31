@@ -3,7 +3,7 @@
 
 #include "planificacion.h"
 
-void iniciar_planificador_corto_plazo();
+void* iniciar_planificador_corto_plazo();
 
 
 #endif

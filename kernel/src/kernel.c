@@ -15,7 +15,6 @@ int main(int argc, char* argv[]) {
     char* archivo_pseudocodigo = argv[1];
 
     //Primero levanto las configs, despues el logger
-    lista_io = list_create();
     inicializar_listas_y_sem();
     inicializar_configs();
     inicializar_logger_kernel();
@@ -42,6 +41,12 @@ int main(int argc, char* argv[]) {
     pthread_t thread_planificador_largo_plazo;
     pthread_create(&thread_planificador_largo_plazo, NULL, iniciar_planificador_largo_plazo, NULL);
     pthread_detach(thread_planificador_largo_plazo);
+
+    //Inicia el planificador corto plazo
+    pthread_t thread_planificador_corto_plazo;
+    pthread_create(&thread_planificador_corto_plazo, NULL, iniciar_planificador_corto_plazo, NULL);
+    pthread_detach(thread_planificador_corto_plazo);
+    log_info(logger_kernel, "Planificador corto plazo iniciado en %s", kernel_configs.cortoplazo);
 
     // Hilo principal se queda en espera para mantener el proceso vivo.
     // Todas las operaciones ahora son manejadas por los hilos planificadores.
