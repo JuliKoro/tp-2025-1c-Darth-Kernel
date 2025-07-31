@@ -31,9 +31,11 @@ void* manejar_conexion_cpu(void* socket_cliente){
                 log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango.",
                     proceso_cpu->pid, proceso_cpu->pc);
             enviar_bool(socket_fd, false);
+            free(proceso_cpu);
             } else {
                 enviar_bool(socket_fd, true);
                 enviar_mensaje(instruccion, socket_fd);
+                free(proceso_cpu);
             }
         }
       //  if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
@@ -48,9 +50,11 @@ void* manejar_conexion_cpu(void* socket_cliente){
                     datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica);
                 //enviar_bool(socket_fd, false);
                 enviar_mensaje('\0', socket_fd); // CORROBORAR SI SIRVE EL \0
+                free(datos_lectura_memoria);
             } else {
                 //enviar_bool(socket_fd, true);
                 enviar_mensaje(memoria_leida, socket_fd); 
+                free(datos_lectura_memoria);
             }
         }
 //int pid, int direccion_fisica, int tam, void* valor
@@ -91,8 +95,10 @@ void* manejar_conexion_kernel(void* socket_cliente){
             if(cargar_proceso(pcb->pid, pcb->archivo_pseudocodigo) == -1){
             log_error(logger_memoria, "[CARGAR PROCESO] Error al cargar proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
+            free(pcb);
             } else {
                 enviar_bool(socket_fd, true);
+                free(pcb);
             }
 
         }
@@ -102,8 +108,10 @@ void* manejar_conexion_kernel(void* socket_cliente){
             if(suspender_proceso(pcb->pid) == -1){
                 log_error(logger_memoria, "[SUSPENDER PROCESO] Error al suspender proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
+            free(pcb);
             } else {
                 enviar_bool(socket_fd, true);
+                free(pcb);
             }
         }
         if (paquete->codigo_operacion == PAQUETE_ELIMINAR_PROCESO){
@@ -112,8 +120,10 @@ void* manejar_conexion_kernel(void* socket_cliente){
             if(finalizar_proceso(pcb->pid) == -1){
                 log_error(logger_memoria, "[ELIMINAR PROCESO] Error al finalizar proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
+            free(pcb);
             } else {
                 enviar_bool(socket_fd, true);
+                free(pcb);
             }
             //Aca tenes que devolverme un bool
         }
@@ -124,8 +134,10 @@ void* manejar_conexion_kernel(void* socket_cliente){
             if(realizar_memory_dump(pcb->pid) == -1){
                 log_error(logger_memoria, "[MEMORIA DUMP PROCESO] Error al dumpear proceso. PID: %d", pcb->pid);
             enviar_bool(socket_fd, false);
+            free(pcb);
             } else {
                 enviar_bool(socket_fd, true);
+                free(pcb);
             }
         }
         liberar_paquete(paquete);
