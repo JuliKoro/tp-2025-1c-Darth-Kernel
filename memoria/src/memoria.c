@@ -48,7 +48,7 @@
     // Inicia el servidor de memoria para escuchar conexiones entrantes.
     int socket_servidor = iniciar_servidor_memoria();
     // Log obligatorio: Conexión de Kernel.
-    log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", socket_servidor);
+    //log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes del módulo Kernel.
     pthread_t hilo_conexiones;
