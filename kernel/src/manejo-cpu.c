@@ -141,12 +141,14 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
         if(paquete->codigo_operacion == PAQUETE_SYSCALL) {
             t_syscall* syscall = deserializar_syscall(paquete->buffer);
             manejar_syscall(syscall);
+            free(syscall->syscall);
             free(syscall);
         }
         
         if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
             t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
             actualizar_pcb(interrupcion->pid, interrupcion->pc);
+            free(interrupcion);
         }
 
     }
