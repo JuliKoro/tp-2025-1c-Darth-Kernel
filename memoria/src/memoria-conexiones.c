@@ -1,6 +1,6 @@
 #include "memoria-conexiones.h"
 #include "memoria-procesos.h"
-
+#include "memoria-operaciones.h"
 
 
 int iniciar_servidor_memoria(){
