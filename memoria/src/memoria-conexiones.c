@@ -39,10 +39,24 @@ void* manejar_conexion_cpu(void* socket_cliente){
                 free(proceso_cpu);
             }
         }
-      //  if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
-        //    t_entrada_tabla* entrada_tabla = deserializar_solicitud_marco(paquete->buffer);
-          //  if()    ;
-//            pid, entr nivel, num pag            
+        
+        if(paquete->codigo_operacion == PAQUETE_SOLICITUD_MARCO){
+            t_entradas_tabla* info_para_marcos = deserializar_solicitud_marco(paquete->buffer, 
+                memoria_configs.cantidadniveles);
+            int32_t marco = obtener_marco_de_memoria(info_para_marcos->num_pag, 
+                info_para_marcos->entradas_niveles, info_para_marcos->pid);
+            if(marco == -1){
+                log_error(logger_memoria, "[PROCESO CPU] No se encontró el marco con PID %d.",
+                    info_para_marcos->pid);
+            enviar_bool(socket_fd, false);
+            free(info_para_marcos);
+            } else {
+                enviar_bool(socket_fd, true);
+                enviar_marco(socket_fd, marco);
+                free(info_para_marcos);
+            }
+        }
+
         if(paquete->codigo_operacion == PAQUETE_READ){
             t_lectura_memoria* datos_lectura_memoria = deserializar_lectura_memoria(paquete->buffer);
             void* memoria_leida = leer_memoria(datos_lectura_memoria->pid, datos_lectura_memoria->direccion_fisica, datos_lectura_memoria->tamanio);
