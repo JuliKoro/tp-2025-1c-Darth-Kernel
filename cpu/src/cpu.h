@@ -4,8 +4,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include <utils/hello.h>
-
 #include "cpu-conexiones.h"
 #include "cpu-configs.h"
 #include "cpu-log.h"

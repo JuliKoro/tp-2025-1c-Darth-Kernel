@@ -2,15 +2,14 @@
 
 t_log* logger_cpu;
 
-t_log* iniciar_logger_cpu(int id_cpu){
+void iniciar_logger_cpu(int id_cpu){
     char log_filename[64]; // Crear nombre de log dinámico (log por cada CPU)
     snprintf(log_filename, sizeof(log_filename), "cpu_%d.log", id_cpu); // formato nombre del archvio 
-    t_log* logger_cpu = iniciar_logger(log_filename, "[CPU]"); // crea logger cpu_<id>.log
+    logger_cpu = log_create(log_filename, "CPU", true, log_level_from_string(cpu_configs.loglevel)); // crea logger cpu_<id>.log
     if (logger_cpu == NULL) {
         fprintf(stderr, "Error al crear el logger.\n");
-        return NULL;
+        exit(EXIT_FAILURE);
     }
-    return logger_cpu;
  }
 
  void destruir_logger_cpu() {

@@ -27,9 +27,9 @@ int inicializar_configs(){
     configcargado.loglevel = cargar_variable_string(cpu_tconfig, "LOG_LEVEL");
 
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo
-    fprintf(stderr, "[DEBUG en cpu-configs.c] Antes: cpu_configs.ipkernel apunta a %p\n", (void*)cpu_configs.ipkernel);
+    //fprintf(stderr, "[DEBUG en cpu-configs.c] Antes: cpu_configs.ipkernel apunta a %p\n", (void*)cpu_configs.ipkernel);
     cpu_configs = configcargado;
-    fprintf(stderr, "[DEBUG en cpu-configs.c] Despues: cpu_configs.ipkernel apunta a %p (con valor '%s')\n", (void*)cpu_configs.ipkernel, cpu_configs.ipkernel);
+    //fprintf(stderr, "[DEBUG en cpu-configs.c] Despues: cpu_configs.ipkernel apunta a %p (con valor '%s')\n", (void*)cpu_configs.ipkernel, cpu_configs.ipkernel);
     fprintf(stderr, "Archivo de configuración de CPU cargado con exito.\n");
 
     return EXIT_SUCCESS;
@@ -40,12 +40,14 @@ void destruir_configs() {
 
     //Destruyo el config
     config_destroy(cpu_tconfig);
+    fprintf(stderr, "Archivo de configuración de CPU destruido.\n");
 }
 
 void cargar_configs_tabla_paginas(t_tabla_pag* info_tabla_pag) {
     cpu_configs.tamanio_pagina = info_tabla_pag->tamanio_pagina;
     cpu_configs.cant_entradas_tabla = info_tabla_pag->cant_entradas_tabla;
     cpu_configs.cant_niveles = info_tabla_pag->cant_niveles;
+    fprintf(stderr, "Informacion de Tabla de Paginas cargado a la configuración de CPU con exito.\n"); // Quiza un log_debug
     free(info_tabla_pag);
 }
 

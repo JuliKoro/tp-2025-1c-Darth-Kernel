@@ -10,8 +10,8 @@ pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización es
 sem_t semaforo_proceso; // Semáforo para controlar la recepción de nuevos procesos
 sem_t semaforo_interrupcion; // Semáforo para controlar la recepción de interrupciones
 
-t_proceso_cpu* proceso = NULL;
-t_interrupcion* interrupcion = NULL;
+t_proceso_cpu* proceso;
+t_interrupcion* interrupcion;
 
 // REGISTROS
 uint32_t PC; // Declaracion de la variable global para el PC (Porgram Counter)
@@ -171,11 +171,14 @@ void* hilo_ciclo_instruccion(void* arg){
 }
 
 void inicializacion_cpu(){
-   // CARGA CONFIGS
-   inicializar_configs(); // Se carga la variable global 'cpu_configs'
+   // CARGA CONFIGS (Se carga la variable global 'cpu_configs')
+    if (inicializar_configs() != 0) {
+        fprintf(stderr, "Error al cargar configuraciones.\n");
+        exit(EXIT_FAILURE);
+    }
 
    // INICIO LOGGERS
-   logger_cpu = iniciar_logger_cpu(id_cpu); // crea logger cpu_<id>.log
+   iniciar_logger_cpu(id_cpu); // crea logger cpu_<id>.log
    log_debug(logger_cpu, "Iniciando CPU con ID: %d", id_cpu);
 
    cache = crear_cache(); // INICIO CACHE

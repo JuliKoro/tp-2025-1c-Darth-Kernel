@@ -20,9 +20,9 @@ extern t_log* logger_cpu;
 /**
  * @brief Crea logger cpu_<id>.log por cada CPU
  * @param id_cpu ID del CPU pasado como argumento a main
- * @return t_log* logger_cpu iniciado
+ * @note Utiliza el logger global de cpu: logger_cpu
  */
-t_log* iniciar_logger_cpu(int id_cpu);
+void iniciar_logger_cpu(int id_cpu);
 
 /** 
  * @brief Destruye el logger del kernel
