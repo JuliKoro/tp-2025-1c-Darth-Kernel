@@ -389,5 +389,3 @@ t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_n
     }
     entradas_tabla->num_pag = buffer_read_uint32(buffer);
 }
-
-// Marco (Memoria -> CPU)

@@ -10,7 +10,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
         // ETAPA EXECUTE
-        execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch); 
+        execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch);
 
         // CHECK INTERRUPT
         if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
@@ -54,7 +54,7 @@ char* fetch(t_proceso_cpu* proceso, int socket_memoria){
     }
 
     // Log de instrucción recibida
-    log_info(logger_cpu, "Instrucción recibida: %s", instruccion_identificada);
+    log_debug(logger_cpu, "Instrucción recibida: %s", instruccion_identificada);
 
     return instruccion_identificada;
 }

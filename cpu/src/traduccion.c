@@ -78,10 +78,10 @@ uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_niv
     return marco_obtenido;
 }
 
-tlb_t* crear_tlb(uint32_t capacidad) {
+tlb_t* crear_tlb() {
     tlb_t* tlb = malloc(sizeof(tlb_t));
-    tlb->entradas = malloc(sizeof(t_entrada_tlb) * capacidad);
-    tlb->capacidad = capacidad;
+    tlb->entradas = malloc(sizeof(t_entrada_tlb) * cpu_configs.entradastlb);
+    tlb->capacidad = cpu_configs.entradastlb;
     tlb->tamanio = 0;
     tlb->algoritmo_reemplazo = cpu_configs.reemplazotlb; // FIFO o LRU
     return tlb;

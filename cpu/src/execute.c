@@ -76,6 +76,7 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
     }
     
     free(parametros);
+    log_debug(logger_cpu, "Ejecucion finalizada con exito!");
     return 0; // Retorna 0 para indicar éxito
 }
 

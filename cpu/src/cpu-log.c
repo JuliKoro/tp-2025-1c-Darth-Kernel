@@ -1,5 +1,7 @@
 #include "cpu-log.h"
 
+t_log* logger_cpu;
+
 t_log* iniciar_logger_cpu(int id_cpu){
     char log_filename[64]; // Crear nombre de log dinámico (log por cada CPU)
     snprintf(log_filename, sizeof(log_filename), "cpu_%d.log", id_cpu); // formato nombre del archvio 
