@@ -1,19 +1,18 @@
 #include "acceso_memoria.h"
 
 int escribir_en_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, void* dato, int socket_memoria) {
-    t_escritura_memoria pagina_escrita;
-    pagina_escrita.pid = pid;
-    pagina_escrita.direccion_fisica = direccion_fisica;
-    pagina_escrita.tamanio = tamanio;
-    pagina_escrita.dato = dato;
+    t_escritura_memoria* pagina_escrita = malloc(sizeof(t_escritura_memoria));
+    pagina_escrita->pid = pid;
+    pagina_escrita->direccion_fisica = direccion_fisica;
+    pagina_escrita->tamanio = tamanio;
+    pagina_escrita->dato = dato;
 
-    t_buffer* buffer = serializar_escritura_memoria(&pagina_escrita);
-    t_paquete paquete;
+    t_buffer* buffer = serializar_escritura_memoria(pagina_escrita);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_WRITE, buffer);
 
-    paquete.codigo_operacion = PAQUETE_WRITE;
-    paquete.buffer = buffer;
+    free(pagina_escrita);
 
-    if (enviar_paquete(socket_memoria, &paquete) == -1) {
+    if (enviar_paquete(socket_memoria, paquete) == -1) {
         log_error(logger_cpu, "Error al enviar escritura de datos a Memoria.");
         return -1; // Manejo de error
     }
@@ -32,20 +31,18 @@ int escribir_en_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamani
 
 void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio, int socket_memoria) {
     // Creo y serializo la solicitud para leer un dato de Memoria
-    t_lectura_memoria solicitud;
-    solicitud.pid = pid;
-    solicitud.direccion_fisica = direccion_fisica;
-    solicitud.tamanio = tamanio; // para solicitar una pagina para la Cache se usa el tamanio de la pagina completa
+    t_lectura_memoria* solicitud = malloc(sizeof(t_lectura_memoria));
+    solicitud->pid = pid;
+    solicitud->direccion_fisica = direccion_fisica;
+    solicitud->tamanio = tamanio; // para solicitar una pagina para la Cache se usa el tamanio de la pagina completa
     
 
-    t_buffer* buffer_solicitud = serializar_lectura_memoria(&solicitud);
-    
-    // Envio la solicitud a memoria
-    t_paquete paquete_solicitud;
-    paquete_solicitud.codigo_operacion = PAQUETE_READ;
-    paquete_solicitud.buffer = buffer_solicitud;
+    t_buffer* buffer_solicitud = serializar_lectura_memoria(solicitud);
+    t_paquete* paquete_solicitud = empaquetar_buffer(PAQUETE_READ, buffer_solicitud);
 
-    if (enviar_paquete(socket_memoria, &paquete_solicitud) == -1) {
+    free(solicitud);
+
+    if (enviar_paquete(socket_memoria, paquete_solicitud) == -1) {
         log_error(logger_cpu, "Error al enviar solicitud de lectura de datos de Memoria.");
         return NULL; // Manejo de error
     }

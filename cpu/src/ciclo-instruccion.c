@@ -16,7 +16,6 @@ void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int
         if (check_interrupt(interrupcion, proceso, socket_kernel_interrupt)) {
             interrupcion->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)
             enviar_devolucion_interrupcion(interrupcion, socket_kernel_dispatch);
-            IF = 0; // Reset IF
             break; // Salir del ciclo en caso de interrupción
         }
 

@@ -46,18 +46,18 @@ uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_niv
     uint32_t marco_obtenido = -1; // Valor por defecto para indicar error
 
     // Construyo el paquete para Memoria
-    t_entradas_tabla* entrada_tabla;
+    // Creo la estructura que contiene la info
+    t_entradas_tabla* entrada_tabla = malloc(sizeof(t_entradas_tabla));
     entrada_tabla->pid = pid;
     entrada_tabla->entradas_niveles = entradas_niveles;
     entrada_tabla->num_pag = numero_pagina;
 
-    t_buffer* buffer = serializar_solicitud_marco(entrada_tabla, cpu_configs.cant_niveles);
-
-    t_paquete* paquete_solicitud;
-    paquete_solicitud->buffer = buffer;
-    paquete_solicitud->codigo_operacion = PAQUETE_SOLICITUD_MARCO;
-
-    // Enviar el paquete a Memoria
+    t_buffer* buffer = serializar_solicitud_marco(entrada_tabla, cpu_configs.cant_niveles); // Serializo
+    
+    t_paquete* paquete_solicitud = empaquetar_buffer(PAQUETE_SOLICITUD_MARCO, buffer); // Empaqueto
+    free(entrada_tabla);
+    
+    // Envio el paquete a Memoria
     if (enviar_paquete(socket_memoria, paquete_solicitud) == -1) {
         log_error(logger_cpu, "Error al enviar solicitud de marco a Memoria para PID: %d, Pagina: %d", pid, numero_pagina);
         return -1;

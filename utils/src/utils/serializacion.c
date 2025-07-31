@@ -375,7 +375,7 @@ t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t 
     t_buffer* buffer = buffer_create(sizeof(t_entradas_tabla));
     buffer_add_uint32(buffer, entradas_tabla->pid);
     for (uint32_t i = 0; i < cant_niveles; i++) { // Agregar las entradas de los niveles
-        buffer_add_uint32(buffer, &entradas_tabla->entradas_niveles[i]);
+        buffer_add_uint32(buffer, entradas_tabla->entradas_niveles[i]);
     }
     buffer_add_uint32(buffer, entradas_tabla->num_pag);
     return buffer;
@@ -388,4 +388,5 @@ t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_n
         entradas_tabla->entradas_niveles[i] = buffer_read_uint32(buffer);
     }
     entradas_tabla->num_pag = buffer_read_uint32(buffer);
+    return entradas_tabla;
 }

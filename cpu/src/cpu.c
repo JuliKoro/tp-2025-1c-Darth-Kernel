@@ -144,7 +144,8 @@ void* hilo_interrupt(void* arg){
          sem_wait(&semaforo_interrupcion);
          
       }
-      
+      IF = 0; // Reset IF
+      free(interrupcion);
       liberar_paquete(paquete_interrupt);
    }
 }
@@ -203,6 +204,8 @@ int conexiones_cpu(){
    }
    t_tabla_pag* info_tabla_pag = hanshake_cpu_memoria(socket_memoria, id_cpu);
    cargar_configs_tabla_paginas(info_tabla_pag);
+
+   return 0;
 }
 
 void desalojar_proceso(uint32_t pid){
@@ -216,7 +219,7 @@ void desalojar_proceso(uint32_t pid){
    limpiar_tlb(pid);
    log_debug(logger_cpu, "Proceso desalojado: PID: %d", pid);
 
-   proceso = NULL;
+   free(proceso);
 }
 
 void finalizacion_cpu(){

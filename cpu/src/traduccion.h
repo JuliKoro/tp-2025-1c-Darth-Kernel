@@ -53,11 +53,6 @@ typedef struct {
 extern tlb_t* tlb;
 
 /**
- * @brief Variable que cuenta los accesos a la TLB
- */
-uint32_t contador_accesos;
-
-/**
  * @brief Traduce una dirección lógica a una dirección física.
  *
  * Esta función calcula el número de página y el desplazamiento a partir de la dirección lógica,

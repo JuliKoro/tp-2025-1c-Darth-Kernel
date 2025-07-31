@@ -46,5 +46,6 @@ void cargar_configs_tabla_paginas(t_tabla_pag* info_tabla_pag) {
     cpu_configs.tamanio_pagina = info_tabla_pag->tamanio_pagina;
     cpu_configs.cant_entradas_tabla = info_tabla_pag->cant_entradas_tabla;
     cpu_configs.cant_niveles = info_tabla_pag->cant_niveles;
+    free(info_tabla_pag);
 }
 
