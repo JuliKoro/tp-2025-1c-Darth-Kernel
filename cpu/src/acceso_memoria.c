@@ -17,7 +17,8 @@ int escribir_en_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamani
         return -1; // Manejo de error
     }
 
-    if (recibir_mensaje(socket_memoria) != "OK") { // REVISAR SI ESTA BIEN
+    char* respuesta_memoria = recibir_mensaje(socket_memoria);
+    if (strcmp(respuesta_memoria, "OK") != 0) { // REVISAR SI ESTA BIEN
         log_error(logger_cpu, "Error en la escritura de datos en Memoria.");
         return -1; // Manejo de error
     }
@@ -50,7 +51,7 @@ void* leer_de_memoria(uint32_t pid, uint32_t direccion_fisica, uint32_t tamanio,
     // Recibo la respuesta de memoria
     void* datos = recibir_mensaje(socket_memoria);
 
-    if ( datos == '\0') { // CORROBORAR SI SIRVE EL \0
+    if (strcmp(datos, "") == 0) {
         log_error(logger_cpu, "Error al recibir la respuesta de Memoria para la lectura.");
         return NULL; // Manejo de error
     }

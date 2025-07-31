@@ -172,7 +172,7 @@ void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pi
  * @param pid Identificador del proceso que realiza la operación.
  * @param socket_memoria Socket para la comunicación con la memoria.
  *
- * @return char* Puntero a los datos leídos de la caché o de la memoria.
+ * @return const char* Puntero a los datos leídos de la caché o de la memoria.
  */
 char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, int socket_memoria);
 

@@ -192,7 +192,7 @@ void escribir_en_cache(uint32_t direccion_logica, const char* datos, uint32_t pi
 
 char* leer_de_cache(uint32_t direccion_logica, uint32_t tamanio, uint32_t pid, int socket_memoria) {
     uint32_t pagina = obtener_numero_pagina(direccion_logica); // Función para obtener el número de página
-    const char* datos; 
+    char* datos; 
     if (acceder_pagina_cache(pagina, pid)) { // Cache Hit
         // Si la página está en la caché, leer los datos
         datos = cache->entradas[cache->puntero].contenido; // Obtener los datos de la entrada de la caché
