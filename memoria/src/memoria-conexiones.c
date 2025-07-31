@@ -152,6 +152,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
             pthread_detach(hilo_cliente);
           } else {
             //Es kernel
+            log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", cliente_fd);
             pthread_t hilo_cliente;
             pthread_create(&hilo_cliente, NULL, manejar_conexion_kernel, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
