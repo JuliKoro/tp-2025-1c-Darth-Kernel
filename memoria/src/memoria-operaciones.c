@@ -169,6 +169,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
 }
     */
 
+    
  /**
   * @brief Lee el contenido completo de una página en memoria principal.
   *
@@ -180,6 +181,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
   * @param direccion_fisica Dirección física de inicio de la página.
   * @return Puntero a un nuevo buffer con el contenido de la página, o NULL si hay un error.
   */
+ /*
  void* leer_pagina_completa(int pid, int direccion_fisica) {
     if (direccion_fisica % memoria_configs.tampagina != 0) {
         log_error(logger_memoria, "PID %d: Dirección física %d no es el inicio de una página. No se puede leer página completa.", pid, direccion_fisica);
@@ -200,6 +202,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
     aplicar_retardo_memoria(); // Aplicar retardo por acceso a memoria
     return contenido_pagina;
 }
+*/
 
  /**
   * @brief Actualiza el contenido completo de una página en memoria principal.
@@ -232,6 +235,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
     }
 }
 
+/*
 
  bool actualizar_pagina_completa(int pid, int direccion_fisica, void* contenido) {
     if (direccion_fisica % memoria_configs.tampagina != 0) {
@@ -260,3 +264,4 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
     aplicar_retardo_memoria(); // Aplicar retardo por acceso a memoria
     return true;
 }
+    */
