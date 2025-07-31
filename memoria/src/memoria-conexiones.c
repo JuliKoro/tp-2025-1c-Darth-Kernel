@@ -26,9 +26,9 @@ void* manejar_conexion_cpu(void* socket_cliente){
     
         if(paquete->codigo_operacion == PAQUETE_PROCESO_CPU){
             t_proceso_cpu* proceso_cpu = deserializar_proceso_cpu(paquete->buffer);
-            char* instruccion = obtener_instruccion(proceso_cpu->pid, proceso_cpu->pc);
+            const char* instruccion = obtener_instruccion(proceso_cpu->pid, proceso_cpu->pc);
             if(instruccion == NULL){
-                log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango (total instrucciones: %d).",
+                log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango.",
                     proceso_cpu->pid, proceso_cpu->pc);
             enviar_bool(socket_fd, false);
             } else {
