@@ -128,6 +128,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
                 enviar_bool(socket_fd, true);
             }
         }
+        liberar_paquete(paquete);
         return NULL;
 }
 
