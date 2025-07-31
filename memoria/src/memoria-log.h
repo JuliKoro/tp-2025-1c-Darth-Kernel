@@ -11,10 +11,11 @@
  
  #include <commons/log.h>
  #include "memoria-configs.h" // Necesario para acceder a memoria_configs.loglevel
+ #include <utils/sockets.h>
+ #include <utils/serializacion.h>
  
  // Logger global que sera usado en todo el modulo
- extern t_log* logger_memoria;
- extern t_log* logger_sockets; // Logger para la capa de sockets, definido en utils/sockets.h
+ extern t_log* logger_memoria; // Logger principal del módulo de memoria
  
  /**
   * @brief Inicializa el logger del módulo de memoria.

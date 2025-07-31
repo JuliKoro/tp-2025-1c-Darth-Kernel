@@ -23,11 +23,13 @@ int main(int argc, char* argv[]) {
     inicializar_configs();
     inicializar_logger_io();
 
-    // Conectar al Kernel y enviar el handshake con el nombre del IO
-    int socket_kernel = io_conectar_a_kernel();
-    if (socket_kernel == -1) {
-        log_error(logger_sockets, "No se pudo establecer conexión con el Kernel. Finalizando.");
-        return EXIT_FAILURE;
+    //Conexion con Kernel
+    int socket_kernel = conectar_a_kernel(io_configs.ipkernel, io_configs.puertokernel);
+    if(socket_kernel == -1) {
+        fprintf(stderr, "No se pudo establecer conexión con el Kernel. Finalizando.\n");
+        destruir_logger_io();
+        destruir_configs();
+        return 1;
     }
 
     // Logica del envio de mensajes con kernel delegada (esta abajo de todo fuera del main)

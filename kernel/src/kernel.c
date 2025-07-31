@@ -15,7 +15,6 @@ int main(int argc, char* argv[]) {
     char* archivo_pseudocodigo = argv[1];
 
     //Primero levanto las configs, despues el logger
-    lista_io = list_create();
     inicializar_listas_y_sem();
     inicializar_configs();
     inicializar_logger_kernel();

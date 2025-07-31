@@ -91,10 +91,16 @@ int main(int argc, char* argv[]) {
    log_info(logger_cpu, "Finalizando ejecución del CPU %d", id_cpu);
 
    close(socket_memoria);
-   //log_destroy(logger_sockets);
-   destruir_configs();
+    //log_info(logger_cpu, "Socket de Dispatch cerrado.");
+    //close(socket_kernel_interrupt);
+    //log_info(logger_cpu, "Socket de Interrupt cerrado.");
 
-   return 0;
+
+    //Finalizo el programa
+    destruir_logger_cpu();
+    destruir_configs();
+
+    return 0;
 }
 
 void* hilo_dispatch(void* arg){
