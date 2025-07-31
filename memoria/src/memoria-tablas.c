@@ -165,104 +165,61 @@
 }
 
 
-
-
-// ESTO LO HACE CPU
- /**
-  * @brief Traduce una dirección lógica a una dirección física.
-  *
-  * Recorre las tablas de páginas del proceso (`pid`) nivel por nivel,
-  * calculando los índices de entrada en cada tabla. Si se encuentra un fallo
-  * de página, lo maneja.
-  *
-  * @param pid PID del proceso.
-  * @param direccion_logica Dirección lógica a traducir.
-  * @return Dirección física resultante, o -1 si hay un error (ej. tabla no encontrada, fallo de página no manejado).
-  */
- /*
- int traducir_direccion(int pid, int direccion_logica, t_entrada_pagina** entrada_out) {
+int32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_niveles, uint32_t pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
 
-// VALIDACIÓN ADICIONAL
-    if (direccion_logica < 0) {
-        log_error(logger_memoria, "PID %d: Dirección lógica negativa (%d)", pid, direccion_logica);
+    t_tabla_nivel* tabla_actual = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    if (tabla_actual == NULL) {
+        log_error(logger_memoria, "PID %d: Tabla de páginas raíz no encontrada.", pid);
         return -1;
     }
 
-    t_tabla_nivel* tabla_nivel_0 = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
-    aplicar_retardo_memoria(); // Retardo por acceso a tabla de páginas de nivel 0
+    aplicar_retardo_memoria(); // Cada acceso cuenta como acceso a tabla
+    actualizar_metricas(pid, ACCESO_TABLA_PAGINA);
 
-    if (!tabla_nivel_0) {
-        log_error(logger_memoria, "Tabla de páginas no encontrada para PID: %d. No se puede traducir dirección lógica %d.", pid, direccion_logica);
-        return -1;
-    }
-
-    int temp_dir = direccion_logica;
-    int desplazamiento = temp_dir % memoria_configs.tampagina;
-    int numero_pagina_logica = temp_dir / memoria_configs.tampagina;
-
-    t_tabla_nivel* tabla_actual = tabla_nivel_0;
-    t_entrada_pagina* entrada_final = NULL; // La entrada que contiene el marco de la página de datos
-
-    for (int nivel = 0; nivel < memoria_configs.cantidadniveles; nivel++) {
-        int indice_entrada = numero_pagina_logica % memoria_configs.entradasportabla;
-        numero_pagina_logica /= memoria_configs.entradasportabla; // Para el siguiente nivel
-
-        if (indice_entrada >= memoria_configs.entradasportabla || indice_entrada < 0) {
-            log_error(logger_memoria, "PID %d: Índice de entrada de tabla de páginas fuera de rango. Nivel: %d, Índice: %d.", pid, nivel, indice_entrada);
+    for (int i = 0; i < memoria_configs.cantidadniveles - 1; i++) {
+        uint32_t entrada_idx = entradas_niveles[i];
+        if (entrada_idx >= memoria_configs.entradasportabla) {
+            log_error(logger_memoria, "PID %d: Índice de entrada inválido (%d) en nivel %d", pid, entrada_idx, i);
             return -1;
         }
 
-        t_entrada_pagina* entrada_actual = tabla_actual->entradas[indice_entrada];
-        actualizar_metricas(pid, ACCESO_TABLA_PAGINA); // Métrica por acceso a tabla de páginas
-        aplicar_retardo_memoria(); // Retardo por acceso a cada nivel de tabla de páginas
-
-        if (!entrada_actual->presente) {
-            log_info(logger_memoria, "PID %d: Fallo de página en nivel %d, índice %d. La entrada no está presente.", pid, nivel, indice_entrada);
-            int direccion_fisica_resultante = manejar_fallo_pagina(pid, entrada_actual, desplazamiento);
-            if (direccion_fisica_resultante == -1) {
-                log_error(logger_memoria, "PID %d: No se pudo manejar el fallo de página. Traducción fallida.", pid);
-                return -1;
-            }
-            *entrada_out = entrada_actual; // ← SOLUCIÓN: devolver la entrada modificada
-            return direccion_fisica_resultante;
+        t_entrada_pagina* entrada = tabla_actual->entradas[entrada_idx];
+        if (!entrada || !entrada->presente) {
+            log_error(logger_memoria, "PID %d: Entrada no presente en nivel %d, índice %d", pid, i, entrada_idx);
+            return -1;
         }
-        
-        
 
-        if (nivel < memoria_configs.cantidadniveles - 1) {
-            // Si no es el último nivel, la entrada apunta a la siguiente tabla de nivel
-            // El campo 'marco' de la entrada de nivel intermedio contiene la dirección física de la siguiente tabla.
-            // Se asume que las tablas de nivel intermedio se cargan en memoria principal como cualquier otra página.
-            
-            //void* direccion_fisica_siguiente_tabla = (char*)administrador_memoria->memoria_principal + (entrada_actual->marco * memoria_configs.tampagina);
-            //tabla_actual = (t_tabla_nivel*)direccion_fisica_siguiente_tabla;
+        tabla_actual = (t_tabla_nivel*)(intptr_t)entrada->marco;
 
-            tabla_actual = (t_tabla_nivel*)(intptr_t)entrada_actual->marco;
-
-            log_debug(logger_memoria, "PID %d: Acceso a tabla de nivel %d. Siguiente tabla en marco %d.", pid, nivel, entrada_actual->marco);
-        } else {
-            // Último nivel: esta entrada contiene el marco de la página de datos
-            entrada_final = entrada_actual;
-            log_debug(logger_memoria, "PID %d: Último nivel alcanzado. Marco de datos: %d.", pid, entrada_final->marco);
-        }
+        aplicar_retardo_memoria();
+        actualizar_metricas(pid, ACCESO_TABLA_PAGINA);
     }
 
-    if (entrada_final == NULL || !entrada_final->presente) {
-        // Esto no debería ocurrir si el manejo de fallo de página es correcto y se llega al último nivel.
-        log_error(logger_memoria, "PID %d: Error lógico en traducción de dirección %d. Entrada final no encontrada o no presente.", pid, direccion_logica);
+    // Llegamos al último nivel
+    uint32_t entrada_final = entradas_niveles[memoria_configs.cantidadniveles - 1];
+    if (entrada_final >= memoria_configs.entradasportabla) {
+        log_error(logger_memoria, "PID %d: Índice de entrada final inválido: %d", pid, entrada_final);
         return -1;
     }
 
-    // La dirección física es el inicio del marco más el desplazamiento
-    int direccion_fisica = entrada_final->marco * memoria_configs.tampagina + desplazamiento;
-    log_debug(logger_memoria, "PID %d: Dirección lógica %d traducida a física %d (marco %d, desplazamiento %d).", pid, direccion_logica, direccion_fisica, entrada_final->marco, desplazamiento);
-    
-    if (entrada_final != NULL && entrada_out != NULL) {
-        *entrada_out = entrada_final;
+    t_entrada_pagina* entrada_final_ptr = tabla_actual->entradas[entrada_final];
+    if (!entrada_final_ptr) {
+        log_error(logger_memoria, "PID %d: Entrada final NULL", pid);
+        return -1;
     }
-    
-    return direccion_fisica;
+
+    if (!entrada_final_ptr->presente) {
+        // Fallo de página → traer desde SWAP o inicializar
+        int marco = manejar_fallo_pagina(pid, entrada_final_ptr);
+        if (marco == -1) {
+            log_error(logger_memoria, "PID %d: Fallo al manejar fallo de página.", pid);
+            return -1;
+        }
+        return marco;
+    }
+
+    return entrada_final_ptr->marco;
 }
-*/
+

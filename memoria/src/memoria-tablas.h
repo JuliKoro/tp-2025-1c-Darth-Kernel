@@ -68,5 +68,7 @@ int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada);
 
 void destruir_tabla_paginas(void *tabla_void);
 
+int32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_niveles, uint32_t pid);
+
 
 #endif /* MEMORIA_TABLAS_H */
