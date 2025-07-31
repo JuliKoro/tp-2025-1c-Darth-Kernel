@@ -17,7 +17,7 @@
     // Abrir o crear el archivo de swap
     administrador_memoria->swap_file = fopen(memoria_configs.pathswapfile, "rb+");
     if (!administrador_memoria->swap_file) {
-        log_info(logger_memoria, "Archivo SWAP no encontrado en %s. Creando nuevo archivo.", memoria_configs.pathswapfile);
+        log_debug(logger_memoria, "Archivo SWAP no encontrado en %s. Creando nuevo archivo.", memoria_configs.pathswapfile);
         administrador_memoria->swap_file = fopen(memoria_configs.pathswapfile, "wb+");
         if (!administrador_memoria->swap_file) {
             log_error(logger_memoria, "No se pudo crear/abrir el archivo SWAP en %s. Verifique permisos o ruta.", memoria_configs.pathswapfile);
@@ -42,9 +42,9 @@
         fwrite(zero_buffer, 1, initial_swap_size, administrador_memoria->swap_file);
         free(zero_buffer);
         fflush(administrador_memoria->swap_file);
-        log_info(logger_memoria, "Archivo SWAP creado con tamaño dinámico de %ld bytes (2x memoria principal).", initial_swap_size);
+        log_debug(logger_memoria, "Archivo SWAP creado con tamaño dinámico de %ld bytes (2x memoria principal).", initial_swap_size);
     } else {
-        log_info(logger_memoria, "Archivo SWAP existente abierto en %s.", memoria_configs.pathswapfile);
+        log_debug(logger_memoria, "Archivo SWAP existente abierto en %s.", memoria_configs.pathswapfile);
     }
 
     // Obtener el tamaño actual del archivo para calcular el número de páginas
@@ -82,7 +82,7 @@
         LSB_FIRST // O MSB_FIRST, según la convención deseada
     );
     // Todos los bits ya están en 0 (libres) debido a calloc
-    log_info(logger_memoria, "Bitmap de SWAP inicializado. Total de páginas SWAP: %d.", total_paginas_swap);
+    log_debug(logger_memoria, "Bitmap de SWAP inicializado. Total de páginas SWAP: %d.", total_paginas_swap);
 }
 
   /**

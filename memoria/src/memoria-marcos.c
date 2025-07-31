@@ -20,7 +20,7 @@
         void* marco = (char*)administrador_memoria->memoria_principal + (i * memoria_configs.tampagina);
         list_add(administrador_memoria->marcos_libres, marco);
     }
-    log_info(logger_memoria, "Marcos de memoria inicializados. Total: %d, Tamaño de página: %d bytes.", total_marcos, memoria_configs.tampagina);
+    log_debug(logger_memoria, "Marcos de memoria inicializados. Total: %d, Tamaño de página: %d bytes.", total_marcos, memoria_configs.tampagina);
 }
 
  /**
@@ -46,7 +46,7 @@
         t_marco_info info = buscar_marco_en_tablas(marco_victima);
 
         if (info.pid != -1) {
-            log_info(logger_memoria, "Aplicando FIFO: Marco víctima para PID %d en dirección %p.", info.pid, marco_victima);
+            log_debug(logger_memoria, "Aplicando FIFO: Marco víctima para PID %d en dirección %p.", info.pid, marco_victima);
             // Escribir en swap si está modificada
             if (info.entrada->modificado) {
                 if (info.entrada->posicion_swap == -1) {
@@ -59,7 +59,7 @@
                     }
 
                     actualizar_metricas(info.pid, BAJADA_SWAP); // Métrica de bajada a SWAP
-                    log_info(logger_memoria, "Página de PID %d swapeada a posición %d.", info.pid, info.entrada->posicion_swap);
+                    log_debug(logger_memoria, "Página de PID %d swapeada a posición %d.", info.pid, info.entrada->posicion_swap);
                 }
                 escribir_pagina_swap(info.entrada->posicion_swap, marco_victima);
                 info.entrada->modificado = false;

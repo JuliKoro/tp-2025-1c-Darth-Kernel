@@ -159,7 +159,7 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
         dictionary_put(procesos_en_memoria, pid_key, proceso);
 
         int tamanio_proceso = proceso->cantidad_instrucciones * memoria_configs.tampagina;
-        log_info(logger_memoria, "## PID: %d - Proceso Creado - Tamaño: %d", pid, tamanio_proceso);
+        log_info(logger_memoria, "## PID: %d - Proceso Creado - Tamaño: %d", pid, tamanio_proceso); //LOG OBLIGATORIO
         return 0;
     }
 
@@ -187,7 +187,7 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
     if (proceso != NULL && pc > 0 && pc <= proceso->cantidad_instrucciones) {
         const char* instruccion = proceso->instrucciones[pc - 1];
         // Log obligatorio: Obtener instrucción
-        log_info(logger_memoria, "## PID: %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion);
+        log_info(logger_memoria, "## PID: %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion); // LOG OBLIGATORIO
         return instruccion;
     }
 
@@ -322,7 +322,7 @@ int suspender_proceso(int pid) {
     }
 
     suspender_paginas_recursivo(tabla, pid);
-    log_info(logger_memoria, "## PID: %d - Proceso Suspendido", pid);
+    log_debug(logger_memoria, "## PID: %d - Proceso Suspendido", pid);
     return resultado;
 }
 
@@ -385,7 +385,7 @@ void desuspender_proceso(int pid) {
     }
 
     desuspender_paginas_recursivo(tabla, pid);
-    log_info(logger_memoria, "## PID: %d - Proceso Desuspendido", pid);
+    log_debug(logger_memoria, "## PID: %d - Proceso Desuspendido", pid);
 }
 
 /**
@@ -443,7 +443,7 @@ int finalizar_proceso(int pid) {
                  metricas->bajadas_swap, 
                  metricas->subidas_memoria, 
                  metricas->lecturas_memoria,
-                 metricas->escrituras_memoria);
+                 metricas->escrituras_memoria); // LOG OBLIGATORIO
         free(metricas);
     } else {
         resultado = -1;
@@ -519,6 +519,6 @@ int realizar_memory_dump(int pid) {
     dump_paginas_recursivo(tabla, pid, f);
     fclose(f);
 
-    log_info(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
+    log_debug(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
     return 0;
 }

@@ -42,7 +42,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
     memcpy(buffer, (char *)administrador_memoria->memoria_principal + direccion_fisica, tam);
     actualizar_metricas(pid, LECTURA_MEMORIA_MET); // Métrica de lectura de memoria
 
-    log_info(logger_memoria, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam);
+    log_info(logger_memoria, "## PID: %d - Lectura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam); //LOG OBLIGATORIO
 
     aplicar_retardo_memoria(); // Aplicar retardo por acceso a memoria
     return buffer;
@@ -85,7 +85,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
 
     // Actualizar métricas y logs
     actualizar_metricas(pid, ESCRITURA_MEMORIA_MET);
-    log_info(logger_memoria, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam);
+    log_info(logger_memoria, "## PID: %d - Escritura - Dir. Física: %d - Tamaño: %d", pid, direccion_fisica, tam); //LOG OBLIGATORIO
     aplicar_retardo_memoria();
 
     return true;

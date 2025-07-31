@@ -24,7 +24,7 @@
          fprintf(stderr, "Error: No se pudo inicializar el logger de memoria.\n");
          exit(EXIT_FAILURE);
      }
-     log_info(logger_memoria, "Logger de memoria inicializado con nivel: %s", memoria_configs.loglevel);
+     log_debug(logger_memoria, "Logger de memoria inicializado con nivel: %s", memoria_configs.loglevel);
  }
  
  /**

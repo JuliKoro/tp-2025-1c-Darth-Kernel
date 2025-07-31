@@ -80,7 +80,7 @@ t_bitarray *bitmap_swap = NULL;
     
     if (administrador_memoria) {
         if (logger_memoria) {
-            log_info(logger_memoria, "Destruyendo administrador de memoria...");
+            log_debug(logger_memoria, "Destruyendo administrador de memoria...");
         }
 
         // Liberar memoria principal
@@ -128,7 +128,7 @@ t_bitarray *bitmap_swap = NULL;
         // Liberar la estructura del administrador
         free(administrador_memoria);
         administrador_memoria = NULL;
-        log_info(logger_memoria, "Administrador de memoria destruido completamente.");
+        log_debug(logger_memoria, "Administrador de memoria destruido completamente.");
     }
 }
 

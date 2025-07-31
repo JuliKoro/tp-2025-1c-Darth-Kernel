@@ -129,7 +129,7 @@
   *         o -1 si no se pudo manejar el fallo (no hay marcos libres).
   */
  int manejar_fallo_pagina(int pid, t_entrada_pagina* entrada) {
-    log_info(logger_memoria, "TLB MISS para PID %d. Asignando marco.", pid);
+    log_debug(logger_memoria, "TLB MISS para PID %d. Asignando marco.", pid);
 
     void* nuevo_marco = obtener_marco_libre();
     if (!nuevo_marco) {
@@ -144,12 +144,12 @@
         actualizar_metricas(pid, SUBIDA_MEMORIA); // Métrica subida desde SWAP
         liberar_posicion_swap(entrada->posicion_swap);
         entrada->posicion_swap = -1;
-        log_info(logger_memoria, "PID %d: Página cargada desde SWAP a marco %ld.",
+        log_debug(logger_memoria, "PID %d: Página cargada desde SWAP a marco %ld.",
                  pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
     } else {
         // Página nueva: inicializar marco con ceros
         memset(nuevo_marco, 0, memoria_configs.tampagina);
-        log_info(logger_memoria, "PID %d: Nueva página asignada en marco %ld.",
+        log_debug(logger_memoria, "PID %d: Nueva página asignada en marco %ld.",
                  pid, ((char*)nuevo_marco - (char*)administrador_memoria->memoria_principal) / memoria_configs.tampagina);
     }
 

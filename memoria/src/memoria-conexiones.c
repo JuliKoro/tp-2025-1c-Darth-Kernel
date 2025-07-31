@@ -20,7 +20,7 @@ void* manejar_conexion_cpu(void* socket_cliente){
 
         //Evaluo paquete
         if(paquete == NULL){
-            log_info(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
+            log_debug(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
             close(socket_fd);
             return NULL;
         }
@@ -104,7 +104,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
 
         //Evaluo paquete
         if(paquete == NULL){
-            log_info(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
+            log_debug(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
             close(socket_fd);
             return NULL;
         }
@@ -148,7 +148,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
         }
          if(paquete->codigo_operacion == PAQUETE_DUMP_MEMORY){
             t_pcb* pcb = deserializar_pcb(paquete->buffer);
-            log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pcb->pid);
+            log_info(logger_memoria, "## PID: %d - Memory Dump solicitado", pcb->pid); //LOG OBLIGATORIO
             //ver si puedo suspender proceso de memoria
             if(realizar_memory_dump(pcb->pid) == -1){
                 log_error(logger_memoria, "[MEMORIA DUMP PROCESO] Error al dumpear proceso. PID: %d", pcb->pid);
@@ -186,7 +186,7 @@ void* manejar_conexion_kernel(void* socket_cliente){
             pthread_detach(hilo_cliente);
           } else {
             //Es kernel
-            log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", cliente_fd);
+            log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", cliente_fd); //LOG OBLIGATORIO
             pthread_t hilo_cliente;
             pthread_create(&hilo_cliente, NULL, manejar_conexion_kernel, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
