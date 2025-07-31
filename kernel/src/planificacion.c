@@ -415,6 +415,7 @@ int mover_executing_a_blockedio(u_int32_t pid, char* nombre_io, u_int32_t tiempo
             t_buffer* buffer = serializar_interrupcion(interrupcion);
             t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
             enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+            free(interrupcion);
             liberar_cpu(cpu);
         }
     } else {
@@ -456,6 +457,7 @@ int mover_executing_a_exit(u_int32_t pid) {
         t_buffer* buffer = serializar_interrupcion(interrupcion);
         t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
         enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+        free(interrupcion);
         liberar_cpu(cpu);
     }
 
@@ -504,6 +506,7 @@ int mover_executing_a_blocked(u_int32_t pid) {
             t_buffer* buffer = serializar_interrupcion(interrupcion);
             t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
             enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+            free(interrupcion);
             liberar_cpu(cpu);
         }
     } else {
@@ -543,6 +546,7 @@ int mover_executing_a_ready(u_int32_t pid) {
         t_buffer* buffer = serializar_interrupcion(interrupcion);
         t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
         enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
+        free(interrupcion);
         liberar_cpu(cpu);
         
     }
@@ -1202,6 +1206,8 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
     t_buffer* buffer = serializar_proceso_cpu(pcb_a_enviar);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_PROCESO_CPU, buffer);
     enviar_paquete(cpu->socket_cpu_dispatch, paquete);
+
+    free(pcb_a_enviar);
 
     mover_ready_a_executing(pcb->pid);
 
