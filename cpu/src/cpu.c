@@ -225,6 +225,6 @@ void finalizacion_cpu(){
    close(socket_memoria);
    destruir_cache();
    destruir_tlb();
-   //log_destroy(logger_sockets);
+   destruir_logger_cpu();
    destruir_configs();
 }
