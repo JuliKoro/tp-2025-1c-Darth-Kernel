@@ -66,13 +66,21 @@
 
     // Libera todos los recursos utilizados por el módulo de memoria.
     // Destruye el diccionario de procesos en memoria y sus elementos asociados.
-    dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);
+            //dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);
+    if (procesos_en_memoria != NULL) {
+        dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);
+        log_debug(logger_memoria, "Diccionario de procesos en memoria destruido.");
+    } else {
+        log_warning(logger_memoria, "El diccionario de procesos en memoria ya estaba NULL.");
+        }
+
+    // Destruye el administrador de memoria y libera la memoria principal, marcos, tablas de páginas y SWAP.
+    destruir_administrador_memoria();
     // Destruye el logger del módulo de memoria.
     destruir_logger_memoria();
     // Destruye la configuración cargada.
     config_destroy(memoria_tconfig);
-    // Destruye el administrador de memoria y libera la memoria principal, marcos, tablas de páginas y SWAP.
-    destruir_administrador_memoria();
+
 
     return 0;
 }

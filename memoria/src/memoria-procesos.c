@@ -132,8 +132,10 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
     if (proceso != NULL) {
         // Asegurarse de que el diccionario esté inicializado
         if (procesos_en_memoria == NULL) {
-            log_warning(logger_memoria, "procesos_en_memoria no estaba inicializado. Se crea uno nuevo.");
             procesos_en_memoria = dictionary_create();
+            log_warning(logger_memoria, "procesos_en_memoria no estaba inicializado. Se crea uno nuevo.");
+        } else {
+            log_warning(logger_memoria, "El diccionario de procesos en memoria ya estaba NULL.");
         }
 
         char* pid_key = string_itoa(pid);

@@ -79,12 +79,16 @@ t_bitarray *bitmap_swap = NULL;
  void destruir_administrador_memoria() {
     
     if (administrador_memoria) {
-        log_info(logger_memoria, "Destruyendo administrador de memoria...");
+        if (logger_memoria) {
+            log_info(logger_memoria, "Destruyendo administrador de memoria...");
+        }
 
         // Liberar memoria principal
         if (administrador_memoria->memoria_principal) {
             free(administrador_memoria->memoria_principal);
-            log_debug(logger_memoria, "Memoria principal liberada.");
+            if (logger_memoria) {
+                log_debug(logger_memoria, "Memoria principal liberada.");
+            }
         }
 
         // Destruir listas de marcos (los elementos son punteros a la memoria principal, no se liberan aquí)
