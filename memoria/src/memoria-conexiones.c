@@ -169,6 +169,10 @@ void* manejar_conexion_kernel(void* socket_cliente){
     while(true){
         int cliente_fd = esperar_cliente(socket_fd); //Se conecta un cliente
         
+        if(cliente_fd == -1){
+            log_error(logger_memoria, "Error al aceptar cliente");
+            continue;
+        }
         int id_cpu = -1;
         recibir_handshake_cpu(cliente_fd, &id_cpu);
         if(id_cpu != -1){

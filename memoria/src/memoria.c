@@ -47,13 +47,17 @@
 
     // Inicia el servidor de memoria para escuchar conexiones entrantes.
     int socket_servidor = iniciar_servidor_memoria();
+    if (socket_servidor == -1) {
+        log_error(logger_memoria, "No se pudo iniciar el servidor de memoria. Abortando.");
+        exit(EXIT_FAILURE);
+    }
     // Log obligatorio: Conexión de Kernel.
     //log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes del módulo Kernel.
     pthread_t hilo_conexiones;
     // Se pasa una copia del socket_servidor para evitar problemas de concurrencia si se modifica.
-    pthread_create(&hilo_conexiones, NULL, escuchar_peticiones, (void*)&socket_servidor);
+    pthread_create(&hilo_conexiones, NULL, escuchar_peticiones, (void*)(intptr_t)socket_servidor);
 
     // Crea un hilo para atender las peticiones provenientes de las múltiples CPU.
     //pthread_t hilo_cpus;
@@ -62,8 +66,10 @@
 
     // Espera a que los hilos de Kernel y CPU finalicen (en un sistema real, estos hilos suelen ser infinitos).
     pthread_detach(hilo_conexiones);
-    //pthread_join(hilo_cpus, NULL);
 
+    while(true){
+    }
+    //pthread_join(hilo_cpus, NULL);
     // Libera todos los recursos utilizados por el módulo de memoria.
     // Destruye el diccionario de procesos en memoria y sus elementos asociados.
             //dictionary_destroy_and_destroy_elements(procesos_en_memoria, destruir_proceso);

@@ -546,7 +546,6 @@ int mover_executing_a_ready(u_int32_t pid) {
         t_buffer* buffer = serializar_interrupcion(interrupcion);
         t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
         enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
-        free(interrupcion);
         liberar_cpu(cpu);
         
     }

@@ -29,9 +29,10 @@ int iniciar_servidor_interrupt() {
 int kernel_conectar_a_memoria(){
     //Obtengo ip y puerto de memoria
     char* ip_memoria = kernel_configs.ipmemoria;
-    char* puerto_memoria = kernel_configs.puertomemoria;
+    char* puerto_memoria = int_a_string(kernel_configs.puertomemoria);
 
     int socket_memoria = crear_conexion(ip_memoria, puerto_memoria);
+    //free(puerto_memoria);
     
     //log_info(logger_sockets, "FD de conexion con la MEMORIA %d", socket_memoria);
 

@@ -59,4 +59,6 @@ void* iniciar_planificador_corto_plazo() {
             printf("No tenido en cuenta o incorrecto\n");
             break;
     }
+
+    return NULL;
 }
