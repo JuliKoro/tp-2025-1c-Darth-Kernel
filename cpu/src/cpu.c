@@ -9,6 +9,7 @@ pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización es
 
 sem_t semaforo_proceso; // Semáforo para controlar la recepción de nuevos procesos
 sem_t semaforo_interrupcion; // Semáforo para controlar la recepción de interrupciones
+sem_t semaforo_asign_proc; // Semaforo para controlar la asignacion de procesos con el ciclo de instruccion
 
 t_proceso_cpu* proceso;
 t_interrupcion* interrupcion;
@@ -49,11 +50,12 @@ int main(int argc, char* argv[]) {
    pthread_create(&thread_interrupt, NULL, hilo_interrupt, NULL);
     
    // Crear hilo para ejecutar el ciclo de instrucción
-   //pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
+   pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
 
    // Inicializaion de Semaforos
    sem_init(&semaforo_proceso, 0, 0); // Inicializa el semáforo en 0 (entre hilos)
    sem_init(&semaforo_interrupcion, 0, 0);
+   sem_init(&semaforo_asign_proc, 0, 0);
 
    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
    pthread_join(thread_dispatch, NULL);
@@ -76,15 +78,14 @@ void* hilo_dispatch(void* arg){
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
    //Recibo la confirmacion de kernel que el socket de dispatch fue creado y asignado a la cpu
-   // log_debug(logger_cpu, "INtentando recibir mensaje de kernel... Dispatch");
-   // char* mensaje = recibir_mensaje(socket_kernel_dispatch);
-   // if(mensaje == NULL){
-   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-   //    pthread_exit(NULL);
-   // }
+   char* mensaje = recibir_mensaje(socket_kernel_dispatch);
+   if(mensaje == NULL){
+      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
 
-   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   // free(mensaje);
+   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   free(mensaje);
 
    while (1) {
       // ASIGNACION DE PROCESO
@@ -98,9 +99,9 @@ void* hilo_dispatch(void* arg){
          
          pthread_mutex_lock(&mutex_proceso); // lock(mutex_proceso)
          // No hace falta liberar proceso (si es que habia uno anterior) xq está declarada de forma global (memoria asignada estáticamente)
-         proceso = malloc(sizeof(t_proceso_cpu));
          proceso = deserializar_proceso_cpu(paquete->buffer);
          log_debug(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
+         sem_post(&semaforo_asign_proc);
          pthread_mutex_unlock(&mutex_proceso); // Liberar el mutex
          // Esperar a que el proceso ejecute su ciclo_instruccion (hasta que termine (syscall) o se interrumpa)
          sem_wait(&semaforo_proceso);
@@ -120,16 +121,15 @@ void* hilo_interrupt(void* arg){
 
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
-   // //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
-   // log_debug(logger_cpu, "INtentando recibir mensaje de kernel... Interrupt");
-   // char* mensaje = recibir_mensaje(socket_kernel_interrupt);
-   // if(mensaje == NULL){
-   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-   //    pthread_exit(NULL);
-   // }
+   //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
+   char* mensaje = recibir_mensaje(socket_kernel_interrupt);
+   if(mensaje == NULL){
+      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+      pthread_exit(NULL);
+   }
 
-   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   // free(mensaje);
+   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   free(mensaje);
 
    while (1) {
       // Lógica para recibir interrupciones
@@ -140,7 +140,6 @@ void* hilo_interrupt(void* arg){
       }
       if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
          log_info(logger_cpu, "## Llega interrupción al puerto Interrupt");
-         interrupcion = malloc(sizeof(t_interrupcion));
          interrupcion = deserializar_interrupcion(paquete_interrupt->buffer);
          // Procesar la interrupción 
          IF = 1; // Flag: Indica que se recibio una interrupcion
@@ -156,16 +155,16 @@ void* hilo_interrupt(void* arg){
 
 void* hilo_ciclo_instruccion(void* arg){
    while (1) {
+      sem_wait(&semaforo_asign_proc);
       // Adquirir el mutex antes de acceder a la variable proceso
       pthread_mutex_lock(&mutex_proceso);
       if (proceso != NULL) {
          // Ejecutar el ciclo de instrucción
-         ciclo_instruccion(proceso, interrupcion, socket_memoria, socket_kernel_dispatch, socket_kernel_interrupt);
+         ciclo_instruccion(proceso, socket_memoria, socket_kernel_dispatch, socket_kernel_interrupt);
+         // DESALOJO DE PROCESO
+         desalojar_proceso(proceso->pid);
       }
       pthread_mutex_unlock(&mutex_proceso);
-
-      // DESALOJO DE PROCESO
-      desalojar_proceso(proceso->pid);
 
       // Libera el semáforo para permitir que el hilo de despacho reciba un nuevo proceso
       sem_post(&semaforo_proceso);

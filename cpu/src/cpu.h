@@ -12,6 +12,8 @@
 #include "registros.h"
 #include "cache.h"
 
+
+
 /**
  * @brief Hilo encargado de recibir procesos del kernel.
  * 

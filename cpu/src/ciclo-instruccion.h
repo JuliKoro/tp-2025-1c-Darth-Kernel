@@ -17,6 +17,8 @@
 #include <utils/sockets.h>
 #include <utils/serializacion.h>
 
+extern t_interrupcion* interrupcion; // Variable global para recibir y enviar interrupciones
+
 /**
 * @brief Funcion que realiza el ciclo de intrucciones fetch-decode-execute para una determinada instruccion
 * @param proceso Estructura de una proceso recibido desde Kernel que contiene el PID y el PC
@@ -26,7 +28,7 @@
 * @param socket_kernel_interrupt socket de kernel donde se haran las interrupciones
 * @return nada
 */
-void ciclo_instruccion(t_proceso_cpu* proceso, t_interrupcion* interrupcion, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
+void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_kernel_dispatch, int socket_kernel_interrupt);
 
 /**
 * @brief Realiza la etapa fetch del ciclo de instruccion de cpu
@@ -58,7 +60,7 @@ instruccion_decodificada* decodificar_instruccion(char* instruccion_str, uint32_
  * @return true Si se recibio una interrupcion desde kernel
  * @return false Si no hubo interrupción
  */
-bool check_interrupt(t_interrupcion* interrupcion, t_proceso_cpu* proceso, int socket_kernel_interrupt);
+bool check_interrupt(t_proceso_cpu* proceso, int socket_kernel_interrupt);
 
 /**
  * @brief Envia una estructura de interrupcion con el PID, PC (actualizado) y Motivo de la interrupcion a Kernel si es que ocurrio una
@@ -66,7 +68,7 @@ bool check_interrupt(t_interrupcion* interrupcion, t_proceso_cpu* proceso, int s
  * @param interrupcion_fb Estructura de la interrupcion con el PC actualizado y su motivo (feedback)
  * @param socket_kernel_dispatch Socket utilizado para enviar paquetes de interrupción al kernel.
  */
-void enviar_devolucion_interrupcion(t_interrupcion* interrupcion_fb, int socket_kernel_dispatch);
+void enviar_devolucion_interrupcion(int socket_kernel_dispatch);
 
 /**
  * @brief Libera los recursos de una instrucción decodificada
