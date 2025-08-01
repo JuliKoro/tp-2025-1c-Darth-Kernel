@@ -222,7 +222,7 @@ static void marcar_modificado_recursivo(t_tabla_nivel *tabla, int pid, int numer
         if (!entrada) continue;
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
             if (entrada->presente) {
-                t_tabla_nivel *next = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                t_tabla_nivel *next = entrada->subnivel;
                 marcar_modificado_recursivo(next, pid, numero_marco_fisico);
             }
         } else {

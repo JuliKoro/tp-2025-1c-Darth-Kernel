@@ -53,7 +53,6 @@
 
 typedef struct t_entrada_pagina t_entrada_pagina;
 
- 
  // Estructura para una tabla de páginas de un nivel
  typedef struct {
      int nivel_actual;         // Nivel actual de la tabla (0 para el primer nivel)

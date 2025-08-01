@@ -347,7 +347,7 @@ static void _buscar_recursivo(t_tabla_nivel *current_tabla, char *current_pid_ke
         {
             if (entrada->presente)
             {
-                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                t_tabla_nivel *next_tabla = entrada->subnivel;
                 if (next_tabla)
                 {
                     _buscar_recursivo(next_tabla, current_pid_key);

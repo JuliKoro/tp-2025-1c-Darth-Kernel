@@ -271,7 +271,7 @@ static void suspender_paginas_recursivo(t_tabla_nivel *current_tabla, int pid) {
 
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
             if (entrada->presente) {
-                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                t_tabla_nivel *next_tabla = entrada->subnivel;
                 suspender_paginas_recursivo(next_tabla, pid);
             }
             continue;
@@ -342,7 +342,7 @@ static void desuspender_paginas_recursivo(t_tabla_nivel *current_tabla, int pid)
 
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
             if (entrada->presente) {
-                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                t_tabla_nivel *next_tabla = entrada->subnivel;
                 desuspender_paginas_recursivo(next_tabla, pid);
             }
             continue;

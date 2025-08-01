@@ -25,9 +25,10 @@
 
     tabla->nivel_actual = nivel;
     tabla->entradas_ocupadas = 0;
+
     tabla->entradas = calloc(memoria_configs.entradasportabla, sizeof(t_entrada_pagina*));
     if (tabla->entradas == NULL) {
-        log_error(logger_memoria, "Error al asignar memoria para entradas de tabla de nivel %d.", nivel);
+        log_error(logger_memoria, "Error al asignar memoria para las entradas de nivel %d.", nivel);
         free(tabla);
         exit(EXIT_FAILURE);
     }
@@ -35,33 +36,29 @@
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         tabla->entradas[i] = malloc(sizeof(t_entrada_pagina));
         if (tabla->entradas[i] == NULL) {
-            log_error(logger_memoria, "Error al asignar entrada %d en tabla de nivel %d", i, nivel);
+            log_error(logger_memoria, "Error al asignar entrada %d en nivel %d", i, nivel);
+            // Liberar lo que ya se asignó
             for (int j = 0; j < i; j++) free(tabla->entradas[j]);
             free(tabla->entradas);
             free(tabla);
             exit(EXIT_FAILURE);
         }
 
-        tabla->entradas[i]->presente = false;
-        tabla->entradas[i]->modificado = false;
-        tabla->entradas[i]->marco = -1;
-        tabla->entradas[i]->posicion_swap = -1;
+        t_entrada_pagina* entrada = tabla->entradas[i];
+        entrada->presente = false;
+        entrada->modificado = false;
+        entrada->marco = -1;
+        entrada->posicion_swap = -1;
+        entrada->subnivel = NULL;
 
-        /* if (nivel < memoria_configs.cantidadniveles - 1) {
-            t_tabla_nivel* subtabla = crear_tabla_nivel(nivel + 1);
-            tabla->entradas[i]->marco = (intptr_t)subtabla;
-            tabla->entradas[i]->presente = true;
-            log_debug(logger_memoria, "Tabla de nivel %d, entrada %d: Creada tabla de nivel %d en dirección %p.", nivel, i, nivel + 1, subtabla);
+        if (nivel < memoria_configs.cantidadniveles - 1) {
+            // Si no es el último nivel, crear subtabla recursiva
+            entrada->subnivel = crear_tabla_nivel(nivel + 1);
+            entrada->presente = true;  // Se marca como presente porque la subtabla fue creada
         }
-            */
-           if (nivel < memoria_configs.cantidadniveles - 1) {
-            tabla->entradas[i]->subnivel = crear_tabla_nivel(nivel + 1);  
-            tabla->entradas[i]->presente = true;
-            tabla->entradas[i]->marco = -1;  
-        }  
     }
 
-    log_debug(logger_memoria, "Tabla de nivel %d creada en dirección %p.", nivel, tabla);
+    log_debug(logger_memoria, "Tabla de nivel %d creada en dirección %p.", nivel, (void*)tabla);
     return tabla;
 }
 
@@ -78,27 +75,25 @@
   *
   * @param tabla_void Puntero a la tabla de páginas a destruir (se castea a `t_tabla_nivel*`).
   */
- void destruir_tabla_paginas(void* tabla_void) {
+ 
+void destruir_tabla_paginas(void* tabla_void) {
     if (!tabla_void) return;
 
     t_tabla_nivel* tabla = (t_tabla_nivel*)tabla_void;
-    log_debug(logger_memoria, "Destruyendo tabla de nivel %d en dirección %p.", tabla->nivel_actual, tabla);
+    log_debug(logger_memoria, "Destruyendo tabla de nivel %d en dirección %p.", tabla->nivel_actual, (void*)tabla);
 
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         t_entrada_pagina* entrada = tabla->entradas[i];
         if (!entrada) continue;
 
+        // Si estamos en un nivel intermedio, liberar recursivamente subnivel
         if (tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-            if (entrada->presente && entrada->marco != -1) {
-                t_tabla_nivel* subtabla = (t_tabla_nivel*)(intptr_t)entrada->marco;
-
-                // Validación adicional: evitar destruir punteros locos
-                if (subtabla != NULL && subtabla != tabla) {
-                    destruir_tabla_paginas(subtabla);
-                    entrada->marco = -1;
-                }
+            if (entrada->subnivel != NULL) {
+                destruir_tabla_paginas(entrada->subnivel);
+                entrada->subnivel = NULL;
             }
         } else {
+            // Último nivel: liberar marco si está presente
             if (entrada->presente && entrada->marco != -1) {
                 void* marco_ptr = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
                 liberar_marco(marco_ptr);
@@ -106,6 +101,7 @@
             }
         }
 
+        // Liberar posición en SWAP si estaba usada
         if (entrada->posicion_swap != -1) {
             liberar_posicion_swap(entrada->posicion_swap);
             log_debug(logger_memoria, "Posición SWAP %d liberada en nivel %d, entrada %d", entrada->posicion_swap, tabla->nivel_actual, i);
@@ -197,7 +193,7 @@ int32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_nive
             return -1;
         }
 
-        tabla_actual = (t_tabla_nivel*)(intptr_t)entrada->marco;
+        tabla_actual = entrada->subnivel;
 
         aplicar_retardo_memoria();
         actualizar_metricas(pid, ACCESO_TABLA_PAGINA);
