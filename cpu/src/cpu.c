@@ -10,6 +10,7 @@ pthread_mutex_t mutex_proceso = PTHREAD_MUTEX_INITIALIZER; // Inicialización es
 sem_t semaforo_proceso; // Semáforo para controlar la recepción de nuevos procesos
 sem_t semaforo_interrupcion; // Semáforo para controlar la recepción de interrupciones
 sem_t semaforo_asign_proc; // Semaforo para controlar la asignacion de procesos con el ciclo de instruccion
+sem_t semaforo_syscall; // Semaforo global que ontrola la llegada de interrupts para sysalls
 
 t_proceso_cpu* proceso;
 t_interrupcion* interrupcion;
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
    sem_init(&semaforo_proceso, 0, 0); // Inicializa el semáforo en 0 (entre hilos)
    sem_init(&semaforo_interrupcion, 0, 0);
    sem_init(&semaforo_asign_proc, 0, 0);
+   sem_init(&semaforo_syscall, 0, 0);
 
    // Esperar a que los hilos terminen (en este caso, no se espera porque son hilos de ejecución continua)
    pthread_join(thread_dispatch, NULL);
@@ -144,6 +146,7 @@ void* hilo_interrupt(void* arg){
          interrupcion = deserializar_interrupcion(paquete_interrupt->buffer);
          // Procesar la interrupción 
          IF = 1; // Flag: Indica que se recibio una interrupcion
+         sem_post(&semaforo_syscall);
          
          sem_wait(&semaforo_interrupcion);
          

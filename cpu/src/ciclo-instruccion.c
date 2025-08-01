@@ -14,7 +14,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
 
         // ETAPA EXECUTE
         execute(instruccion_decodificada, proceso, socket_memoria, socket_kernel_dispatch);
-        sleep(1); //REVISAR
+        
         // CHECK INTERRUPT
         if (check_interrupt(proceso, socket_kernel_interrupt)) {
             interrupcion->pc = PC; // Actualizo el PC del struct de proceso (PID + PC)

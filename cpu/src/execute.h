@@ -2,6 +2,8 @@
 #define EXECUTE_H_
 
 #include <stdint.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 #include <commons/log.h>
 #include <commons/string.h>
@@ -16,6 +18,8 @@
 #include "cpu-conexiones.h"
 #include "cache.h"
 #include "acceso_memoria.h"
+
+extern sem_t semaforo_syscall; // Semaforo global que ontrola la llegada de interrupts para sysalls
 
 /**
  * @brief Ejecuta una instrucción decodificada del CPU
