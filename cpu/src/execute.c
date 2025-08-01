@@ -62,7 +62,7 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
 
         case EXIT_INSTR: // SYSCALL
             enviar_syscall(instruccion, socket_kernel_dispatch);
-            PC++;
+            exit_flag = true;
             break;
 
         case INSTRUCCION_DESCONOCIDA:
