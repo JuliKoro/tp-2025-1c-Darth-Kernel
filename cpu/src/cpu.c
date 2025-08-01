@@ -97,6 +97,7 @@ void* hilo_dispatch(void* arg){
          
          pthread_mutex_lock(&mutex_proceso); // lock(mutex_proceso)
          // No hace falta liberar proceso (si es que habia uno anterior) xq está declarada de forma global (memoria asignada estáticamente)
+         proceso = malloc(sizeof(t_proceso_cpu));
          proceso = deserializar_proceso_cpu(paquete->buffer);
          log_debug(logger_cpu, "PID: %d, PC: %d", proceso->pid, proceso->pc);
          pthread_mutex_unlock(&mutex_proceso); // Liberar el mutex
@@ -137,6 +138,7 @@ void* hilo_interrupt(void* arg){
       }
       if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
          log_info(logger_cpu, "## Llega interrupción al puerto Interrupt");
+         interrupcion = malloc(sizeof(t_interrupcion));
          interrupcion = deserializar_interrupcion(paquete_interrupt->buffer);
          // Procesar la interrupción 
          IF = 1; // Flag: Indica que se recibio una interrupcion
