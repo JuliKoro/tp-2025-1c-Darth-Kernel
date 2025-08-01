@@ -47,12 +47,18 @@
         tabla->entradas[i]->marco = -1;
         tabla->entradas[i]->posicion_swap = -1;
 
-        if (nivel < memoria_configs.cantidadniveles - 1) {
+        /* if (nivel < memoria_configs.cantidadniveles - 1) {
             t_tabla_nivel* subtabla = crear_tabla_nivel(nivel + 1);
             tabla->entradas[i]->marco = (intptr_t)subtabla;
             tabla->entradas[i]->presente = true;
             log_debug(logger_memoria, "Tabla de nivel %d, entrada %d: Creada tabla de nivel %d en dirección %p.", nivel, i, nivel + 1, subtabla);
         }
+            */
+           if (nivel < memoria_configs.cantidadniveles - 1) {
+            tabla->entradas[i]->subnivel = crear_tabla_nivel(nivel + 1);  
+            tabla->entradas[i]->presente = true;
+            tabla->entradas[i]->marco = -1;  
+        }  
     }
 
     log_debug(logger_memoria, "Tabla de nivel %d creada en dirección %p.", nivel, tabla);

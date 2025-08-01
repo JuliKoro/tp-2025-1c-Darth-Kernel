@@ -470,25 +470,27 @@ int finalizar_proceso(int pid) {
 
   static void dump_paginas_recursivo(t_tabla_nivel *current_tabla, int pid, FILE *f) {
     log_debug(logger_memoria, "Dump PID %d: Entrando a tabla nivel %d en dirección %p", pid, current_tabla->nivel_actual, (void*)current_tabla);
+
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         t_entrada_pagina *entrada = current_tabla->entradas[i];
         if (!entrada) continue;
 
+        // Si NO estamos en el último nivel, bajamos al subnivel
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
-            if (entrada->presente) {
-                void* direccion_base_marco = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
-                t_tabla_nivel *next_tabla = (t_tabla_nivel*)direccion_base_marco;
-                log_debug(logger_memoria, "Dump PID %d: Nivel %d, entrada %d -> Marco %d. Calculando dirección para siguiente nivel: %p", pid, current_tabla->nivel_actual, i, entrada->marco, (void*)next_tabla);
-                dump_paginas_recursivo(next_tabla, pid, f);
+            if (entrada->presente && entrada->subnivel != NULL) {
+                log_debug(logger_memoria, "Dump PID %d: Nivel %d, entrada %d -> Subnivel en dirección %p", pid, current_tabla->nivel_actual, i, (void*)entrada->subnivel);
+                dump_paginas_recursivo(entrada->subnivel, pid, f);
             }
             continue;
         }
 
-        if (!entrada->presente) continue; // sólo paginas en memoria
+        // Si estamos en el último nivel y la página está presente, escribimos su contenido
+        if (!entrada->presente) continue;
 
         void *data = (char *)administrador_memoria->memoria_principal +
                      (entrada->marco * memoria_configs.tampagina);
-        log_debug(logger_memoria, "Dump PID %d: Escribiendo página de datos desde marco %d (Dirección: %p)", pid, entrada->marco, (void*)data);
+
+        log_debug(logger_memoria, "Dump PID %d: Escribiendo página de datos desde marco %d (Dirección: %p)", pid, entrada->marco, data);
         fwrite(data, 1, memoria_configs.tampagina, f);
     }
 }

@@ -41,6 +41,7 @@
  } t_metricas_por_proceso;
  
  // Estructura para una entrada en la tabla de páginas
+ /*
  typedef struct {
      int marco; // Si es una página de datos, es el número de marco.
                 // Si es una entrada de tabla de nivel intermedio, es la dirección física de la siguiente tabla.
@@ -48,14 +49,25 @@
      bool presente;     // Indica si la página está en memoria principal
      bool modificado;   // Indica si la página ha sido modificada desde que se cargó
  } t_entrada_pagina;
+ */
+
+typedef struct t_entrada_pagina t_entrada_pagina;
+
  
  // Estructura para una tabla de páginas de un nivel
  typedef struct {
      int nivel_actual;         // Nivel actual de la tabla (0 para el primer nivel)
      int entradas_ocupadas;    // Cantidad de entradas actualmente en uso (no estrictamente necesario para este TP, pero útil)
-     t_entrada_pagina** entradas; // Array de punteros a entradas de página
+     struct t_entrada_pagina** entradas; // Array de punteros a entradas de página
  } t_tabla_nivel;
  
+ typedef struct t_entrada_pagina {
+    bool presente;
+    bool modificado;
+    int32_t marco;                  
+    int32_t posicion_swap;
+    t_tabla_nivel* subnivel; 
+} t_entrada_pagina;
  // Estructura principal para la administración de memoria
  typedef struct {
      void* memoria_principal;        // Puntero al espacio contiguo de memoria principal
