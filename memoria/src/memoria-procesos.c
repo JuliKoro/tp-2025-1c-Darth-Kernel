@@ -469,15 +469,16 @@ int finalizar_proceso(int pid) {
   */
 
   static void dump_paginas_recursivo(t_tabla_nivel *current_tabla, int pid, FILE *f) {
+    log_debug(logger_memoria, "Dump PID %d: Entrando a tabla nivel %d en dirección %p", pid, current_tabla->nivel_actual, (void*)current_tabla);
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         t_entrada_pagina *entrada = current_tabla->entradas[i];
         if (!entrada) continue;
 
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
             if (entrada->presente) {
-                //Prueba
                 void* direccion_base_marco = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
-                t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
+                t_tabla_nivel *next_tabla = (t_tabla_nivel*)direccion_base_marco;
+                log_debug(logger_memoria, "Dump PID %d: Nivel %d, entrada %d -> Marco %d. Calculando dirección para siguiente nivel: %p", pid, current_tabla->nivel_actual, i, entrada->marco, (void*)next_tabla);
                 dump_paginas_recursivo(next_tabla, pid, f);
             }
             continue;
@@ -487,6 +488,7 @@ int finalizar_proceso(int pid) {
 
         void *data = (char *)administrador_memoria->memoria_principal +
                      (entrada->marco * memoria_configs.tampagina);
+        log_debug(logger_memoria, "Dump PID %d: Escribiendo página de datos desde marco %d (Dirección: %p)", pid, entrada->marco, (void*)data);
         fwrite(data, 1, memoria_configs.tampagina, f);
     }
 }

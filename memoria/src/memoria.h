@@ -21,6 +21,8 @@
  #include <unistd.h> // Para usleep
  #include <time.h>   // Para timestamp en memory dump
  #include <inttypes.h> // Para intptr_t
+ #include <sys/stat.h> // Para mkdir
+ #include <sys/types.h> // Para mkdir
  
  #include "memoria-conexiones.h"
  #include "memoria-configs.h"
