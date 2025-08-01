@@ -1106,6 +1106,8 @@ void actualizar_pcb(u_int32_t pid, u_int32_t pc) {
     pthread_mutex_unlock(&mutex_lista_suspblocked);
     pthread_mutex_unlock(&mutex_lista_blocked);
 
+    log_info(logger_kernel, "PCB actualizado para PID %d, pc: %d", pid, pc);
+
     if(!encontrado) {
         log_warning(logger_kernel, "Se recibió contexto para el PID %d, pero no se encontró en ninguna lista para actualizar.", pid);
     }

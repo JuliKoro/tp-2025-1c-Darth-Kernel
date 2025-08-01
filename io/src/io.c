@@ -95,6 +95,7 @@ int manejar_kernel(int socket_kernel, t_log* io_logger, char* nombre_io) { // se
             t_solicitud_io* solicitud = deserializar_solicitud_io(paquete->buffer);
             log_info(io_logger, "PID: %d, Tiempo: %d", solicitud->pid, solicitud->tiempo);
             usleep(solicitud->tiempo * 1000);
+            log_info(io_logger, "IO finalizada");
             enviar_mensaje("IO finalizada", socket_kernel);
         }
 
