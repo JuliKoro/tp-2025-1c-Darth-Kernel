@@ -150,6 +150,7 @@ void enviar_devolucion_interrupcion(int socket_kernel_dispatch){
         log_error(logger_cpu, "Error: No se pudo enviar la devulucion de la interrupcion a kernel");
         return;
     }  
+    log_info(logger_cpu, "##PID: %d - Actualizacion de PC enviada a Kernel - PC: %d", interrupcion->pid, interrupcion->pc);
 }
 
 void destruir_instruccion(instruccion_decodificada* instruccion) {

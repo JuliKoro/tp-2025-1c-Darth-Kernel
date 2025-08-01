@@ -46,7 +46,6 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             // manejar operaciones de entrada/salida
             enviar_syscall(instruccion, socket_kernel_dispatch);
             PC++;
-            flag_desalojo = true;
             break;
 
         case INIT_PROC: // SYSCALL (Archivo de instrucciones, Tamaño)
@@ -59,7 +58,6 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             // volcar la memoria
             enviar_syscall(instruccion, socket_kernel_dispatch);
             PC++;
-            flag_desalojo = true;
             break;
 
         case EXIT_INSTR: // SYSCALL
