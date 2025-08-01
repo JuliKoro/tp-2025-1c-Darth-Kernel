@@ -185,19 +185,13 @@ int enviar_paquete(int socket, t_paquete* paquete){
 }
 
 t_paquete* recibir_paquete(int socket){
-    printf("test1");
     t_paquete* paquete = malloc(sizeof(t_paquete));
-    printf("test2");
     if(paquete == NULL){
-        printf("test3");
         return NULL;
     }
     paquete->buffer = malloc(sizeof(t_buffer));
-    printf("test4");
-    if(paquete->buffer == NULL){
-        
+    if(paquete->buffer == NULL){       
         free(paquete);
-        printf("test5");
         return NULL;
     }
 
@@ -205,7 +199,6 @@ t_paquete* recibir_paquete(int socket){
     if (recv(socket, &(paquete->codigo_operacion), sizeof(t_codigo_operacion), MSG_WAITALL) <= 0) {
         free(paquete->buffer);
         free(paquete);
-        printf("test6");
         return NULL;
     }
     
@@ -213,33 +206,26 @@ t_paquete* recibir_paquete(int socket){
      if (recv(socket, &(paquete->buffer->size), sizeof(uint32_t), MSG_WAITALL) <= 0) {
         free(paquete->buffer);
         free(paquete);
-        printf("test7");
         return NULL;
     }
     
     if (paquete->buffer->size > 0) {
         paquete->buffer->stream = malloc(paquete->buffer->size);
-        printf("test8");
         if (paquete->buffer->stream == NULL) {
              free(paquete->buffer);
              free(paquete);
-             printf("test8");
              return NULL;
         }
         if (recv(socket, paquete->buffer->stream, paquete->buffer->size, MSG_WAITALL) <= 0) {
             free(paquete->buffer->stream);
             free(paquete->buffer);
             free(paquete);
-            printf("test8");
             return NULL;
         }
     } else {
         paquete->buffer->stream = NULL;
-        printf("test8");
     }
     paquete->buffer->offset = 0;
-    printf("test8");
-
     return paquete; //Recordar liberar en donde se llame
 }
 
