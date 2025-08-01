@@ -206,32 +206,30 @@ char* recibir_mensaje(int socket) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
-int enviar_handshake(int socket, id_modulo_t modulo) {
-    //Casteo enum a uint8_t
-    u_int8_t id = (u_int8_t)modulo;
+int enviar_handshake(int socket, int valor) {
     //Envio al socket el valor de id, chequeo errores
-    if(send(socket, &id, sizeof(u_int8_t), 0) == -1){
-        fprintf(stderr,"Error al enviar handshake %s (ID %d) : %s\n", nombre_modulo(modulo), modulo , strerror(errno));
+    if(send(socket, &valor, sizeof(int), 0) == -1){
+        fprintf(stderr,"Error al enviar handshake %s : %s\n", strerror(errno));
         return -1;
     } 
 
-    printf("Handshake de %s (ID %d) enviado!\n", nombre_modulo(modulo), modulo);
+    printf("Handshake enviado!\n");
     return 0;
 }
 
-int recibir_handshake(int socket, id_modulo_t* modulo_recibido) {
-    u_int8_t id;
+int recibir_handshake(int socket, int* valor_recibido) {
+    int id;
 
     //Recibo valor de id y chequeo errores
-    if(recv(socket, &id, sizeof(u_int8_t), MSG_WAITALL) == -1){
+    if(recv(socket, &id, sizeof(int), MSG_WAITALL) == -1){
         fprintf(stderr,"Error al recibir handshake: %s\n", strerror(errno));
         return -1;
     }
 
     //Casteo el u_int8_t a id_modulo_t y la almaceno en la variable que se recibio para eso
-    *modulo_recibido = (id_modulo_t)id;
+    *valor_recibido = id;
     
-    printf("Handshake de %s (ID %d) recibido!\n", nombre_modulo((id_modulo_t)id), id);
+    printf("Handshake recibido!\n");
     
     return 0;
 }

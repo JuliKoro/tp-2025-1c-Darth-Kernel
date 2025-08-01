@@ -39,10 +39,10 @@ void* receptor_dispatch(void* socket_cpu_dispatch){
         int id_cpu = 0;
         recibir_handshake_cpu(conexion_dispatch, &id_cpu);
         log_info(logger_kernel, "Se estableció conexión con CPU ID: %d en el canal Dispatch", id_cpu);
-        enviar_mensaje("Handshake recibido", conexion_dispatch);
+        //enviar_mensaje("Handshake recibido", conexion_dispatch);
         guardar_cpu_dispatch((void*)(intptr_t)conexion_dispatch, id_cpu);
     }
-    return NULL;
+
 };
 
 void* receptor_interrupt(void* socket_cpu_interrupt){
@@ -54,10 +54,10 @@ void* receptor_interrupt(void* socket_cpu_interrupt){
         int id_cpu = 0;
         recibir_handshake_cpu(conexion_interrupt, &id_cpu);
         log_info(logger_kernel, "Se estableció conexión con CPU ID: %d en el canal Interrupt", id_cpu);
-        enviar_mensaje("Handshake recibido", conexion_interrupt);
+        //enviar_mensaje("Handshake recibido", conexion_interrupt);
         guardar_cpu_interrupt((void*)(intptr_t)conexion_interrupt, id_cpu);
     }
-    return NULL;
+
 };
 
 void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
@@ -75,12 +75,14 @@ void* guardar_cpu_dispatch(void* socket_cpu_dispatch, int id_cpu) {
         log_debug(logger_kernel, "[CPU Management] Nueva CPU (ID: %d, Dispatch Socket: %d) creada y añadida a la lista. Dirección: %p", cpu_nueva->id_cpu, cpu_nueva->socket_cpu_dispatch, (void*)cpu_nueva); // DEBUG_LOG
         pthread_mutex_unlock(&mutex_cpu);
         sem_post(&sem_cpu_disponible);
+        sem_post(&sem_corto_plazo);
     }
     else {
         //Si existe, actualizo el socket de dispatch
         cpu_en_kernel->socket_cpu_dispatch = (intptr_t)socket_cpu_dispatch;
         pthread_mutex_unlock(&mutex_cpu);
         sem_post(&sem_cpu_disponible);
+        sem_post(&sem_corto_plazo);
     }
 
     //Creo el hilo que estara operando infinitamente sobre ese socket de dispatch. 

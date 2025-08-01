@@ -173,10 +173,12 @@ void* manejar_conexion_kernel(void* socket_cliente){
             log_error(logger_memoria, "Error al aceptar cliente");
             continue;
         }
-        int id_cpu = -1;
-        recibir_handshake_cpu(cliente_fd, &id_cpu);
-        if(id_cpu != -1){
-            //Es una cpu
+        int valor_handshake = -1; // Default to an invalid value
+        recibir_handshake(cliente_fd, &valor_handshake);
+
+        if (valor_handshake >= 0) {
+            // Es una cpu (ID es 0 o positivo)
+            log_info(logger_memoria, "## CPU Conectada (ID: %d) - FD del socket: %d", valor_handshake, cliente_fd);
             t_tabla_pag* info_tabla_pag = malloc(sizeof(t_tabla_pag));
             info_tabla_pag->tamanio_pagina = memoria_configs.tampagina;
             info_tabla_pag->cant_entradas_tabla = memoria_configs.entradasportabla;
@@ -184,18 +186,20 @@ void* manejar_conexion_kernel(void* socket_cliente){
             t_paquete* paquete = empaquetar_buffer(PAQUETE_INFO_TP, serializar_info_tabla_pag(info_tabla_pag));
             enviar_paquete(cliente_fd, paquete);
             free(info_tabla_pag);
-            //Creo un hilo para atender la peticion
+
             pthread_t hilo_cliente;
             pthread_create(&hilo_cliente, NULL, manejar_conexion_cpu, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
-          } else {
-            //Es kernel
+        } else if (valor_handshake == -2) {
+            // Es kernel
             log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", cliente_fd); //LOG OBLIGATORIO
             pthread_t hilo_cliente;
             pthread_create(&hilo_cliente, NULL, manejar_conexion_kernel, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
-          }
-
-        
+        } else {
+            // Handshake invalido
+            log_error(logger_memoria, "Handshake invalido recibido: %d. Cerrando conexión.", valor_handshake);
+            close(cliente_fd);
+        }
     }
 }

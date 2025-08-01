@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
    pthread_create(&thread_interrupt, NULL, hilo_interrupt, NULL);
     
    // Crear hilo para ejecutar el ciclo de instrucción
-   pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
+   //pthread_create(&thread_ciclo_instruccion, NULL, hilo_ciclo_instruccion, NULL);
 
    // Inicializaion de Semaforos
    sem_init(&semaforo_proceso, 0, 0); // Inicializa el semáforo en 0 (entre hilos)
@@ -76,14 +76,15 @@ void* hilo_dispatch(void* arg){
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
    //Recibo la confirmacion de kernel que el socket de dispatch fue creado y asignado a la cpu
-   char* mensaje = recibir_mensaje(socket_kernel_dispatch);
-   if(mensaje == NULL){
-      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-      pthread_exit(NULL);
-   }
+   // log_debug(logger_cpu, "INtentando recibir mensaje de kernel... Dispatch");
+   // char* mensaje = recibir_mensaje(socket_kernel_dispatch);
+   // if(mensaje == NULL){
+   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+   //    pthread_exit(NULL);
+   // }
 
-   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   free(mensaje);
+   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   // free(mensaje);
 
    while (1) {
       // ASIGNACION DE PROCESO
@@ -119,15 +120,16 @@ void* hilo_interrupt(void* arg){
 
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
-   //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
-   char* mensaje = recibir_mensaje(socket_kernel_interrupt);
-   if(mensaje == NULL){
-      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-      pthread_exit(NULL);
-   }
+   // //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
+   // log_debug(logger_cpu, "INtentando recibir mensaje de kernel... Interrupt");
+   // char* mensaje = recibir_mensaje(socket_kernel_interrupt);
+   // if(mensaje == NULL){
+   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+   //    pthread_exit(NULL);
+   // }
 
-   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   free(mensaje);
+   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   // free(mensaje);
 
    while (1) {
       // Lógica para recibir interrupciones

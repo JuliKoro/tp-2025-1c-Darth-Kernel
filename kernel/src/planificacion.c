@@ -665,6 +665,7 @@ int mover_blocked_a_suspblocked(u_int32_t pid) {
                 log_error(logger_kernel, "Error al conectar con memoria");
                 return -1;
             }
+            enviar_handshake(socket_memoria, -2);
             t_paquete* paquete = empaquetar_buffer(PAQUETE_SUSPENDER_PROCESO, serializar_pcb(pcb_encontrado));
             enviar_paquete(socket_memoria, paquete);
             if(recibir_bool(socket_memoria)) {
@@ -982,6 +983,7 @@ void eliminar_procesos_en_exit(){
                 pthread_mutex_unlock(&mutex_lista_exit); // Liberar antes de salir por error
                 return;
             }
+            enviar_handshake(socket_memoria, -2);
             t_paquete* paquete = empaquetar_buffer(PAQUETE_ELIMINAR_PROCESO, serializar_pcb(pcb));
             enviar_paquete(socket_memoria, paquete);
             if(recibir_bool(socket_memoria)) {
@@ -1192,6 +1194,7 @@ int buscar_cpu_por_socket_unsafe(int socket) {
 int asignar_pcb_a_cpu(t_pcb* pcb){
     t_cpu_en_kernel* cpu = obtener_cpu_libre();
     if(cpu == NULL) {
+        log_debug(logger_kernel, "[PCP] No hay CPUs libres");
         return -1;
     }
     cpu->esta_ocupada = true;
@@ -1209,6 +1212,8 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
     free(pcb_a_enviar);
 
     mover_ready_a_executing(pcb->pid);
+
+     log_debug(logger_kernel, "[PCP] Asignado! PID %d a CPU%d.", pcb->pid, cpu->id_cpu);
 
     return 0;
 }

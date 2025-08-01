@@ -115,16 +115,16 @@ const char* int_a_string(int numero);
 * @param logger el logger del modulo
 * @return 
 */
-int enviar_handshake(int socket, id_modulo_t modulo);
+int enviar_handshake(int socket, int valor);
 
 /**
 * @brief Recibe handshake
 * @param socket el socket desde el cual se recibe el mensae de handshake
-* @param modulo_recibido donde se guardara el valor de handshake recibido para luego evaluar
+* @param valor_recibido donde se guardara el valor de handshake recibido para luego evaluar
 * @param logger el logger del modulo
 * @return 
 */
-int recibir_handshake(int socket, id_modulo_t* modulo_recibido);
+int recibir_handshake(int socket, int* valor_recibido);
 
 
 
