@@ -6,6 +6,9 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
     while(1){ // loop ciclo de instruccion
         
         char* paquete_instruccion = fetch(proceso, socket_memoria); // ETAPA FETCH
+        if (paquete_instruccion == NULL) {
+            log_error(logger_cpu, "No hay instruccion para continuar en el ciclo");
+        }
 
         instruccion_decodificada* instruccion_decodificada = decodificar_instruccion(paquete_instruccion, proceso->pid); // ETAPA DECODE
 
@@ -44,7 +47,7 @@ char* fetch(t_proceso_cpu* proceso, int socket_memoria){
     
     // Recibe la instruccion de Memoria :)
     char* instruccion_identificada = recibir_mensaje(socket_memoria);
-    printf("Instruccion recibida:\n%s\n", instruccion_identificada);
+    //printf("Instruccion recibida:\n%s\n", instruccion_identificada);
 
     // Validar la instrucción recibida
     if (instruccion_identificada == NULL) {
