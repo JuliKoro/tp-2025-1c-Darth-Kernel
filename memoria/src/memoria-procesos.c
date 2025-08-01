@@ -469,11 +469,21 @@ int finalizar_proceso(int pid) {
   */
 
   static void dump_paginas_recursivo(t_tabla_nivel *current_tabla, int pid, FILE *f) {
+
+    if (!current_tabla) {
+        log_error(logger_memoria, "Tabla actual NULL al intentar realizar dump para PID %d.", pid);
+        return;
+    }
+
     log_debug(logger_memoria, "Dump PID %d: Entrando a tabla nivel %d en dirección %p", pid, current_tabla->nivel_actual, (void*)current_tabla);
 
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         t_entrada_pagina *entrada = current_tabla->entradas[i];
-        if (!entrada) continue;
+        
+        if (!entrada) {
+            log_warning(logger_memoria, "Entrada %d en nivel %d es NULL para PID %d.", i, current_tabla->nivel_actual, pid);
+            continue;
+        }
 
         // Si NO estamos en el último nivel, bajamos al subnivel
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
@@ -494,6 +504,7 @@ int finalizar_proceso(int pid) {
         fwrite(data, 1, memoria_configs.tampagina, f);
     }
 }
+
 
 
 int realizar_memory_dump(int pid) {

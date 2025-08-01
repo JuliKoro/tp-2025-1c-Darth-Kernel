@@ -17,8 +17,13 @@
   * @return Puntero a la tabla de páginas creada.
   */
  t_tabla_nivel* crear_tabla_nivel(int nivel) {
+    if (nivel >= memoria_configs.cantidadniveles) {
+        log_error(logger_memoria, "Nivel %d excede la cantidad de niveles permitidos (%d).", nivel, memoria_configs.cantidadniveles);
+        return NULL;
+    }
+
     t_tabla_nivel* tabla = malloc(sizeof(t_tabla_nivel));
-    if (tabla == NULL) {
+    if (!tabla) {
         log_error(logger_memoria, "Error al asignar memoria para tabla de nivel %d.", nivel);
         exit(EXIT_FAILURE);
     }
@@ -27,7 +32,7 @@
     tabla->entradas_ocupadas = 0;
 
     tabla->entradas = calloc(memoria_configs.entradasportabla, sizeof(t_entrada_pagina*));
-    if (tabla->entradas == NULL) {
+    if (!tabla->entradas) {
         log_error(logger_memoria, "Error al asignar memoria para las entradas de nivel %d.", nivel);
         free(tabla);
         exit(EXIT_FAILURE);
@@ -35,9 +40,8 @@
 
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
         tabla->entradas[i] = malloc(sizeof(t_entrada_pagina));
-        if (tabla->entradas[i] == NULL) {
+        if (!tabla->entradas[i]) {
             log_error(logger_memoria, "Error al asignar entrada %d en nivel %d", i, nivel);
-            // Liberar lo que ya se asignó
             for (int j = 0; j < i; j++) free(tabla->entradas[j]);
             free(tabla->entradas);
             free(tabla);
@@ -52,9 +56,13 @@
         entrada->subnivel = NULL;
 
         if (nivel < memoria_configs.cantidadniveles - 1) {
-            // Si no es el último nivel, crear subtabla recursiva
             entrada->subnivel = crear_tabla_nivel(nivel + 1);
-            entrada->presente = true;  // Se marca como presente porque la subtabla fue creada
+            if (!entrada->subnivel) {
+                log_error(logger_memoria, "Error al crear subnivel para entrada %d en nivel %d", i, nivel);
+                free(entrada);
+                continue;
+            }
+            entrada->presente = true;
         }
     }
 
