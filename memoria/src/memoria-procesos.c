@@ -475,6 +475,8 @@ int finalizar_proceso(int pid) {
 
         if (current_tabla->nivel_actual < memoria_configs.cantidadniveles - 1) {
             if (entrada->presente) {
+                //Prueba
+                void* direccion_base_marco = (char*)administrador_memoria->memoria_principal + (entrada->marco * memoria_configs.tampagina);
                 t_tabla_nivel *next_tabla = (t_tabla_nivel *)(intptr_t)entrada->marco;
                 dump_paginas_recursivo(next_tabla, pid, f);
             }
@@ -493,6 +495,9 @@ int finalizar_proceso(int pid) {
 int realizar_memory_dump(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
+
+    char* ruta_directorio = memoria_configs.dumppath;
+    mkdir(ruta_directorio, 0777);
 
     t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
     if (!tabla) {

@@ -1421,6 +1421,8 @@ int dump_memory(u_int32_t pid) {
     mover_blocked_a_exit(pid);
     return -1;
     }
+
+    enviar_handshake(socket_memoria, -2);
     
     t_paquete* paquete = empaquetar_buffer(PAQUETE_DUMP_MEMORY, serializar_pcb(pcb));
     enviar_paquete(socket_memoria, paquete);
