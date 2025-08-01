@@ -6,7 +6,7 @@
 
 #include "io-configs.h"
 
-int io_conectar_a_kernel();
+int conectar_a_kernel(char* ip, int puerto);
 
 
 

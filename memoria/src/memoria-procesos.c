@@ -184,15 +184,14 @@ int cargar_proceso(int pid, const char* nombre_archivo) {
     t_proceso* proceso = dictionary_get(procesos_en_memoria, pid_key);
     // El PC es 1-based, el array de instrucciones es 0-based.
     // Se verifica que pc sea mayor que 0 y no exceda la cantidad de instrucciones.
-    if (proceso != NULL && pc > 0 && pc <= proceso->cantidad_instrucciones) {
-        const char* instruccion = proceso->instrucciones[pc - 1];
+    if (proceso != NULL && pc >= 0 && pc <= proceso->cantidad_instrucciones) {
+        const char* instruccion = proceso->instrucciones[pc];
         // Log obligatorio: Obtener instrucción
         log_info(logger_memoria, "## PID: %d - Obtener instrucción: %d - Instrucción: %s", pid, pc, instruccion); // LOG OBLIGATORIO
         return instruccion;
     }
 
-    log_warning(logger_memoria, "No se encontró el proceso con PID %d o PC %d fuera de rango (total instrucciones: %d).",
-               pid, pc, (proceso != NULL ? proceso->cantidad_instrucciones : 0));
+    log_warning(logger_memoria, "PID %d: PC %d fuera de rango (0 a %d).", pid, pc, proceso->cantidad_instrucciones - 1);
     return NULL;
 }
 

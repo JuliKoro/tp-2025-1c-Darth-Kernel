@@ -17,7 +17,7 @@ int cpu_conectar_a_memoria(int id_cpu){
 
 t_tabla_pag* hanshake_cpu_memoria(int socket_memoria, int id_cpu) {
     //Hago el handshake con Memoria
-    if(enviar_handshake_cpu(socket_memoria, id_cpu) == -1){
+    if(enviar_handshake(socket_memoria, id_cpu) == -1){
         log_error(logger_cpu, "Error al enviar handshake a Memoria. Cerrando conexion");
     }
 

@@ -19,9 +19,24 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     char* nombre_io = argv[1];
+
+    fprintf(stderr, "[DEBUG] Paso 1: Main iniciado.\n");
     
     inicializar_configs();
+    
+    fprintf(stderr, "[DEBUG] Paso 2: Configs inicializadas.\n");
+
     inicializar_logger_io();
+
+    fprintf(stderr, "[DEBUG] Paso 3: Logger inicializado.\n");
+
+    log_info(logger_io, "Iniciando IO con nombre: %s", nombre_io);
+
+    fprintf(stderr, "[DEBUG] Paso 4: Log de nombre de IO escrito.\n");
+
+    log_debug(logger_io, "Intentando conectar con Kernel en %s:%d", io_configs.ipkernel, io_configs.puertokernel);
+    
+    fprintf(stderr, "[DEBUG] Paso 5: Log de conexión a Kernel escrito.\n");
 
     //Conexion con Kernel
     int socket_kernel = conectar_a_kernel(io_configs.ipkernel, io_configs.puertokernel);
@@ -60,6 +75,7 @@ int manejar_kernel(int socket_kernel, t_log* io_logger, char* nombre_io) { // se
     // Verificar si hubo error en la recepción
     if (mensaje == NULL) {
         log_error(io_logger, "Error al recibir mensaje de Kernel. Cerrando conexion");
+        return -1;
     }
 
     log_info(io_logger, "Mensaje recibido del kernel: %s", mensaje);
@@ -78,7 +94,7 @@ int manejar_kernel(int socket_kernel, t_log* io_logger, char* nombre_io) { // se
             log_info(io_logger, "Recibido paquete de solicitud de IO");
             t_solicitud_io* solicitud = deserializar_solicitud_io(paquete->buffer);
             log_info(io_logger, "PID: %d, Tiempo: %d", solicitud->pid, solicitud->tiempo);
-            usleep(solicitud->tiempo * 1000000);
+            usleep(solicitud->tiempo * 1000);
             enviar_mensaje("IO finalizada", socket_kernel);
         }
 

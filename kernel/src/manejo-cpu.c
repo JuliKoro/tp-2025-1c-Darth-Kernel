@@ -141,7 +141,9 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
         }
 
         if(paquete->codigo_operacion == PAQUETE_SYSCALL) {
+            log_debug(logger_kernel, "[DEBUG] SYSCALL recibida de CPU. Deserializando...");
             t_syscall* syscall = deserializar_syscall(paquete->buffer);
+            log_debug(logger_kernel, "[DEBUG] SYSCALL deserializada. Contenido: '%s'", syscall->syscall);
             manejar_syscall(syscall);
             free(syscall->syscall);
             free(syscall);

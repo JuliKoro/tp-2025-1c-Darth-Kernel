@@ -112,11 +112,14 @@ int enviar_syscall(instruccion_decodificada* instruccion, int socket_kernel_disp
 
 void enviar_syscall_io(instruccion_decodificada* instruccion, int socket_kernel_dispatch){
     t_syscall* syscall = malloc(sizeof(t_syscall));
-    syscall->syscall = malloc(sizeof(char) * 100);
+    syscall->syscall = malloc(sizeof(char) * 256);
     //Armo el string de la syscall. Tiene el formato: "IO <dispositivo_io> <tiempo_io>"
-    sprintf(syscall->syscall, "IO %s %d", instruccion->dispositivo_io, instruccion->tiempo_io);
+    snprintf(syscall->syscall,256, "IO %s %d", instruccion->dispositivo_io, instruccion->tiempo_io);
     //Asigno el pid del proceso que llamo la syscall
     syscall->pid = instruccion->pid;
+    
+    log_debug(logger_cpu, "[DEBUG] Preparando para serializar SYSCALL. PID: %d, Contenido: '%s', Longitud: %d", syscall->pid, syscall->syscall, strlen(syscall->syscall));
+
     //Serializo la syscall y armo un paquete, luego lo envio
     t_buffer* buffer = serializar_syscall(syscall);
     t_paquete* paquete = empaquetar_buffer(PAQUETE_SYSCALL, buffer);

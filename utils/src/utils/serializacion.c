@@ -271,7 +271,9 @@ t_pcb* deserializar_pcb(t_buffer* buffer){
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 
 t_buffer* serializar_syscall(t_syscall* syscall){
-    t_buffer* buffer = buffer_create(sizeof(t_syscall));
+    // Se calcula el tamaño del buffer: tamanio del pid + tamanio del largo del string + el string en si
+    uint32_t tamanio_buffer = sizeof(uint32_t) + sizeof(uint32_t) + strlen(syscall->syscall);
+    t_buffer* buffer = buffer_create(tamanio_buffer);
     buffer_add_uint32(buffer, syscall->pid);
     buffer_add_string(buffer, strlen(syscall->syscall), syscall->syscall);
     return buffer;
@@ -280,8 +282,8 @@ t_buffer* serializar_syscall(t_syscall* syscall){
 t_syscall* deserializar_syscall(t_buffer* buffer){
     t_syscall* syscall = malloc(sizeof(t_syscall));
     uint32_t length;
-    syscall->syscall = buffer_read_string(buffer, &length);
     syscall->pid = buffer_read_uint32(buffer);
+    syscall->syscall = buffer_read_string(buffer, &length);
     return syscall;
 }
 

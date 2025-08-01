@@ -13,28 +13,32 @@ int iniciar_servidor_memoria(){
 }
 
 void* manejar_conexion_cpu(void* socket_cliente){
+    log_debug(logger_memoria, "Iniciando manejo de conexion con CPU");
     int socket_fd = (intptr_t)socket_cliente;
-
+    while(true){    
         //Recibir pid, tamanio, pc, archivo pseudocodigo
+        log_debug(logger_memoria, "Esperando paquete de CPU");
         t_paquete* paquete = recibir_paquete(socket_fd);
+        log_debug(logger_memoria, "Recibido paquete de CPU");
 
         //Evaluo paquete
         if(paquete == NULL){
-            log_debug(logger_memoria, "Cliente desconectado (socket %d)", socket_fd);
+            log_info(logger_memoria, "CPU desconectado (socket %d)", socket_fd);
             close(socket_fd);
             return NULL;
         }
     
         if(paquete->codigo_operacion == PAQUETE_PROCESO_CPU){
+            log_debug(logger_memoria, "Recibido paquete de PROCESO_CPU");
             t_proceso_cpu* proceso_cpu = deserializar_proceso_cpu(paquete->buffer);
             const char* instruccion = obtener_instruccion(proceso_cpu->pid, proceso_cpu->pc);
             if(instruccion == NULL){
                 log_error(logger_memoria, "[PROCESO CPU] No se encontró el proceso con PID %d o PC %d fuera de rango.",
                     proceso_cpu->pid, proceso_cpu->pc);
-            enviar_bool(socket_fd, false);
+            //enviar_bool(socket_fd, false);
             free(proceso_cpu);
             } else {
-                enviar_bool(socket_fd, true);
+                //enviar_bool(socket_fd, true);
                 enviar_mensaje(instruccion, socket_fd);
                 free(proceso_cpu);
             }
@@ -48,10 +52,10 @@ void* manejar_conexion_cpu(void* socket_cliente){
             if(marco == -1){
                 log_error(logger_memoria, "[PROCESO CPU] No se encontró el marco con PID %d.",
                     info_para_marcos->pid);
-            enviar_bool(socket_fd, false);
+            //enviar_bool(socket_fd, false);
             free(info_para_marcos);
             } else {
-                enviar_bool(socket_fd, true);
+                //enviar_bool(socket_fd, true);
                 enviar_marco(socket_fd, marco);
                 free(info_para_marcos);
             }
@@ -92,9 +96,8 @@ void* manejar_conexion_cpu(void* socket_cliente){
         }
         //Enviar respuesta al kernel     
         liberar_paquete(paquete);
-        close(socket_fd);
-        return NULL;
     }
+}
 
 void* manejar_conexion_kernel(void* socket_cliente){
  int socket_fd = (intptr_t)socket_cliente;
@@ -188,12 +191,14 @@ void* manejar_conexion_kernel(void* socket_cliente){
             free(info_tabla_pag);
 
             pthread_t hilo_cliente;
+            log_debug(logger_memoria, "Creando hilo para manejar conexion con CPU");
             pthread_create(&hilo_cliente, NULL, manejar_conexion_cpu, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
         } else if (valor_handshake == -2) {
             // Es kernel
             log_info(logger_memoria, "## Kernel Conectado - FD del socket: %d", cliente_fd); //LOG OBLIGATORIO
             pthread_t hilo_cliente;
+            log_debug(logger_memoria, "Creando hilo para manejar conexion con Kernel");
             pthread_create(&hilo_cliente, NULL, manejar_conexion_kernel, (void*)(intptr_t) cliente_fd);
             pthread_detach(hilo_cliente);
         } else {

@@ -79,14 +79,14 @@ void* hilo_dispatch(void* arg){
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
    //Recibo la confirmacion de kernel que el socket de dispatch fue creado y asignado a la cpu
-   char* mensaje = recibir_mensaje(socket_kernel_dispatch);
-   if(mensaje == NULL){
-      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-      pthread_exit(NULL);
-   }
+   // char* mensaje = recibir_mensaje(socket_kernel_dispatch);
+   // if(mensaje == NULL){
+   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+   //    pthread_exit(NULL);
+   // }
 
-   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   free(mensaje);
+   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   // free(mensaje);
 
    while (1) {
       // ASIGNACION DE PROCESO
@@ -123,21 +123,21 @@ void* hilo_interrupt(void* arg){
    log_debug(logger_cpu, "Handshake enviado correctamente. Esperando confirmacion de kernel...");
 
    //Recibo la confirmacion de kernel que el socket de interrupt fue creado y asignado a la cpu
-   char* mensaje = recibir_mensaje(socket_kernel_interrupt);
-   if(mensaje == NULL){
-      log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
-      pthread_exit(NULL);
-   }
+   // char* mensaje = recibir_mensaje(socket_kernel_interrupt);
+   // if(mensaje == NULL){
+   //    log_error(logger_cpu, "Error al recibir mensaje de Kernel. Cerrando conexion");
+   //    pthread_exit(NULL);
+   // }
 
-   log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
-   free(mensaje);
+   // log_debug(logger_cpu, "Mensaje recibido del kernel: %s", mensaje);
+   // free(mensaje);
 
    while (1) {
       // Lógica para recibir interrupciones
       t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
       if (paquete_interrupt == NULL) {
          log_error(logger_cpu, "Error al recibir interrupción de Kernel. Cerrando conexion");
-         pthread_exit(NULL); // Terminar el hilo si hay un error
+         //pthread_exit(NULL); // Terminar el hilo si hay un error
       }
       if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
          log_info(logger_cpu, "## Llega interrupción al puerto Interrupt");
