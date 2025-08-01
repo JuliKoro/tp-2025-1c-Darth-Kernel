@@ -24,7 +24,7 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             PC++;
             break;
 
-        case READ: // REVISAR WARNINGS
+        case READ:
             char* datos;
             if (acceder_cache()) { // Cache Habilitada
                 datos = leer_de_cache(instruccion->direccion, instruccion->tamanio, instruccion->pid, socket_memoria); // Imprime datos dentro de la funcion (printf)
@@ -46,6 +46,7 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             // manejar operaciones de entrada/salida
             enviar_syscall(instruccion, socket_kernel_dispatch);
             PC++;
+            flag_desalojo = true;
             break;
 
         case INIT_PROC: // SYSCALL (Archivo de instrucciones, Tamaño)
@@ -58,11 +59,13 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             // volcar la memoria
             enviar_syscall(instruccion, socket_kernel_dispatch);
             PC++;
+            flag_desalojo = true;
             break;
 
         case EXIT_INSTR: // SYSCALL
             enviar_syscall(instruccion, socket_kernel_dispatch);
-            exit_flag = true;
+            PC++;
+            flag_desalojo = true;
             break;
 
         case INSTRUCCION_DESCONOCIDA:

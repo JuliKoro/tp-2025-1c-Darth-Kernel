@@ -15,6 +15,6 @@ extern uint32_t PC; // Variable global para el PC (Program Counter)
  */
 extern bool IF; // Variable global que representa el registro IF (Interrupt Flag)
 
-extern bool exit_flag;
+extern bool flag_desalojo;
 
 #endif

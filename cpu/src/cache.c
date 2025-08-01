@@ -32,7 +32,7 @@ void destruir_cache() {
 
 bool acceder_cache() {
     // Verificar si la caché está habilitada
-    if (cache == NULL || cache->capacidad <= 0) {
+    if (cache == NULL || cache->capacidad == 0) {
         log_debug(logger_cpu, "Caché deshabilitada, accediendo directamente a memoria.");
         return false; // La caché está deshabilitada, no se puede acceder
     }

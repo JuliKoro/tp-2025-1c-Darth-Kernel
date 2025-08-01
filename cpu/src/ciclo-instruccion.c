@@ -25,7 +25,7 @@ void ciclo_instruccion(t_proceso_cpu* proceso, int socket_memoria, int socket_ke
         // LIMPIAR INSTRUCCIONES
         destruir_instruccion(instruccion_decodificada);
         free(paquete_instruccion);
-        if(exit_flag) break; // Si el proceso termino
+        if(flag_desalojo) break; // Si el proceso termino
     }
     
 }

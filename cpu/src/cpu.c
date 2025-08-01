@@ -17,7 +17,7 @@ t_interrupcion* interrupcion;
 // REGISTROS
 uint32_t PC; // Declaracion de la variable global para el PC (Porgram Counter)
 bool IF = 0; // Declaracion de la pariable global para el IF (Interrupt Flag)
-bool exit_flag = false;
+bool flag_desalojo = false;
 
 int id_cpu; //La hice global para que se pueda usar en los hilos de dispatch e interrupt.
 
@@ -223,7 +223,7 @@ void desalojar_proceso(uint32_t pid){
    }
 
    // LIMPIAR TLB
-   limpiar_tlb(pid);
+   if (acceder_tlb()) limpiar_tlb(pid); // Si la TLB esta habilitada
    log_debug(logger_cpu, "Proceso desalojado: PID: %d", pid);
 
    free(proceso);

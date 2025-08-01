@@ -21,8 +21,8 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int 
             // TLB Miss
             log_info(logger_cpu, "PID: %d - TLB MISS - Pagina: %d", pid, nro_pagina);
         }
-    }
-    
+    } else log_debug(logger_cpu, "TLB deshabilitada, accediendo directamente a Tabla de Paginas de Memoria.");
+
     // Calcular las entradas de cada nivel
     uint32_t entradas_niveles[cpu_configs.cant_niveles];
     for (uint32_t i = 0; i < cpu_configs.cant_niveles; i++) {
@@ -108,8 +108,7 @@ void limpiar_tlb(uint32_t pid) {
 
 bool acceder_tlb() {
     // Verificar si la TLB está habilitada
-    if (tlb == NULL || tlb->tamanio <= 0) {
-        log_debug(logger_cpu, "TLB deshabilitada, accediendo directamente a Tabla de Paginas de Memoria.");
+    if (tlb == NULL || tlb->tamanio == 0) {
         return false; // La TLB está deshabilitada, no se puede acceder
     }
     return true; // TLB habilitada
