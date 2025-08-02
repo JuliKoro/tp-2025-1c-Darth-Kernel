@@ -372,7 +372,7 @@ t_escritura_memoria* deserializar_escritura_memoria(t_buffer* buffer){
 
 // Solicitud de Marco (CPU [MMU] -> Memoria [TP])
 
-t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t cant_niveles) {
+/*t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t cant_niveles) {
     t_buffer* buffer = buffer_create(sizeof(t_entradas_tabla));
     buffer_add_uint32(buffer, entradas_tabla->pid);
     for (uint32_t i = 0; i < cant_niveles; i++) { // Agregar las entradas de los niveles
@@ -380,9 +380,36 @@ t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t 
     }
     buffer_add_uint32(buffer, entradas_tabla->num_pag);
     return buffer;
+}*/
+
+t_buffer* serializar_solicitud_marco(t_entradas_tabla* entradas_tabla, uint32_t cant_niveles) {
+    // Calcular el tamaño total del buffer
+    size_t buffer_size = sizeof(uint32_t) + // PID
+                         (sizeof(uint32_t) * cant_niveles) + // Entradas de niveles
+                         sizeof(uint32_t); // Número de página
+
+    t_buffer* buffer = buffer_create(buffer_size);
+    if (buffer == NULL) {
+        printf("Error al crear el buffer para serializar la solicitud de marco");
+        return NULL; // Manejo de error
+    }
+
+    // Agregar el PID al buffer
+    buffer_add_uint32(buffer, entradas_tabla->pid);
+
+    // Agregar las entradas de los niveles
+    for (uint32_t i = 0; i < cant_niveles; i++) {
+        buffer_add_uint32(buffer, entradas_tabla->entradas_niveles[i]);
+    }
+
+    // Agregar el número de página al buffer
+    buffer_add_uint32(buffer, entradas_tabla->num_pag);
+
+    return buffer;
 }
 
-t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles) {
+
+/*t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles) {
     t_entradas_tabla* entradas_tabla = malloc(sizeof(t_entradas_tabla));
     entradas_tabla->pid = buffer_read_uint32(buffer);
     for (uint32_t i = 0; i < cant_niveles; i++) { // Extraigo las entradas de los niveles
@@ -390,4 +417,36 @@ t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_n
     }
     entradas_tabla->num_pag = buffer_read_uint32(buffer);
     return entradas_tabla;
+}*/
+
+t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles) {
+    t_entradas_tabla* entradas_tabla = malloc(sizeof(t_entradas_tabla));
+    if (entradas_tabla == NULL) {
+        printf("Error al asignar memoria para entradas_tabla");
+        return NULL; // Manejo de error
+    }
+
+    entradas_tabla->pid = buffer_read_uint32(buffer);
+
+    // Asignar memoria para entradas_niveles
+    entradas_tabla->entradas_niveles = malloc(sizeof(uint32_t) * cant_niveles);
+    if (entradas_tabla->entradas_niveles == NULL) {
+        printf("Error al asignar memoria para entradas_niveles");
+        free(entradas_tabla); // Liberar memoria previamente asignada
+        return NULL; // Manejo de error
+    }
+
+    for (uint32_t i = 0; i < cant_niveles; i++) { // Extraigo las entradas de los niveles
+        entradas_tabla->entradas_niveles[i] = buffer_read_uint32(buffer);
+    }
+    entradas_tabla->num_pag = buffer_read_uint32(buffer);
+    return entradas_tabla;
 }
+
+void liberar_entradas_tabla(t_entradas_tabla* entradas_tabla) {
+    if (entradas_tabla != NULL) {
+        free(entradas_tabla->entradas_niveles); // Liberar el arreglo de entradas_niveles
+        free(entradas_tabla); // Liberar la estructura
+    }
+}
+

@@ -54,6 +54,7 @@ void* manejar_conexion_cpu(void* socket_cliente){
                     info_para_marcos->pid);
             //enviar_bool(socket_fd, false);
             free(info_para_marcos);
+            //liberar_entradas_tabla(info_para_marcos);
             } else {
                 //enviar_bool(socket_fd, true);
                 enviar_marco(socket_fd, marco);

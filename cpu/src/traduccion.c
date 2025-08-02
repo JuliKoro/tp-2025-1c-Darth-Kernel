@@ -28,7 +28,7 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int 
     for (uint32_t i = 0; i < cpu_configs.cant_niveles; i++) {
         entradas_niveles[i] = (uint32_t)floor(nro_pagina / pow(cpu_configs.cant_entradas_tabla, cpu_configs.cant_niveles - 1 - i)) % cpu_configs.cant_entradas_tabla;
     }
-
+    log_debug(logger_cpu, "Entradas de Nivel calculadas, para pagina %d", nro_pagina);
     // Consultar memoria para obtener el marco
     int32_t marco_memoria = obtener_marco_de_memoria(nro_pagina, entradas_niveles, pid, socket_memoria);
     if (marco_memoria == -1) {
@@ -44,24 +44,33 @@ uint32_t traducir_direccion_logica(uint32_t direccion_logica, uint32_t pid, int 
 
 uint32_t obtener_marco_de_memoria(uint32_t numero_pagina, uint32_t* entradas_niveles, uint32_t pid, int socket_memoria) {
     uint32_t marco_obtenido = -1; // Valor por defecto para indicar error
-
+    log_debug(logger_cpu, "Obteniendo el numero de marco desde Memoria");
     // Construyo el paquete para Memoria
     // Creo la estructura que contiene la info
     t_entradas_tabla* entrada_tabla = malloc(sizeof(t_entradas_tabla));
     entrada_tabla->pid = pid;
     entrada_tabla->entradas_niveles = entradas_niveles;
     entrada_tabla->num_pag = numero_pagina;
+    log_debug(logger_cpu, "Serializando PAQUETE_SOLICITUD_MARCO");
 
     t_buffer* buffer = serializar_solicitud_marco(entrada_tabla, cpu_configs.cant_niveles); // Serializo
+    log_debug(logger_cpu, "Empaquetando SOLICITUD_MARCO");
     
     t_paquete* paquete_solicitud = empaquetar_buffer(PAQUETE_SOLICITUD_MARCO, buffer); // Empaqueto
+    log_debug(logger_cpu, "SOLICITUD_MARCO empaquetado");
+
     free(entrada_tabla);
-    
+    //liberar_entradas_tabla(entrada_tabla);
+    log_debug(logger_cpu, "Entradas liberadas");
+
+
     // Envio el paquete a Memoria
     if (enviar_paquete(socket_memoria, paquete_solicitud) == -1) {
         log_error(logger_cpu, "Error al enviar solicitud de marco a Memoria para PID: %d, Pagina: %d", pid, numero_pagina);
         return -1;
     }
+    log_debug(logger_cpu, "SOLICITUD_MARCO enviado a Memoria");
+
 
     // Recibo la respuesta de Memoria
     if (recibir_marco(socket_memoria, &marco_obtenido) == -1) {

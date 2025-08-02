@@ -566,6 +566,8 @@ t_buffer* serializar_solicitud_marco(t_entradas_tabla* entrada_tabla, uint32_t c
  */
 t_entradas_tabla* deserializar_solicitud_marco(t_buffer* buffer, uint32_t cant_niveles);
 
+void liberar_entradas_tabla(t_entradas_tabla* entradas_tabla);
+
 #endif
 
 
