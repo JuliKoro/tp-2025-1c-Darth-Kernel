@@ -17,7 +17,7 @@ void inicializar_configs(){
     configcargado.cortoplazo = cargar_variable_string(kernel_tconfig, "ALGORITMO_CORTO_PLAZO");
     configcargado.ingreasoaready = cargar_variable_string(kernel_tconfig, "ALGORITMO_INGRESO_A_READY");
     configcargado.alfa = cargar_variable_double(kernel_tconfig, "ALFA");
-    configcargado.estimacioninicial = cargar_variable_int(kernel_tconfig, "ESTIMACION_INICIAL");
+    configcargado.estimacioninicial = cargar_variable_double(kernel_tconfig, "ESTIMACION_INICIAL");
     configcargado.tiemposuspension = cargar_variable_int(kernel_tconfig, "TIEMPO_SUSPENSION");
     configcargado.loglevel = cargar_variable_string(kernel_tconfig, "LOG_LEVEL");
     //Igualo el struct global a este, de esta forma puedo usar los datos en cualquier archivo del modulo

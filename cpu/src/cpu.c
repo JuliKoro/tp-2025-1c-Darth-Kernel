@@ -219,6 +219,7 @@ int conexiones_cpu(){
 }
 
 void desalojar_proceso(uint32_t pid){
+   flag_desalojo = false;
    // LIMPIAR CACHE DE PAGINAS
    if (acceder_cache()) { // Si esta habiliatada la Cache
       actualizar_cache_a_memoria(pid, socket_memoria);

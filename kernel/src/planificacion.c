@@ -546,7 +546,7 @@ int mover_executing_a_ready(u_int32_t pid) {
         t_buffer* buffer = serializar_interrupcion(interrupcion);
         t_paquete* paquete = empaquetar_buffer(PAQUETE_INTERRUPCION, buffer);
         enviar_paquete(cpu->socket_cpu_interrupt, paquete); //Esta funcion ya libera el paquete despues de enviarlo
-        liberar_cpu(cpu);
+        //liberar_cpu(cpu);
         
     }
 
@@ -1024,20 +1024,33 @@ t_pcb* obtener_pcb_con_menor_estimacion() {
         return NULL;
     }
 
+    // ¡AGREGAR LOGS DE DIAGNÓSTICO!
+    log_debug(logger_kernel, "[SJF] Lista READY tiene %d procesos", list_size(lista_ready));
+    for(int i = 0; i < list_size(lista_ready); i++) {
+        t_pcb* pcb = list_get(lista_ready, i);
+        log_debug(logger_kernel, "[SJF] PID %d - Estimación: %f", pcb->pid, pcb->proxima_estimacion);
+    }
+
     t_pcb* pcb_elegido= list_get(lista_ready, 0);
     int indice_elegido = 0;
+    
+    // ¡AGREGAR LOG INICIAL!
+    log_debug(logger_kernel, "[SJF] Inicialmente elegido: PID %d (estimación: %f)", pcb_elegido->pid, pcb_elegido->proxima_estimacion);
 
     for(int i = 1; i < list_size(lista_ready); i++) {
         t_pcb* pcb_actual = list_get(lista_ready, i);
 
-        if(pcb_actual->proxima_estimacion <= pcb_elegido->proxima_estimacion) {
+        if(pcb_actual->proxima_estimacion < pcb_elegido->proxima_estimacion) {  // ¡CAMBIAR <= por < para FIFO!
+            // ¡AGREGAR LOG DE CAMBIO!
+            log_debug(logger_kernel, "[SJF] Nuevo elegido: PID %d (estimación: %f) reemplaza a PID %d", 
+                     pcb_actual->pid, pcb_actual->proxima_estimacion, pcb_elegido->pid);
             pcb_elegido = pcb_actual;
             indice_elegido = i;
         }
     }
 
     list_remove(lista_ready, indice_elegido);
-    log_debug(logger_kernel, "[Lista READY] PID %d removido (menor estimación).", pcb_elegido->pid); // DEBUG_LOG
+    log_debug(logger_kernel, "[Lista READY] PID %d removido (menor estimación: %f).", pcb_elegido->pid, pcb_elegido->proxima_estimacion);
     pthread_mutex_unlock(&mutex_lista_ready);
     return pcb_elegido;
 }
@@ -1124,12 +1137,12 @@ void actualizar_pcb(u_int32_t pid, u_int32_t pc) {
 
 int actualizar_metricas_sjf(t_pcb* pcb) {
    int64_t rafaga_real_ms = temporal_gettime(pcb->cronometro_estado);
-   pcb->rafaga_real_anterior = (u_int32_t)rafaga_real_ms;
+   pcb->rafaga_real_anterior = (double)rafaga_real_ms;
 
    //Calculo la nueva estimacion
 
    double alfa = kernel_configs.alfa;
-   u_int32_t nueva_estimacion = (u_int32_t)(alfa * pcb->rafaga_real_anterior + (1 - alfa) * pcb->estimacion_rafaga_anterior);
+   double nueva_estimacion = (alfa * pcb->rafaga_real_anterior + (1 - alfa) * pcb->estimacion_rafaga_anterior);
    pcb->proxima_estimacion = nueva_estimacion;
 
    return 0;
@@ -1224,6 +1237,48 @@ int asignar_pcb_a_cpu(t_pcb* pcb){
     mover_ready_a_executing(pcb->pid);
 
      log_debug(logger_kernel, "[PCP] Asignado! PID %d a CPU%d.", pcb->pid, cpu->id_cpu);
+
+    return 0;
+}
+
+asignar_pcb_ya_removido_a_cpu(t_pcb* pcb){
+    t_cpu_en_kernel* cpu = obtener_cpu_libre();
+    if(cpu == NULL) {
+        log_debug(logger_kernel, "[PCP] No hay CPUs libres");
+        return -1;
+    }
+    cpu->esta_ocupada = true;
+    cpu->pid_actual = pcb->pid;
+
+    //Creo la estructura que contiene el pid y el pc del proceso
+    t_proceso_cpu* pcb_a_enviar = malloc(sizeof(t_proceso_cpu));
+    pcb_a_enviar->pid = pcb->pid;
+    pcb_a_enviar->pc = pcb->pc;
+    //Lo serializo, lo empaqueto y lo envio
+    t_buffer* buffer = serializar_proceso_cpu(pcb_a_enviar);
+    t_paquete* paquete = empaquetar_buffer(PAQUETE_PROCESO_CPU, buffer);
+    enviar_paquete(cpu->socket_cpu_dispatch, paquete);
+
+    free(pcb_a_enviar);
+    
+    algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
+    
+    if(algoritmo == SJF_SIN_DESALOJO) {
+        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+        pthread_mutex_lock(&mutex_lista_executing);
+        list_add(lista_executing, pcb);
+        pthread_mutex_unlock(&mutex_lista_executing);
+        actualizar_estado_pcb(pcb, RUNNING);
+
+    } else if(algoritmo == SJF_CON_DESALOJO) {
+        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+        pthread_mutex_lock(&mutex_lista_executing);
+        list_add(lista_executing, pcb);
+        pthread_mutex_unlock(&mutex_lista_executing);
+        actualizar_estado_pcb(pcb, RUNNING);
+    }
+
+    log_debug(logger_kernel, "[PCP] Asignado! PID %d a CPU%d.", pcb->pid, cpu->id_cpu);
 
     return 0;
 }
@@ -1414,6 +1469,13 @@ int exit_syscall(u_int32_t pid) {
         }
     }
     pthread_mutex_unlock(&mutex_lista_executing);
+
+    t_cpu_en_kernel* cpu = obtener_cpu_por_pid(pid);
+    if(cpu != NULL) {
+        liberar_cpu(cpu);               // Liberar CPU (patrón consistente)
+    }
+    sem_post(&sem_largo_plazo);         // Despertar PLP
+    
     return 0;
 }
 

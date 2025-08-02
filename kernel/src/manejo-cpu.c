@@ -152,6 +152,15 @@ void* manejo_dispatch(void* socket_cpu_dispatch){
         if(paquete->codigo_operacion == PAQUETE_INTERRUPCION) {
             t_interrupcion* interrupcion = deserializar_interrupcion(paquete->buffer);
             actualizar_pcb(interrupcion->pid, interrupcion->pc);
+
+            t_cpu_en_kernel* cpu = obtener_cpu_por_pid(interrupcion->pid);
+            if(cpu != NULL) {
+                liberar_cpu(cpu);
+                log_debug(logger_kernel, "[DEBUG] Antes de sem_post(sem_corto_plazo) para PID %d", interrupcion->pid);
+                sem_post(&sem_corto_plazo);
+                log_debug(logger_kernel, "[DEBUG] Después de sem_post(sem_corto_plazo) para PID %d", interrupcion->pid);
+            }
+
             free(interrupcion);
         }
 

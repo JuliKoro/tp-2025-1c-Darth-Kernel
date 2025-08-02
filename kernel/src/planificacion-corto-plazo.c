@@ -37,7 +37,8 @@ void* iniciar_planificador_corto_plazo() {
                     continue;
                 }
                 log_debug(logger_kernel, "[PCP] Asignando PID %d a CPU (SJF).", pcb->pid); // DEBUG_LOG
-                asignar_pcb_a_cpu(pcb);
+                //asignar_pcb_a_cpu(pcb);
+                asignar_pcb_ya_removido_a_cpu(pcb);
             }
             break;
         case SJF_CON_DESALOJO:
@@ -52,7 +53,8 @@ void* iniciar_planificador_corto_plazo() {
                     continue;
                 }
                 log_debug(logger_kernel, "[PCP] Asignando PID %d a CPU (SJF con desalojo).", pcb->pid); // DEBUG_LOG
-                asignar_pcb_a_cpu(pcb);
+                //asignar_pcb_a_cpu(pcb);
+                asignar_pcb_ya_removido_a_cpu(pcb);
             }
             break;
         default:

@@ -89,9 +89,9 @@ typedef struct t_pcb {
     u_int32_t tamanio_proceso;
     estado_pcb estado;
     pthread_mutex_t mutex_cambio_estado;
-    u_int32_t proxima_estimacion;
-    u_int32_t rafaga_real_anterior;
-    u_int32_t estimacion_rafaga_anterior;
+    double proxima_estimacion;
+    double rafaga_real_anterior;
+    double estimacion_rafaga_anterior;
 } t_pcb;
 
 
@@ -105,7 +105,7 @@ typedef struct t_pcb {
  * @param tamanio_proceso: Tamaño del proceso en bytes
  * @return Puntero al t_pcb inicializado
  */
-t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso, u_int32_t estimacion_inicial);
+t_pcb* inicializar_pcb(u_int32_t pid, char* archivo_pseudocodigo, u_int32_t tamanio_proceso, double estimacion_inicial);
 
 /**
  * @brief Destruye un PCB y todas las estructuras

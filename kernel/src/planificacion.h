@@ -608,6 +608,15 @@ int buscar_cpu_por_socket_unsafe(int socket);
 int asignar_pcb_a_cpu(t_pcb* pcb);
 
 /**
+ * @brief Asigna un pcb YA REMOVIDO de ready a una cpu (para SJF)
+ * 
+ * @param pcb: El pcb a asignar (ya removido de lista_ready)
+ * @return 0 si el pcb se asigna correctamente
+ */
+int asignar_pcb_ya_removido_a_cpu(t_pcb* pcb);
+
+
+/**
  * @brief Obtiene la cpu que esta ejecutando un proceso
  * 
  * @param pid: El pid del proceso
