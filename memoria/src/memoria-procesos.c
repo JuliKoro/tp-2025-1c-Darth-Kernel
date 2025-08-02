@@ -427,7 +427,9 @@ int finalizar_proceso(int pid) {
     t_tabla_nivel *tabla = dictionary_remove(administrador_memoria->tablas_paginas, pid_str);
     if (tabla) {
         destruir_tabla_paginas(tabla);
+        log_debug(logger_memoria, "PID %d: Tabla de páginas destruida correctamente.", pid);
     } else {
+        log_error(logger_memoria, "PID %d: No se encontró tabla de páginas para finalizar el proceso.", pid);
         resultado = -1;
     }
 
@@ -445,6 +447,7 @@ int finalizar_proceso(int pid) {
                  metricas->escrituras_memoria); // LOG OBLIGATORIO
         free(metricas);
     } else {
+        log_warning(logger_memoria, "PID %d: No se encontraron métricas para el proceso.", pid);
         resultado = -1;
     }
 
@@ -452,9 +455,19 @@ int finalizar_proceso(int pid) {
     t_proceso *proc = dictionary_remove(procesos_en_memoria, pid_str);
     if (proc) {
         destruir_proceso(proc);
+        log_debug(logger_memoria, "PID %d: Estructura del proceso destruida correctamente.", pid);
+
     } else {
+        log_warning(logger_memoria, "PID %d: No se encontró estructura del proceso para liberar.", pid);
         resultado = -1;
     }
+
+    if (resultado == 0) {
+        log_info(logger_memoria, "PID %d: Proceso finalizado correctamente.", pid);
+    } else {
+        log_error(logger_memoria, "PID %d: Error al finalizar el proceso.", pid);
+    }
+    
     return resultado;
 }
 
