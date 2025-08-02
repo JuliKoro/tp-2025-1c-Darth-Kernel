@@ -505,8 +505,6 @@ int finalizar_proceso(int pid) {
     }
 }
 
-
-
 int realizar_memory_dump(int pid) {
     char pid_str[16];
     sprintf(pid_str, "%d", pid);
@@ -535,9 +533,71 @@ int realizar_memory_dump(int pid) {
         return -1;
     }
 
+    // Escribir el contenido completo de la memoria reservada por el proceso
+    for (int i = 0; i < memoria_configs.entradasportabla; i++) {
+        t_entrada_pagina *entrada = tabla->entradas[i];
+        void *data;
+
+        if (entrada && entrada->presente) {
+            // Página presente en memoria principal
+            data = (char *)administrador_memoria->memoria_principal +
+                   (entrada->marco * memoria_configs.tampagina);
+        } else {
+            // Página no presente: inicializar con ceros
+            data = calloc(1, memoria_configs.tampagina);
+            if (!data) {
+                log_error(logger_memoria, "Error al asignar memoria para página vacía en dump.");
+                fclose(f);
+                return -1;
+            }
+        }
+
+        fwrite(data, 1, memoria_configs.tampagina, f);
+
+        if (!entrada || !entrada->presente) {
+            free(data); // Liberar memoria si fue inicializada con ceros
+        }
+    }
+
+    fclose(f);
+
+    log_debug(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
+    return 0;
+}
+
+/*
+int realizar_memory_dump(int pid) {
+    char pid_str[16];
+    sprintf(pid_str, "%d", pid);
+
+    char* ruta_directorio = memoria_configs.dumppath;
+    mkdir(ruta_directorio, 0777);
+
+    t_tabla_nivel *tabla = dictionary_get(administrador_memoria->tablas_paginas, pid_str);
+    if (!tabla) {
+        log_warning(logger_memoria, "PID %d – dump fallido: sin tabla de páginas", pid);
+        return -1;
+    }
+
+    // construir nombre de archivo <PID>-<timestamp>.dmp en DUMP_PATH 
+    char timestamp[32];
+    time_t now = time(NULL);
+    strftime(timestamp, sizeof timestamp, "%Y%m%d-%H%M%S", localtime(&now));
+
+    char filepath[PATH_MAX];
+    snprintf(filepath, sizeof filepath, "%s/%d-%s.dmp", memoria_configs.dumppath, pid,
+             timestamp);
+
+    FILE *f = fopen(filepath, "wb");
+    if (!f) {
+        log_error(logger_memoria, "No se pudo crear el dump en %s", filepath);
+        return -1;
+    }
+
     dump_paginas_recursivo(tabla, pid, f);
     fclose(f);
 
     log_debug(logger_memoria, "## PID: %d - Memory‑Dump generado en %s", pid, filepath);
     return 0;
 }
+*/
