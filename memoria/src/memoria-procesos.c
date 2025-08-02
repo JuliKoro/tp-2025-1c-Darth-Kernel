@@ -537,8 +537,8 @@ int realizar_memory_dump(int pid) {
     int total_memoria_reservada = memoria_configs.entradasportabla * memoria_configs.tampagina;
 
     // Escribir el encabezado con el tamaño total de la memoria reservada
-    fprintf(f, "tamaño total de la memoria reservada por el proceso: %d bytes\n", total_memoria_reservada);
-    fprintf(f, "contenido actual de la memoria:\n");
+    fprintf(f, "Tamaño total de la memoria reservada por el proceso: %d bytes\n", total_memoria_reservada);
+    fprintf(f, "Contenido actual de la memoria:\n");
 
     // Escribir el contenido actual de la memoria
     for (int i = 0; i < memoria_configs.entradasportabla; i++) {
