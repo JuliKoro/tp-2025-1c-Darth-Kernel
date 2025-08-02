@@ -147,9 +147,10 @@ bool _encontrar_pcb_por_pid(void* elemento, void* pid_a_comparar) {
 
 u_int32_t obtener_pid_siguiente() {
     pthread_mutex_lock(&mutex_pid_counter);
+    u_int32_t pid_actual = pid_counter;
     pid_counter++;
     pthread_mutex_unlock(&mutex_pid_counter);
-    return pid_counter;
+    return pid_actual;
 }
 
 u_int32_t obtener_pid_actual() {
@@ -171,9 +172,9 @@ algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo) 
         return FIFO;
     } else if(strcmp(algoritmo, "PMCP") == 0) {
         return PMCP;
-    } else if(strcmp(algoritmo, "SJF_SIN_DESALOJO") == 0) {
+    } else if(strcmp(algoritmo, "SJF") == 0) {
         return SJF_SIN_DESALOJO;
-    } else if(strcmp(algoritmo, "SJF_CON_DESALOJO") == 0)   {
+    } else if(strcmp(algoritmo, "SRT") == 0)   {
         return SJF_CON_DESALOJO;
     }
     log_error(logger_kernel, "Algoritmo de planificacion '%s' no reconocido. Usando FIFO por defecto.", algoritmo);
@@ -181,10 +182,7 @@ algoritmos_de_planificacion obtener_algoritmo_de_planificacion(char* algoritmo) 
 }
 
 void planificar_proceso_inicial(char* archivo_pseudocodigo, u_int32_t tamanio_proceso) {
-    t_pcb* pcb = inicializar_pcb(obtener_pid_actual(), archivo_pseudocodigo, tamanio_proceso, kernel_configs.estimacioninicial);
-    pthread_mutex_lock(&mutex_pid_counter);
-    pid_counter++;
-    pthread_mutex_unlock(&mutex_pid_counter);
+    t_pcb* pcb = inicializar_pcb(obtener_pid_siguiente(), archivo_pseudocodigo, tamanio_proceso, kernel_configs.estimacioninicial);
     agregar_a_new(pcb);
     //Loggear ## (<PID>) Se crea el proceso - Estado: NEW
     log_creacion_proceso(pcb);
@@ -228,10 +226,12 @@ int recibir_mensaje_cpu(int socket_cpu) {
             manejar_syscall(syscall);
             free(syscall);
             free(paquete);
+            break;
         default:
             log_error(logger_kernel, "Codigo de operacion invalido recibido de CPU");
             return -1;
     }
+    return 0;
 }
 
 /*/////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -744,6 +744,7 @@ int mover_ready_a_executing(u_int32_t pid) {
     log_debug(logger_kernel, "[Transición] Intentando mover PID %d de READY a EXECUTING.", pid); // DEBUG_LOG
     algoritmos_de_planificacion algoritmo = obtener_algoritmo_de_planificacion(kernel_configs.cortoplazo);
     t_pcb* pcb = NULL;
+    pthread_mutex_lock(&mutex_lista_ready);
     for(int i = 0; i < list_size(lista_ready); i++) {
         t_pcb* pcb_temp = list_get(lista_ready, i);
         if(pcb_temp->pid == pid) {
@@ -751,26 +752,33 @@ int mover_ready_a_executing(u_int32_t pid) {
             break;
         }
     }
+    pthread_mutex_unlock(&mutex_lista_ready);
 
-    if(algoritmo == FIFO) {
-        pthread_mutex_lock(&mutex_lista_executing);
-        list_add(lista_executing, pcb);
-        pthread_mutex_unlock(&mutex_lista_executing);
-        actualizar_estado_pcb(pcb, RUNNING);
+    if(pcb == NULL) {
+        log_error(logger_kernel, "ERROR CRÍTICO: PID %d no encontrado en lista_ready para mover a EXECUTING", pid);
+        return -1;
+    } else {
 
-    } else if(algoritmo == SJF_SIN_DESALOJO) {
-        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
-        pthread_mutex_lock(&mutex_lista_executing);
-        list_add(lista_executing, pcb);
-        pthread_mutex_unlock(&mutex_lista_executing);
-        actualizar_estado_pcb(pcb, RUNNING);
+        if(algoritmo == FIFO) {
+            pthread_mutex_lock(&mutex_lista_executing);
+            list_add(lista_executing, pcb);
+            pthread_mutex_unlock(&mutex_lista_executing);
+            actualizar_estado_pcb(pcb, RUNNING);
 
-    } else if(algoritmo == SJF_CON_DESALOJO) {
-        pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
-        pthread_mutex_lock(&mutex_lista_executing);
-        list_add(lista_executing, pcb);
-        pthread_mutex_unlock(&mutex_lista_executing);
-        actualizar_estado_pcb(pcb, RUNNING);
+        } else if(algoritmo == SJF_SIN_DESALOJO) {
+            pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+            pthread_mutex_lock(&mutex_lista_executing);
+            list_add(lista_executing, pcb);
+            pthread_mutex_unlock(&mutex_lista_executing);
+            actualizar_estado_pcb(pcb, RUNNING);
+
+        } else if(algoritmo == SJF_CON_DESALOJO) {
+            pcb->estimacion_rafaga_anterior = pcb->proxima_estimacion;
+            pthread_mutex_lock(&mutex_lista_executing);
+            list_add(lista_executing, pcb);
+            pthread_mutex_unlock(&mutex_lista_executing);
+            actualizar_estado_pcb(pcb, RUNNING);
+        }
     }
 
     return 0;

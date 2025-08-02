@@ -57,6 +57,6 @@ void* iniciar_planificador_largo_plazo() {
                     continue;
                 }
         }
-    return NULL;
     }
+    return NULL;
 }
