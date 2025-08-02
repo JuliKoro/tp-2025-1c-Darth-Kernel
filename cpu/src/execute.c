@@ -12,7 +12,7 @@ int execute(instruccion_decodificada* instruccion, t_proceso_cpu* proceso, int s
             sleep(1); // Simula un ciclo de instrucción de 1 segundo
             PC++; // Incremento el PC en 1 (actualiza el PC global)
             break;
-        case WRITE: // REVISAR WARNINGS
+        case WRITE:
             // Lógica para escribir en memoria
             if (acceder_cache()) { // Cache Habilitada
                 escribir_en_cache(instruccion->direccion, instruccion->datos, instruccion->pid, socket_memoria);

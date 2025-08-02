@@ -94,8 +94,8 @@ void* hilo_dispatch(void* arg){
       // ASIGNACION DE PROCESO
       t_paquete* paquete = recibir_paquete(socket_kernel_dispatch);
       if (paquete == NULL) {
-         log_error(logger_cpu, "Error al recibir paquete de Kernel. Cerrando conexion");
-         pthread_exit(NULL); // Termino el hilo si hay un error
+         log_error(logger_cpu, "Error al recibir paquete de Kernel.");
+         //pthread_exit(NULL); // Termino el hilo si hay un error
       }
       if (paquete->codigo_operacion == PAQUETE_PROCESO_CPU) {
          log_debug(logger_cpu, "Recibido paquete de instrucción de Kernel");
@@ -110,7 +110,7 @@ void* hilo_dispatch(void* arg){
          sem_wait(&semaforo_proceso);
       }
       
-      liberar_paquete(paquete);
+      if (paquete != NULL) liberar_paquete(paquete);
    }
 }
 
@@ -138,7 +138,7 @@ void* hilo_interrupt(void* arg){
       // Lógica para recibir interrupciones
       t_paquete* paquete_interrupt = recibir_paquete(socket_kernel_interrupt);
       if (paquete_interrupt == NULL) {
-         log_error(logger_cpu, "Error al recibir interrupción de Kernel. Cerrando conexion");
+         log_error(logger_cpu, "Error al recibir interrupción de Kernel.");
          //pthread_exit(NULL); // Terminar el hilo si hay un error
       }
       if (paquete_interrupt->codigo_operacion == PAQUETE_INTERRUPCION) {
@@ -153,7 +153,7 @@ void* hilo_interrupt(void* arg){
       }
       IF = 0; // Reset IF
       free(interrupcion);
-      liberar_paquete(paquete_interrupt);
+      if (paquete_interrupt != NULL) liberar_paquete(paquete_interrupt);
    }
 }
 
