@@ -1,7 +1,16 @@
-# tp-scaffold
+# TP Sistemas Operativos (1C - 2025)
+Realizado por el Grupo Darth Kernel.
+![Darth Kernel](https://drive.google.com/file/d/1zse04k85p2ukFdunid4cwAaj6mnSBS76/view?usp=sharing)
 
-Esta es una plantilla de proyecto diseñada para generar un TP de Sistemas
-Operativos de la UTN FRBA.
+Proyecto de TP de Sistemas
+Operativos de la UTN FRBA, realizado en el 1er Cuatrimestre del año 2025.
+
+> [!WARNING]
+> ### Aclaración Importante:
+> El desarrollo del TP fue completado, cumpliendo con todas las funcionalidades de la consigna.
+> Al momento de realizar las pruebas finales (testing), el Módulo de Kernel presentaba fallas en el planificador SJF.
+> Ademas, otras funcionalidades de otros módulos no llegaron a probarse.
+> Por ello, no se considera un TP aprobado.
 
 ## Dependencias
 
@@ -40,30 +49,21 @@ repositorio:
 code tp.code-workspace
 ```
 
-## Checkpoint
+## Enunciado
+Enunciado completo del TP:
+[Enunciado](https://docs.google.com/document/d/1HC9Zi-kpn8jI_egJGEZe77wUCbSkwSw9Ygqqs7m_-is/edit?tab=t.0)
 
-Para cada checkpoint de control obligatorio, se debe crear un tag en el
-repositorio con el siguiente formato:
+## Testing
+A continuación se adjunta link al documento de Pruebas Finales y el repositorio que contien los archivos de pseudocódigo:
 
-```
-checkpoint-{número}
-```
+- [Pruebas Fianles](https://docs.google.com/document/d/13XPliZvUBtYjaRfuVUGHWbYX8LBs8s3TDdaDa9MFr_I/edit?tab=t.0)
+- [Repo Testing](https://github.com/sisoputnfrba/revenge-of-the-cth-pruebas)
 
-Donde `{número}` es el número del checkpoint, ejemplo: `checkpoint-1`.
+## Documentación
+Documentación elaborada por el grup, para acarar algunos temas en comun durante el desarrollo del mismo:
+[Documentación](https://docs.google.com/document/d/1e8QvoQteYOtw42_G0_le-rf4aH5IlKBM_JWxaYAEi60/edit?tab=t.0)
 
-Para crear un tag y subirlo al repositorio, podemos utilizar los siguientes
-comandos:
-
-```bash
-git tag -a checkpoint-{número} -m "Checkpoint {número}"
-git push origin checkpoint-{número}
-```
-
-> [!WARNING]
-> Asegúrense de que el código compila y cumple con los requisitos del checkpoint
-> antes de subir el tag.
-
-## Entrega
+## Deploy
 
 Para desplegar el proyecto en una máquina Ubuntu Server, podemos utilizar el
 script [so-deploy] de la cátedra:
@@ -80,13 +80,6 @@ y compilar el proyecto en la máquina remota.
 > [!NOTE]
 > Ante cualquier duda, pueden consultar la documentación en el repositorio de
 > [so-deploy], o utilizar el comando `./deploy.sh --help`.
-
-## Guías útiles
-
-- [Cómo interpretar errores de compilación](https://docs.utnso.com.ar/primeros-pasos/primer-proyecto-c#errores-de-compilacion)
-- [Cómo utilizar el debugger](https://docs.utnso.com.ar/guias/herramientas/debugger)
-- [Cómo configuramos Visual Studio Code](https://docs.utnso.com.ar/guias/herramientas/code)
-- **[Guía de despliegue de TP](https://docs.utnso.com.ar/guías/herramientas/deploy)**
 
 [so-commons-library]: https://github.com/sisoputnfrba/so-commons-library
 [so-deploy]: https://github.com/sisoputnfrba/so-deploy
