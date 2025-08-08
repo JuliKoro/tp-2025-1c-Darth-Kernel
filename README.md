@@ -1,6 +1,6 @@
 # TP Sistemas Operativos (1C - 2025)
-Realizado por el Grupo Darth Kernel.
-![Darth Kernel](https://drive.google.com/file/d/1zse04k85p2ukFdunid4cwAaj6mnSBS76/view?usp=sharing)
+Realizado por el Grupo *"Darth Kernel"*.
+![Darth Kernel](/darthKernel.jpeg "Darth Kernel")
 
 Proyecto de TP de Sistemas
 Operativos de la UTN FRBA, realizado en el 1er Cuatrimestre del año 2025.
@@ -8,9 +8,12 @@ Operativos de la UTN FRBA, realizado en el 1er Cuatrimestre del año 2025.
 > [!WARNING]
 > ### Aclaración Importante:
 > El desarrollo del TP fue completado, cumpliendo con todas las funcionalidades de la consigna.
+> 
 > Al momento de realizar las pruebas finales (testing), el Módulo de Kernel presentaba fallas en el planificador SJF.
+> 
 > Ademas, otras funcionalidades de otros módulos no llegaron a probarse.
-> Por ello, no se considera un TP aprobado.
+>
+> Por ello, __NO se considera un TP aprobado__.
 
 ## Dependencias
 
